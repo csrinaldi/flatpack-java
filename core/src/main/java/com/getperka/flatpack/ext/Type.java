@@ -21,6 +21,7 @@ package com.getperka.flatpack.ext;
 
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.UUID;
 
 import javax.annotation.security.PermitAll;
 import javax.inject.Inject;
+import javax.management.RuntimeErrorException;
 
 import com.getperka.flatpack.BaseHasUuid;
 
@@ -154,7 +156,11 @@ public class Type extends BaseHasUuid {
   @Override
   protected UUID defaultUuid() {
     String key = getClass().getName() + ":" + toString();
-    return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+    try {
+      return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   void setEnumValues(List<String> enumValues) {

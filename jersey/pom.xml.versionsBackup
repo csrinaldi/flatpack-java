@@ -1,12 +1,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>flatpack-client</artifactId>
-  <name>FlatPack Client</name>
+  <artifactId>flatpack-jersey</artifactId>
+  <name>FlatPack Jersey integration</name>
 
   <parent>
     <groupId>com.getperka.flatpack</groupId>
     <artifactId>flatpack-parent</artifactId>
-    <version>2.15-android-2.2</version>
+    <version>2.16-SNAPSHOT</version>
   </parent>
 
   <scm>
@@ -15,44 +15,49 @@
     <developerConnection>scm:git:git@git.getperka.com:flatpack.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
+
   <dependencies>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-core</artifactId>
+      <version>1.5</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
+      <version>1.5</version>
+    </dependency>
     <dependency>
       <groupId>com.getperka.flatpack</groupId>
       <artifactId>flatpack-core</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
+      <groupId>com.getperka.flatpack</groupId>
+      <artifactId>flatpack-client</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>javax.annotation</groupId>
       <artifactId>jsr250-api</artifactId>
       <version>1.0</version>
     </dependency>
+    <!-- Test dependencies -->
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
+      <groupId>com.getperka.flatpack</groupId>
+      <artifactId>flatpack-search</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.10</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>com.getperka.flatpack</groupId>
-        <artifactId>flatpack-apidoc-maven-plugin</artifactId>
-        <version>${project.version}</version>
-        <executions>
-          <execution>
-            <configuration>
-              <docletClass>com.getperka.flatpack.doclets.DocStringsDoclet</docletClass>
-              <subpackages>com.getperka.flatpack.client.dto</subpackages>
-            </configuration>
-            <goals>
-              <goal>apidoc</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

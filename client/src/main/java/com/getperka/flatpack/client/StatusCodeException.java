@@ -36,7 +36,8 @@ public class StatusCodeException extends IOException {
   private final int statusCode;
 
   public StatusCodeException(int statusCode, Throwable cause) {
-    super("Status code " + statusCode, cause);
+    super("Status code " + statusCode);
+    super.initCause(cause);
     this.statusCode = statusCode;
   }
 

@@ -22,6 +22,7 @@ package com.getperka.flatpack.ext;
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleName;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -35,6 +36,7 @@ import javax.annotation.security.DenyAll;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
+import javax.management.RuntimeErrorException;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.InheritPrincipal;
@@ -463,7 +465,11 @@ public class Property extends BaseHasUuid {
     if (getEnclosingTypeName() == null || getName() == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getEnclosingTypeName() + "." + getName()).getBytes(UTF8));
+    try {
+      return UUID.nameUUIDFromBytes((getEnclosingTypeName() + "." + getName()).getBytes(UTF8));
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   void setDeepTraversalOnly(boolean deepTraversalOnly) {

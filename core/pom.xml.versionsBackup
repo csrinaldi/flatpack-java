@@ -1,12 +1,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>flatpack-client</artifactId>
-  <name>FlatPack Client</name>
+  <artifactId>flatpack-core</artifactId>
+  <name>FlatPack serialization code</name>
 
   <parent>
     <groupId>com.getperka.flatpack</groupId>
     <artifactId>flatpack-parent</artifactId>
-    <version>2.15-android-2.2</version>
+    <version>2.16-SNAPSHOT</version>
   </parent>
 
   <scm>
@@ -17,13 +17,12 @@
   </scm>
   <dependencies>
     <dependency>
-      <groupId>com.getperka.flatpack</groupId>
-      <artifactId>flatpack-core</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.annotation</groupId>
@@ -33,6 +32,33 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>1</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+      <version>1.0.0.GA</version>
+    </dependency>
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.10</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <version>3.1</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
@@ -45,7 +71,7 @@
           <execution>
             <configuration>
               <docletClass>com.getperka.flatpack.doclets.DocStringsDoclet</docletClass>
-              <subpackages>com.getperka.flatpack.client.dto</subpackages>
+              <subpackages>com.getperka.flatpack.ext</subpackages>
             </configuration>
             <goals>
               <goal>apidoc</goal>

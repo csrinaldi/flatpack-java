@@ -446,7 +446,7 @@ public class TypeContext {
     SparseCollection implies = m.getAnnotation(SparseCollection.class);
     if (implies != null) {
       // Treat the default value of an empty string as just a breakpoint, without implication
-      return implies.value().isEmpty() ? null : implies.value();
+      return implies.value().length() == 0 ? null : implies.value();
     }
 
     for (Annotation a : m.getAnnotations()) {

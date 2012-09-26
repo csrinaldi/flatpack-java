@@ -21,6 +21,7 @@ package com.getperka.flatpack.client.dto;
 
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
+import java.io.UnsupportedEncodingException;
 import java.util.UUID;
 
 import javax.annotation.security.PermitAll;
@@ -87,6 +88,11 @@ public class ParameterDescription extends BaseHasUuid {
       throw new IllegalStateException();
     }
     String key = endpoint.getUuid() + ":" + name;
-    return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+
+    try {
+      return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

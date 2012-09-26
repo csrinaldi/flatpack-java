@@ -48,7 +48,7 @@ public class FlatPackTypes {
       Arrays.<Class<?>> asList(boolean.class, byte.class, char.class, double.class, float.class,
           int.class, long.class, short.class, void.class));
 
-  public static final Charset UTF8 = Charset.forName("UTF8");
+  public static final String UTF8 = "UTF8";
 
   public static Class<?> box(Class<?> primitive) {
     assert PRIMITIVE_TYPES.contains(primitive);
@@ -83,7 +83,7 @@ public class FlatPackTypes {
    * Portable implementation of decapitalize.
    */
   public static String decapitalize(String string) {
-    if (string == null || string.isEmpty()) {
+    if (string == null || string.length() == 0) {
       return string;
     } else if (string.length() == 1) {
       return String.valueOf(Character.toLowerCase(string.charAt(0)));
