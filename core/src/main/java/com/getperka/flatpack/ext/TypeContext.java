@@ -36,9 +36,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -386,44 +388,59 @@ public class TypeContext {
    */
   private void computePrincipalPaths(Deque<Property> pathSoFar, Class<? extends HasUuid> lookingAt,
       LinkedList<Class<? extends HasUuid>> seen, List<PropertyPath> accumulator) {
-    // Cycle detection
-    if (seen.contains(lookingAt)) {
-      return;
-    }
 
-    // Add the current path if it provides useful information
-    if (principalMapper.isMapped(Collections.unmodifiableList(seen), lookingAt)) {
-      accumulator.add(new PropertyPath(pathSoFar));
-    }
-
-    // Iterate over each property of the type and recurse
-    seen.push(lookingAt);
-    for (Property property : extractProperties(lookingAt)) {
-      // Ignore properties that don't inherit
-      if (!property.isInheritPrincipal()) {
-        continue;
+    /*
+     * Compute all types the property value is assignable from. This allows principal paths in
+     * subtypes of the property type to also be evaluated. (e.g. @InheritPrincipal Person
+     * getPerson() should allow Employee.getManager() or Manager.getVP() to also be traversed).
+     */
+    Set<Class<? extends HasUuid>> assignableFrom = new HashSet<Class<? extends HasUuid>>();
+    for (Class<?> test : classes.values()) {
+      if (lookingAt.isAssignableFrom(test)) {
+        assignableFrom.add(test.asSubclass(HasUuid.class));
       }
-      Type returnType = property.getGetter().getGenericReturnType();
-      Class<? extends HasUuid> nextType;
-      switch (property.getType().getJsonKind()) {
-        case STRING:
-          nextType = erase(returnType).asSubclass(HasUuid.class);
-          break;
-        case LIST:
-          // TODO: This doesn't support arbitrary composition
-          nextType = erase(getSingleParameterization(returnType, Collection.class))
-              .asSubclass(HasUuid.class);
-          break;
-        default:
-          throw new RuntimeException("Cannot use property " + property + " with "
-            + InheritPrincipal.class.getSimpleName());
+    }
+
+    for (Class<? extends HasUuid> toCheck : assignableFrom) {
+      // Cycle detection
+      if (seen.contains(toCheck)) {
+        return;
       }
 
-      pathSoFar.addLast(property);
-      computePrincipalPaths(pathSoFar, nextType, seen, accumulator);
-      pathSoFar.removeLast();
+      // Add the current path if it provides useful information
+      if (principalMapper.isMapped(Collections.unmodifiableList(seen), toCheck)) {
+        accumulator.add(new PropertyPath(pathSoFar));
+      }
+
+      // Iterate over each property of the type and recurse
+      seen.push(toCheck);
+      for (Property property : extractProperties(toCheck)) {
+        // Ignore properties that don't inherit
+        if (!property.isInheritPrincipal()) {
+          continue;
+        }
+        Type returnType = property.getGetter().getGenericReturnType();
+        Class<? extends HasUuid> nextType;
+        switch (property.getType().getJsonKind()) {
+          case STRING:
+            nextType = erase(returnType).asSubclass(HasUuid.class);
+            break;
+          case LIST:
+            // TODO: This doesn't support arbitrary composition
+            nextType = erase(getSingleParameterization(returnType, Collection.class))
+                .asSubclass(HasUuid.class);
+            break;
+          default:
+            throw new RuntimeException("Cannot use property " + property + " with "
+              + InheritPrincipal.class.getSimpleName());
+        }
+
+        pathSoFar.addLast(property);
+        computePrincipalPaths(pathSoFar, nextType, seen, accumulator);
+        pathSoFar.removeLast();
+      }
+      seen.pop();
     }
-    seen.pop();
   }
 
   /**

@@ -95,6 +95,12 @@ public class PropertyPath extends BaseHasUuid {
     Throwable ex;
     try {
       Property prop = properties.get(0);
+
+      // Don't try to invoke Employee.getFoo() on a Manager
+      if (!prop.getGetter().getDeclaringClass().isAssignableFrom(target.getClass())) {
+        return false;
+      }
+
       Object currentValue = prop.getGetter().invoke(target);
       switch (prop.getType().getJsonKind()) {
         case STRING:
