@@ -25,8 +25,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.TraversalMode;
+
 /**
- * Used by the API documentation generator to specify the format of the returned data.
+ * Used by the API documentation generator to specify the format of the returned data. In addition
+ * to providing a description of the
  * <p>
  * If the return type is parameterized (e.g. {@link java.util.List}), the value of the annotation
  * should be a flattened representation of the generic type. For example
@@ -36,12 +40,52 @@ import java.lang.annotation.Target;
  * {@literal @}FlatPackEntity({Map.class, String.class, Merchant.class})
  * </pre>
  * <p>
- * This annotation has no runtime implications if the actual value returned does not match the
- * declaration.
+ * The data from this annotation may be used by client code generators to provide type hints. It has
+ * no effect on the server code, however.
  */
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface FlatPackResponse {
-  Class<?>[] value();
+  /**
+   * Provides information about supplementary entities that can be expected in a payload.
+   */
+  @Documented
+  @Target({})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface ExtraEntity {
+    /**
+     * Additional descriptive text about the extra entities that will be found in the response.
+     */
+    String description();
+
+    /**
+     * A description of the type of the extra entity.
+     */
+    Class<? extends HasUuid> type();
+  }
+
+  /**
+   * Additional descriptive text about the payload's value. This is analogous to a JavaDoc
+   * {@literal @return}.
+   */
+  String description() default "";
+
+  /**
+   * Descriptions of extra entities not related to the payload's {@code value} that may also be in
+   * the payload.
+   */
+  ExtraEntity[] extra() default {};
+
+  /**
+   * The default traversal mode for the payload.
+   */
+  TraversalMode traversalMode() default TraversalMode.SIMPLE;
+
+  /**
+   * A description of the type that can be expected in the payload's {@code value} section. A
+   * payload with no specific return value (e.g. a "bag") may use the default value of {@link Void}
+   * and instead provide information via {@link #extra()}.
+   */
+  Class<?>[] value() default Void.class;
 }

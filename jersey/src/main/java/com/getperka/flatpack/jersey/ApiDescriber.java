@@ -55,9 +55,11 @@ import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
+import com.getperka.flatpack.client.dto.TypeDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
@@ -233,7 +235,19 @@ public class ApiDescriber {
     FlatPackResponse responseAnnotation = method.getAnnotation(FlatPackResponse.class);
     if (responseAnnotation != null) {
       Type returnType = reference(FlatPackTypes.createType(responseAnnotation.value()));
+      desc.setReturnDocString(
+          responseAnnotation.description().isEmpty() ? null : responseAnnotation.description());
       desc.setReturnType(returnType);
+      desc.setTraversalMode(responseAnnotation.traversalMode());
+
+      List<TypeDescription> extraTypeDescriptions = new ArrayList<TypeDescription>();
+      for (ExtraEntity extra : responseAnnotation.extra()) {
+        TypeDescription typeDescription = new TypeDescription();
+        typeDescription.setDocString(extra.description());
+        typeDescription.setType(reference(FlatPackTypes.createType(extra.type())));
+        extraTypeDescriptions.add(typeDescription);
+      }
+      desc.setExtraReturnData(extraTypeDescriptions.isEmpty() ? null : extraTypeDescriptions);
     }
 
     String docString = getDocStrings(declaringClass).get(methodKey);
