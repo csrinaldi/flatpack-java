@@ -1,22 +1,3 @@
-/*
- * #%L
- * FlatPack Automatic Source Tool
- * %%
- * Copyright (C) 2012 Perka Inc.
- * %%
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *      http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * #L%
- */
 package com.getperka.flatpack.fast;
 
 import java.io.File;
@@ -26,7 +7,6 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -46,7 +26,6 @@ import org.stringtemplate.v4.STGroupFile;
 import org.stringtemplate.v4.misc.ObjectModelAdaptor;
 import org.stringtemplate.v4.misc.STNoSuchPropertyException;
 
-import com.getperka.cli.flags.Flag;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
@@ -56,50 +35,19 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.util.FlatPackCollections;
 
-/**
- * Generates simple Ruby representations of a FlatPack API.
- */
-public class RbDialect implements Dialect {
-  @Flag(tag = "gemName",
-      help = "The name of the generated gem",
-      defaultValue = "changeme")
-  static String gemName;
+public class ObjcDialect implements Dialect {
 
-  @Flag(tag = "moduleName",
-      help = "The name of the generated top-level module",
-      defaultValue = "NoName")
-  static String moduleName;
-
-  @Flag(tag = "modelModuleName",
-      help = "The name of the generated model sub-module",
-      defaultValue = "Dto")
-  static String modelModuleName;
-
-  private static final Charset UTF8 = Charset.forName("UTF8");
-
-  static String camelCaseToUnderscore(String s) {
-    return s.replaceAll(
-        String.format("%s|%s|%s", "(?<=[A-Z])(?=[A-Z][a-z])",
-            "(?<=[^A-Z])(?=[A-Z])", "(?<=[A-Za-z])(?=[^A-Za-z])"), "_")
-        .toLowerCase();
-  }
+  private static final Logger logger = LoggerFactory.getLogger(ObjcDialect.class);
 
   private static String upcase(String s) {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
 
-  private final Logger logger = LoggerFactory.getLogger(getClass());
-
   @Override
   public void generate(ApiDescription api, File outputDir) throws IOException {
-
-    // define our output directories
-    File genOutput = new File(outputDir, "generated");
-    File moduleOutput = new File(genOutput, gemName);
-
-    // delete our root output directory if one already exists
-    if (genOutput.exists()) {
-      delete(genOutput);
+    if (!outputDir.isDirectory() && !outputDir.mkdirs()) {
+      logger.error("Could not create output directory {}", outputDir.getPath());
+      return;
     }
 
     // first collect just our model entities
@@ -107,14 +55,15 @@ public class RbDialect implements Dialect {
         .mapForIteration();
     for (EntityDescription entity : api.getEntities()) {
       allEntities.put(entity.getTypeName(), entity);
-      for (Iterator<Property> it = entity.getProperties().iterator(); it
-          .hasNext();) {
+      for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
         Property prop = it.next();
+        // Remove the uuid property
         if ("uuid".equals(prop.getName())) {
-          // Crop the UUID property
           it.remove();
-        } else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
-          // Remove properties not declared in the current type
+        }
+
+        // and properties not declared in the current type
+        else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
           it.remove();
         }
       }
@@ -123,73 +72,31 @@ public class RbDialect implements Dialect {
     allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
 
-    // rendr the list of require statements
-    List<String> requires = new ArrayList<String>();
-    requires.add(gemName + "/client_api");
-    for (EntityDescription desc : allEntities.values()) {
-      requires.add(gemName + "/model/"
-        + camelCaseToUnderscore(desc.getTypeName()));
-    }
-    STGroup group = loadGroup();
-    ST entityST = group.getInstanceOf("module")
-        .add("requires", requires);
-    render(entityST, genOutput, gemName + "Fast");
-
     // Render entities
-    File modelOutput = new File(moduleOutput, "model");
+    STGroup group = loadGroup();
+    ST entityST = null;
+    File modelOutput = new File(outputDir, "model");
     for (EntityDescription entity : allEntities.values()) {
+      entityST = group.getInstanceOf("entityHeader").add("entity", entity);
+      render(entityST, modelOutput, upcase(entity.getTypeName()) + ".h");
+
       entityST = group.getInstanceOf("entity").add("entity", entity);
-      render(entityST, modelOutput, upcase(entity.getTypeName()));
+      render(entityST, modelOutput, upcase(entity.getTypeName()) + ".m");
     }
-
-    // Render referenced enumerations
-
-    /*
-     * for (Type enumType : usedEnums) { ST enumST = group.getInstanceOf("enum") .add("enum",
-     * enumType).add("packageName", packageName); render(enumST, packageDir, typePrefix +
-     * upcase(enumType.getName())); }
-     */
-
-    // Render the Api convenience class
-    ST apiST = group.getInstanceOf("api").add("api", api);
-    render(apiST, moduleOutput, "clientApi");
-
-    // Emit a manifest of all generated types ST typeSourceST =
-    /*
-     * group.getInstanceOf("typeSource").add("allEntities", allEntities.values()).add("packageName",
-     * packageName).add("namePrefix", namePrefix); render(typeSourceST, packageDir, namePrefix +
-     * "TypeSource");
-     */
-
-    // File gemfiles = new File(getClass().getResource("/gemfiles").getFile());
-    // for (String file : (gemfiles.list())) {
-    // copy(new File(gemfiles, file), new File(gemOutput, file));
-    // }
   }
 
   @Override
   public String getDialectName() {
-    return "rb";
-  }
-
-  private void delete(File f) {
-    if (f.isDirectory()) {
-      for (File c : f.listFiles()) {
-        delete(c);
-      }
-    }
-    if (!f.delete()) {
-      logger.error("Could not delete " + f);
-    }
+    return "objc";
   }
 
   /**
-   * Load {@code rb.stg} from the classpath and configure a number of model adaptors to add virtual
-   * properties to the objects being rendered.
+   * Load {@code objc.stg} from the classpath and configure a number of model adaptors to add
+   * virtual properties to the objects being rendered.
    */
   private STGroup loadGroup() {
 
-    STGroup group = new STGroupFile(getClass().getResource("rb.stg"), "UTF8", '<', '>');
+    STGroup group = new STGroupFile(getClass().getResource("objc.stg"), "UTF8", '<', '>');
     // EntityDescription are rendered as the FQN
     group.registerRenderer(EntityDescription.class, new AttributeRenderer() {
 
@@ -199,7 +106,7 @@ public class RbDialect implements Dialect {
         if (entity.getTypeName().equals("baseHasUuid")) {
           return BaseHasUuid.class.getCanonicalName();
         }
-        return upcase(entity.getTypeName());
+        return entity.getTypeName();
       }
     });
 
@@ -242,7 +149,7 @@ public class RbDialect implements Dialect {
               sb.append(upcase(end.getMethod().toLowerCase()));
               String name = sb.toString();
 
-              return "className".equals(propertyName) ? upcase(name) : camelCaseToUnderscore(name);
+              return "className".equals(propertyName) ? upcase(name) : name;
             } else if ("pathDecoded".equals(propertyName)) {
               // URL-decode the path in the endpoint description
               try {
@@ -332,7 +239,7 @@ public class RbDialect implements Dialect {
               throws STNoSuchPropertyException {
             ParameterDescription param = (ParameterDescription) o;
             if ("underscoreName".equals(propertyName)) {
-              return camelCaseToUnderscore(param.getName());
+              return param.getName();
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }
@@ -345,7 +252,7 @@ public class RbDialect implements Dialect {
           throws STNoSuchPropertyException {
         Property p = (Property) o;
         if ("attrName".equals(propertyName)) {
-          return camelCaseToUnderscore(p.getName());
+          return p.getName();
         }
 
         else if ("requireName".equals(propertyName)) {
@@ -363,7 +270,7 @@ public class RbDialect implements Dialect {
           throws STNoSuchPropertyException {
 
         if (propertyName.equals("name")) {
-          return moduleName + "::" + modelModuleName + "::" + upcase(((Type) o).getName());
+          return ((Type) o).getName();
         }
         return super.getProperty(interp, self, o, property, propertyName);
       }
@@ -435,15 +342,15 @@ public class RbDialect implements Dialect {
     });
 
     Map<String, Object> namesMap = new HashMap<String, Object>();
-    namesMap.put("gemName", gemName);
-    namesMap.put("moduleName", moduleName);
-    namesMap.put("modelModuleName", modelModuleName);
+    // namesMap.put("gemName", gemName);
+    // namesMap.put("moduleName", moduleName);
+    // namesMap.put("modelModuleName", modelModuleName);
     group.defineDictionary("names", namesMap);
 
     return group;
   }
 
-  private void render(ST enumST, File packageDir, String typeName)
+  private void render(ST enumST, File packageDir, String fileName)
       throws IOException {
 
     if (!packageDir.isDirectory() && !packageDir.mkdirs()) {
@@ -452,7 +359,7 @@ public class RbDialect implements Dialect {
       return;
     }
     Writer fileWriter = new OutputStreamWriter(new FileOutputStream(new File(
-        packageDir, camelCaseToUnderscore(typeName) + ".rb")), UTF8);
+        packageDir, fileName)), "UTF8");
     AutoIndentWriter writer = new AutoIndentWriter(fileWriter);
     writer.setLineWidth(80);
     enumST.write(writer);
@@ -460,10 +367,6 @@ public class RbDialect implements Dialect {
   }
 
   private String requireNameForType(String type) {
-    if (type.equals("baseHasUuid")) {
-      return "flatpack_core";
-    }
-    return gemName + "/" + camelCaseToUnderscore(modelModuleName) + "/"
-      + camelCaseToUnderscore(type);
+    return type;
   }
 }

@@ -1,0 +1,154 @@
+/*
+ * #%L
+ * FlatPack Automatic Source Tool
+ * %%
+ * Copyright (C) 2012 Perka Inc.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+entityHeader(entity) ::= <<
+# Generated File - DO NOT EDIT
+
+<if(entity.supertype.requireName)>
+require '<entity.supertype.requireName>'
+<endif>
+
+>>
+
+entity(entity) ::= <<
+# Generated File - DO NOT EDIT
+
+<if(entity.supertype.requireName)>
+require '<entity.supertype.requireName>'
+<endif>
+
+module <names.moduleName>
+  module <names.modelModuleName> 
+
+    <docString(entity.docString)>
+    class <entity.simpleName> \< <entity.supertype.simpleName>
+    
+      <if(entity.properties)>
+      PROPERTY_NAMES = [
+        <entity.properties:field(); separator=",\n">
+      ]
+      attr_accessor *PROPERTY_NAMES
+      <endif>
+      
+      <if(entity.embeddedEntityProperties)>
+      EMBEDDED_PROPERTY_NAMES = [
+        <entity.embeddedEntityProperties:{p | :<p.attrName>}; wrap, separator=",\n">
+      ]
+      attr_accessor *EMBEDDED_PROPERTY_NAMES
+      <endif>
+      
+      <if(entity.entityProperties)>
+      <entity.entityProperties:{p | require '<p.requireName>'}; wrap, separator="\n">
+      TYPE_MAP = {
+        <entity.entityProperties:{p | :<p.attrName> => <p.type.name>}; wrap, separator=",\n">
+      }
+      <endif>
+      
+    end
+  end
+end
+>>
+
+field(property) ::= <%
+<if(property.docString)><\n><docString(property.docString)><\n><endif>
+:<property.attrName>
+%>
+
+/**
+ * Emit a doc string, reflowed to fit the current context.
+ */
+docString(docString) ::= <<
+<if(docString)># <docString.chunks; wrap="\n# ", separator=" "><endif>
+>>
+
+/**
+ * Generate an API accessor stub.
+ */
+api(api) ::= <<
+# Generated File - DO NOT EDIT
+require 'flatpack_client'
+
+module <names.moduleName>
+  class ClientApi \< Flatpack::Client::BaseApi
+    include Flatpack::Core::MapInitialize
+  
+    <api.endpoints:endpoint(); separator="\n">
+    private
+    
+    <api.endpoints:endpointPrivate()>
+  end
+end
+>>
+
+/**
+ * Select the kind of endpoint, either one that's documented to return a FlatPackEntity
+ * or just return a HttpURLConnection for anything else.
+ */
+endpoint(end) ::= <<
+<docString(end.docString)>
+def <end.methodName><endpointArgList()>
+  <if(end.queryParameters)>
+  to_return = <end.className>.new(self<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>)
+  <else>
+  to_return = Flatpack::Client::<if(end.returnType)>FlatpackRequest<else>Request<endif>.new(self, "<end.method>", "<end.pathDecoded>"<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>)
+  <endif>
+  <if(end.entity)>to_return.entity = entity<endif>
+  to_return
+end
+
+>>
+
+endpointPrivate(end) ::= <<
+<if(end.queryParameters)>
+class <end.className> \< Flatpack::Client::<if(end.returnType)>FlatpackRequest<else>Request<endif>
+    
+  def initialize(api, *args)
+    super(api, "<end.method>", "<end.pathDecoded>", *args)
+  end
+      
+  <end.queryParameters:endpointQueryParameterStub(); separator="\n">
+end
+    
+<endif>
+>>
+
+endpointArgList() ::= <%
+<if(end.entity && end.pathParameters)>
+  (entity, <end.pathParameters:{x |<x.name>}; separator=", ">)
+<elseif(end.entity)>
+  (entity)
+<elseif(end.pathParameters)>
+  (<end.pathParameters:{x |<x.name>}; separator=", ">)
+<endif>
+%>
+
+/**
+ * The names of the path parameter arguments.
+ */
+endpointPathParameters() ::= <%
+<end.pathParameters:{x |<x.name>}; separator=", ">
+%>
+
+endpointQueryParameterStub(param) ::= <<
+<docString(param.docString)>
+def with_<param.underscoreName>(<param.underscoreName>)
+  query_parameter('<param.name>', <param.underscoreName>);
+end
+
+>>
