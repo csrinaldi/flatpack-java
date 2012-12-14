@@ -75,7 +75,7 @@ public class ObjcDialect implements Dialect {
     // Render entities
     STGroup group = loadGroup();
     ST entityST = null;
-    File modelOutput = new File(outputDir, "model");
+    File modelOutput = new File(outputDir, "");
     for (EntityDescription entity : allEntities.values()) {
       entityST = group.getInstanceOf("entityHeader").add("entity", entity);
       render(entityST, modelOutput, upcase(entity.getTypeName()) + ".h");
