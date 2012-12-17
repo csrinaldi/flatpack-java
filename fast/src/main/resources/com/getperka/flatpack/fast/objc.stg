@@ -18,70 +18,74 @@
  * #L%
  */
 entityHeader(entity) ::= <<
-# Generated File - DO NOT EDIT
+// Generated File - DO NOT EDIT
 
+#import \<Foundation/Foundation.h\>
 <if(entity.supertype.requireName)>
-require '<entity.supertype.requireName>'
+#import "<entity.supertype.requireName>.h"
 <endif>
+
+<entity.entityProperties:{p | @class <p.requireName>;}; wrap, separator="\n">
+
+<docString(entity.docString)>
+@interface <entity.requireName> : <entity.supertype.requireName>
+
+<if(entity.properties)>
+<entity.properties:property(); separator="\n\n">
+<endif>
+
+@end
 
 >>
 
 entity(entity) ::= <<
-# Generated File - DO NOT EDIT
+// Generated File - DO NOT EDIT
 
-<if(entity.supertype.requireName)>
-require '<entity.supertype.requireName>'
-<endif>
+#import "<entity.requireName>.h"
+<entity.entityProperties:{p | #import "<p.requireName>.h"}; wrap, separator="\n">
+#import "FPBaseHasUuid.h"
+#import "FPEntityDescription.h"
+#import "FPProperty.h"
+#import "NSObject+FP.h"
 
-module <names.moduleName>
-  module <names.modelModuleName> 
+@implementation <entity.requireName>
 
-    <docString(entity.docString)>
-    class <entity.simpleName> \< <entity.supertype.simpleName>
-    
-      <if(entity.properties)>
-      PROPERTY_NAMES = [
-        <entity.properties:field(); separator=",\n">
-      ]
-      attr_accessor *PROPERTY_NAMES
-      <endif>
-      
-      <if(entity.embeddedEntityProperties)>
-      EMBEDDED_PROPERTY_NAMES = [
-        <entity.embeddedEntityProperties:{p | :<p.attrName>}; wrap, separator=",\n">
-      ]
-      attr_accessor *EMBEDDED_PROPERTY_NAMES
-      <endif>
-      
-      <if(entity.entityProperties)>
-      <entity.entityProperties:{p | require '<p.requireName>'}; wrap, separator="\n">
-      TYPE_MAP = {
-        <entity.entityProperties:{p | :<p.attrName> => <p.type.name>}; wrap, separator=",\n">
-      }
-      <endif>
-      
-    end
-  end
-end
+static NSMutableArray *_allProperties;
+
++ (void)initialize {
+  [super initialize];
+  
+  _allProperties = [NSMutableArray array];
+}
+
++ (FPEntityDescription *)entityDescription {
+  return [FPEntityDescription newWithDictionary:@{
+    @"typeName":@"<entity.typeName>",
+    @"superType":[<entity.supertype.requireName> entityDescription],
+    @"properties":_allProperties 
+  }];
+}
+
+@end
 >>
 
-field(property) ::= <%
-<if(property.docString)><\n><docString(property.docString)><\n><endif>
-:<property.attrName>
+property(property) ::= <%
+<if(property.docString)><docString(property.docString)><\n><endif>
+@property (<property.modifiers:{m | <m>}; separator=", ">) <property.objcType> *<property.safeName>;
 %>
 
 /**
  * Emit a doc string, reflowed to fit the current context.
  */
 docString(docString) ::= <<
-<if(docString)># <docString.chunks; wrap="\n# ", separator=" "><endif>
+<if(docString)>// <docString.chunks; wrap="\n// ", separator=" "><endif>
 >>
 
 /**
  * Generate an API accessor stub.
  */
 api(api) ::= <<
-# Generated File - DO NOT EDIT
+// Generated File - DO NOT EDIT
 require 'flatpack_client'
 
 module <names.moduleName>

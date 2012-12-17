@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.stringtemplate.v4.STGroupFile;
 import org.stringtemplate.v4.misc.ObjectModelAdaptor;
 import org.stringtemplate.v4.misc.STNoSuchPropertyException;
 
+import com.getperka.cli.flags.Flag;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
@@ -36,6 +38,33 @@ import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 public class ObjcDialect implements Dialect {
+
+  @Flag(tag = "classPrefix",
+      help = "The prefix to add to all class names",
+      defaultValue = "FP")
+  static String classPrefix;
+
+  private static final List<String> KEYWORDS = Arrays.asList(
+      "void",
+      "char",
+      "short",
+      "int",
+      "long",
+      "float",
+      "double",
+      "signed",
+      "unsigned",
+      "id",
+      "const",
+      "volatile",
+      "in",
+      "out",
+      "inout",
+      "bycopy",
+      "byref",
+      "oneway",
+      "self",
+      "super");
 
   private static final Logger logger = LoggerFactory.getLogger(ObjcDialect.class);
 
@@ -180,25 +209,22 @@ public class ObjcDialect implements Dialect {
               return supertype == null ? new EntityDescription("baseHasUuid", null) : supertype;
             }
 
-            else if ("simpleName".equals(propertyName)) {
-              if (entity.getTypeName().equals("baseHasUuid")) {
-                return "Flatpack::Core::" + BaseHasUuid.class.getSimpleName();
-              }
-              return upcase(entity.getTypeName());
-            }
-
             else if ("requireName".equals(propertyName)) {
               return requireNameForType(entity.getTypeName());
             }
 
             else if ("properties".equals(propertyName)) {
-              List<Property> properties = new ArrayList<Property>();
+
+              Map<String, Property> propertyMap = new HashMap<String, Property>();
               for (Property p : entity.getProperties()) {
-                if (!p.isEmbedded()) {
-                  properties.add(p);
+
+                // TODO if we decide to encode enum types, we'll want to remove the second condition
+                if (p.getType().getName() == null && p.getType().getEnumValues() == null) {
+                  propertyMap.put(p.getName(), p);
                 }
               }
-              return properties;
+
+              return propertyMap.values();
             }
 
             else if ("entityProperties".equals(propertyName)) {
@@ -212,18 +238,6 @@ public class ObjcDialect implements Dialect {
                 }
               }
 
-              return propertyMap.values();
-            }
-
-            else if ("embeddedEntityProperties".equals(propertyName)) {
-              Map<String, Property> propertyMap = new HashMap<String, Property>();
-              for (Property p : entity.getProperties()) {
-                if (p.getType().getName() != null &&
-                  p.getType().getEnumValues() == null && p.isEmbedded()) {
-
-                  propertyMap.put(p.getName(), p);
-                }
-              }
               return propertyMap.values();
             }
 
@@ -251,13 +265,26 @@ public class ObjcDialect implements Dialect {
           Object property, String propertyName)
           throws STNoSuchPropertyException {
         Property p = (Property) o;
-        if ("attrName".equals(propertyName)) {
-          return p.getName();
-        }
-
-        else if ("requireName".equals(propertyName)) {
+        if ("requireName".equals(propertyName)) {
           return requireNameForType(p.getType().getName());
         }
+        else if ("objcType".equals(propertyName)) {
+          return objcTypeForProperty(p);
+        }
+        else if ("modifiers".equals(propertyName)) {
+          List<String> modifiers = new ArrayList<String>();
+          modifiers.add("strong");
+
+          // http://developer.apple.com/library/ios/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html
+          if (p.getName().startsWith("new")) {
+            modifiers.add("getter=a" + upcase(p.getName()));
+          }
+          return modifiers;
+        }
+        else if ("safeName".equals(propertyName)) {
+          return p.getName() + (KEYWORDS.contains(p.getName()) ? "Property" : "");
+        }
+
         return super.getProperty(interp, self, o, property, propertyName);
       }
     });
@@ -342,12 +369,52 @@ public class ObjcDialect implements Dialect {
     });
 
     Map<String, Object> namesMap = new HashMap<String, Object>();
-    // namesMap.put("gemName", gemName);
-    // namesMap.put("moduleName", moduleName);
-    // namesMap.put("modelModuleName", modelModuleName);
+    namesMap.put("classPrefix", classPrefix);
     group.defineDictionary("names", namesMap);
 
     return group;
+  }
+
+  private String objcTypeForProperty(Property p) {
+    if (p.isEmbedded()) {
+      return classPrefix + upcase(p.getType().getName());
+    }
+
+    if (p.getType().getName() != null) {
+      return classPrefix + upcase(p.getType().getName());
+    }
+
+    String objcType = "nil";
+    switch (p.getType().getJsonKind()) {
+      case BOOLEAN:
+        objcType = "NSNumber";
+        break;
+      case DOUBLE:
+        objcType = "NSNumber";
+        break;
+      case ANY:
+        objcType = "NSObject";
+        break;
+      case INTEGER:
+        objcType = "NSNumber";
+        break;
+      case LIST:
+        objcType = "NSArray";
+        break;
+      case MAP:
+        objcType = "NSDictionary";
+        break;
+      case NULL:
+        objcType = "nil";
+        break;
+      case STRING:
+        objcType = "NSString";
+        break;
+      default:
+        break;
+    }
+
+    return objcType;
   }
 
   private void render(ST enumST, File packageDir, String fileName)
@@ -359,7 +426,7 @@ public class ObjcDialect implements Dialect {
       return;
     }
     Writer fileWriter = new OutputStreamWriter(new FileOutputStream(new File(
-        packageDir, fileName)), "UTF8");
+        packageDir, classPrefix + fileName)), "UTF8");
     AutoIndentWriter writer = new AutoIndentWriter(fileWriter);
     writer.setLineWidth(80);
     enumST.write(writer);
@@ -367,6 +434,6 @@ public class ObjcDialect implements Dialect {
   }
 
   private String requireNameForType(String type) {
-    return type;
+    return type.equalsIgnoreCase("baseHasUuid") ? "FP" + upcase(type) : classPrefix + upcase(type);
   }
 }
