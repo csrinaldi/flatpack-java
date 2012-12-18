@@ -50,21 +50,41 @@ entity(entity) ::= <<
 
 @implementation <entity.requireName>
 
+static FPEntityDescription *_entityDescription;
 static NSMutableArray *_allProperties;
 
 + (void)initialize {
   [super initialize];
   
   _allProperties = [NSMutableArray array];
+  
+  <entity.properties:propertyAdd(); separator="\n\n">
+  
+  _entityDescription = [FPEntityDescription newWithDictionary:@{
+    @"typeName":@"<entity.typeName>",
+    @"superType":[<entity.supertype.requireName> entityDescription],
+    @"kind":[<entity.requireName> class],
+    @"properties":_allProperties 
+  }];
+  
+  [FPEntityDescription setEntityDescription:_entityDescription forName:@"<entity.typeName>"];
 }
 
 + (FPEntityDescription *)entityDescription {
-  return [FPEntityDescription newWithDictionary:@{
-    @"typeName":@"<entity.typeName>",
-    @"superType":[<entity.supertype.requireName> entityDescription],
-    @"properties":_allProperties 
-  }];
+  return _entityDescription;
 }
+
+
+<if(entity.collectionProperties)>
+// initialize collection properties
+- (id)init {
+  self = [super init];
+  if(self != nil) {
+    <entity.collectionProperties:{p | _<p.name> = [<p.objcType> new];}; separator="\n">
+  }
+  return self;
+}
+<endif>
 
 @end
 >>
@@ -73,6 +93,17 @@ property(property) ::= <%
 <if(property.docString)><docString(property.docString)><\n><endif>
 @property (<property.modifiers:{m | <m>}; separator=", ">) <property.objcType> *<property.safeName>;
 %>
+
+propertyAdd(property) ::= <<
+// <property.name>
+[_allProperties addObject:
+  [FPProperty setPropertyForUuid:@"<property.uuid>"
+                  withDictionary:@{
+                    @"name":@"<property.name>",
+                    @"kind":[<property.objcType> class]<if(property.impliedProperty)>,<endif>
+                    <if(property.impliedProperty)>@"impliedProperty":[FPProperty propertyForUuid:@"<property.impliedProperty.uuid>"]<endif>
+                  }]];
+>>
 
 /**
  * Emit a doc string, reflowed to fit the current context.

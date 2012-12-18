@@ -9,6 +9,8 @@ import java.io.Writer;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +35,7 @@ import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
+import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.util.FlatPackCollections;
@@ -217,14 +220,21 @@ public class ObjcDialect implements Dialect {
 
               Map<String, Property> propertyMap = new HashMap<String, Property>();
               for (Property p : entity.getProperties()) {
-
-                // TODO if we decide to encode enum types, we'll want to remove the second condition
-                if (p.getType().getName() == null && p.getType().getEnumValues() == null) {
+                if (p.getType().getEnumValues() == null) {
                   propertyMap.put(p.getName(), p);
                 }
               }
 
-              return propertyMap.values();
+              List<Property> sortedProperties = new ArrayList<Property>();
+              sortedProperties.addAll(propertyMap.values());
+              Collections.sort(sortedProperties, new Comparator<Property>() {
+                @Override
+                public int compare(Property p1, Property p2) {
+                  return p1.getName().compareTo(p2.getName());
+                }
+              });
+
+              return sortedProperties;
             }
 
             else if ("entityProperties".equals(propertyName)) {
@@ -239,6 +249,16 @@ public class ObjcDialect implements Dialect {
               }
 
               return propertyMap.values();
+            }
+
+            else if ("collectionProperties".equals(propertyName)) {
+              List<Property> properties = new ArrayList<Property>();
+              for (Property p : entity.getProperties()) {
+                if (p.getType().getJsonKind().equals(JsonKind.LIST)) {
+                  properties.add(p);
+                }
+              }
+              return properties;
             }
 
             return super.getProperty(interp, self, o, property, propertyName);
@@ -399,10 +419,10 @@ public class ObjcDialect implements Dialect {
         objcType = "NSNumber";
         break;
       case LIST:
-        objcType = "NSArray";
+        objcType = "NSMutableArray";
         break;
       case MAP:
-        objcType = "NSDictionary";
+        objcType = "NSMutableDictionary";
         break;
       case NULL:
         objcType = "nil";
