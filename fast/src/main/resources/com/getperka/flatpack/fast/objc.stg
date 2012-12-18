@@ -74,7 +74,6 @@ static NSMutableArray *_allProperties;
   return _entityDescription;
 }
 
-
 <if(entity.collectionProperties)>
 // initialize collection properties
 - (id)init {
@@ -112,23 +111,25 @@ docString(docString) ::= <<
 <if(docString)>// <docString.chunks; wrap="\n// ", separator=" "><endif>
 >>
 
-/**
- * Generate an API accessor stub.
- */
+apiHeader(api) ::= <<
+// Generated File - DO NOT EDIT
+
+#import \<Foundation/Foundation.h\>
+#import "FPBaseApi.h"
+
+@interface PerkaBaseApi : FPBaseApi
+
+@end
+>>
+
 api(api) ::= <<
 // Generated File - DO NOT EDIT
-require 'flatpack_client'
 
-module <names.moduleName>
-  class ClientApi \< Flatpack::Client::BaseApi
-    include Flatpack::Core::MapInitialize
-  
-    <api.endpoints:endpoint(); separator="\n">
-    private
-    
-    <api.endpoints:endpointPrivate()>
-  end
-end
+#import "PerkaBaseApi.h"
+
+@implementation PerkaBaseApi
+
+@end
 >>
 
 /**

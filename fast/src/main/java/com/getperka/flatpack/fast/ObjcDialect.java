@@ -107,19 +107,28 @@ public class ObjcDialect implements Dialect {
     // Render entities
     STGroup group = loadGroup();
     ST entityST = null;
-    File modelOutput = new File(outputDir, "");
     for (EntityDescription entity : allEntities.values()) {
       entityST = group.getInstanceOf("entityHeader").add("entity", entity);
-      render(entityST, modelOutput, upcase(entity.getTypeName()) + ".h");
+      render(entityST, outputDir, upcase(entity.getTypeName()) + ".h");
 
       entityST = group.getInstanceOf("entity").add("entity", entity);
-      render(entityST, modelOutput, upcase(entity.getTypeName()) + ".m");
+      render(entityST, outputDir, upcase(entity.getTypeName()) + ".m");
     }
+
+    // render api stubs
+    ST apiHeaderST = group.getInstanceOf("apiHeader").add("api", api);
+    render(apiHeaderST, outputDir, "BaseApi.h");
+    ST apiST = group.getInstanceOf("api").add("api", api);
+    render(apiST, outputDir, "BaseApi.m");
   }
 
   @Override
   public String getDialectName() {
     return "objc";
+  }
+
+  private String getSafeName(String name) {
+    return name + (KEYWORDS.contains(name) ? "Property" : "");
   }
 
   /**
@@ -294,15 +303,18 @@ public class ObjcDialect implements Dialect {
         else if ("modifiers".equals(propertyName)) {
           List<String> modifiers = new ArrayList<String>();
           modifiers.add("strong");
-
+          String safeName = getSafeName(p.getName());
+          if (p.getType().getJsonKind().equals(JsonKind.BOOLEAN)) {
+            modifiers.add("getter=is" + upcase(safeName));
+          }
           // http://developer.apple.com/library/ios/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html
           if (p.getName().startsWith("new")) {
-            modifiers.add("getter=a" + upcase(p.getName()));
+            modifiers.add("getter=a" + upcase(safeName));
           }
           return modifiers;
         }
         else if ("safeName".equals(propertyName)) {
-          return p.getName() + (KEYWORDS.contains(p.getName()) ? "Property" : "");
+          return getSafeName(p.getName());
         }
 
         return super.getProperty(interp, self, o, property, propertyName);
