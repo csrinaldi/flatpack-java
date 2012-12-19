@@ -42,6 +42,8 @@ import com.getperka.flatpack.inject.PackScope;
 import com.getperka.flatpack.inject.PrettyPrint;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.IoObserver;
+import com.google.gson.JsonElement;
+import com.google.gson.internal.bind.JsonTreeWriter;
 import com.google.gson.stream.JsonWriter;
 
 /**
@@ -71,6 +73,30 @@ public class Packer {
   protected Packer() {}
 
   /**
+   * Pack the given entity into a json structure. If the entity is to be immediately written to a
+   * stream, consider using {@link #pack(FlatPackEntity, Writer)} instead.
+   * 
+   * @param entity the entity to serialize
+   * @return a json representation of the entity
+   */
+  public JsonElement pack(FlatPackEntity<?> entity) throws IOException {
+    JsonTreeWriter json = new JsonTreeWriter();
+    JsonElement toReturn;
+    json.setSerializeNulls(false);
+    packScope.enter().withEntity(entity).withJsonWriter(json);
+    try {
+      SerializationContext context = contexts.get();
+      doPack(entity, context);
+      toReturn = json.get();
+      context.runPostWork();
+      context.close();
+    } finally {
+      packScope.exit();
+    }
+    return toReturn;
+  }
+
+  /**
    * Write the given entity into a {@link Writer}.
    * 
    * @param entity the entity to write
@@ -86,7 +112,10 @@ public class Packer {
 
     packScope.enter().withEntity(entity).withJsonWriter(json);
     try {
-      pack(entity);
+      SerializationContext context = contexts.get();
+      doPack(entity, context);
+      context.runPostWork();
+      context.close();
     } finally {
       packScope.exit();
     }
@@ -122,9 +151,7 @@ public class Packer {
     return toReturn;
   }
 
-  private void pack(FlatPackEntity<?> entity) throws IOException {
-    SerializationContext context = contexts.get(); // injector.getInstance(SerializationContext.class);
-
+  private void doPack(FlatPackEntity<?> entity, SerializationContext context) throws IOException {
     @SuppressWarnings("unchecked")
     Codex<Object> codex = (Codex<Object>) typeContext.getCodex(entity.getType());
     if (entity.getTraversalMode().isSparse()) {
@@ -219,9 +246,5 @@ public class Packer {
       json.endObject(); // warnings
     }
     json.endObject(); // core payload
-
-    context.runPostWork();
-    context.close();
   }
-
 }

@@ -44,6 +44,7 @@ import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.internal.bind.JsonTreeReader;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
@@ -72,6 +73,25 @@ public class Unpacker {
   private TypeContext typeContext;
 
   protected Unpacker() {}
+
+  /**
+   * Reify a {@link FlatPackEntity} from an in-memory json representation.
+   * 
+   * @param <T> the type of data to return
+   * @param returnType a reference to {@code T}
+   * @param in the source of the serialized data
+   * @param principal the identity for which the unpacking is occurring
+   * @return the reified {@link FlatPackEntity}.
+   */
+  public <T> FlatPackEntity<T> unpack(Type returnType, JsonElement in, Principal principal)
+      throws IOException {
+    packScope.enter().withPrincipal(principal);
+    try {
+      return unpack(returnType, new JsonTreeReader(in), principal);
+    } finally {
+      packScope.exit();
+    }
+  }
 
   /**
    * Reify a {@link FlatPackEntity} from its serialized form.
