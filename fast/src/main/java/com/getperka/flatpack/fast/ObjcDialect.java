@@ -132,10 +132,16 @@ public class ObjcDialect implements Dialect {
   }
 
   private String getBuilderReturnType(EndpointDescription end) {
+    // if the endpoint has no query parameters, we can simply use the FPFlatpackRequest
+    if (end.getQueryParameters() == null || end.getQueryParameters().size() == 0) {
+      return "FPFlatpackRequest";
+    }
+
     // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
     String path = end.getPath();
     String[] parts = path.split(Pattern.quote("/"));
     StringBuilder sb = new StringBuilder();
+    sb.append(classPrefix);
     sb.append(upcase(end.getMethod().toLowerCase()));
     for (int i = 3, j = parts.length; i < j; i++) {
       try {
@@ -228,7 +234,6 @@ public class ObjcDialect implements Dialect {
             if ("importNames".equals(propertyName)) {
               List<String> imports = new ArrayList<String>();
               for (EndpointDescription e : apiDescription.getEndpoints()) {
-                imports.add(getBuilderReturnType(e));
                 if (e.getEntity() != null) {
                   imports.add(objcTypeForType(e.getEntity()));
                 }
@@ -267,6 +272,10 @@ public class ObjcDialect implements Dialect {
               }
 
               return sb.toString();
+            }
+
+            if ("requestBuilderClassName".equals(propertyName)) {
+              return getBuilderReturnType(end);
             }
 
             else if ("pathDecoded".equals(propertyName)) {
@@ -359,8 +368,8 @@ public class ObjcDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             ParameterDescription param = (ParameterDescription) o;
-            if ("underscoreName".equals(propertyName)) {
-              return param.getName();
+            if ("requireName".equals(propertyName)) {
+              return upcase(param.getName());
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }

@@ -111,89 +111,73 @@ docString(docString) ::= <<
 <if(docString)>// <docString.chunks; wrap="\n// ", separator=" "><endif>
 >>
 
+endpointDeclaration(endpoint) ::= <<
+<endpoint.methodName>
+>>
+
+endpointRequestInterface(endpoint) ::= <<
+<if(endpoint.queryParameters)>
+
+@interface <endpoint.requestBuilderClassName> : FPFlatpackRequest
+  <endpoint.queryParameters:{p | -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name>;}; separator="\n">
+@end
+<endif>
+>>
+
+endpointRequestImplementation(endpoint) ::= <<
+<if(endpoint.queryParameters)>
+
+@implementation <endpoint.requestBuilderClassName>
+<endpoint.queryParameters:{p |
+  -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name> {
+    [self setQueryParameterWithName:@"<p.name>" value:<p.name>];
+    return self;
+  \}}; separator="\n">
+@end
+<endif>
+>>
+
 apiHeader(api) ::= <<
 // Generated File - DO NOT EDIT
 
 #import \<Foundation/Foundation.h\>
 #import "FPBaseApi.h"
 #import "FPBaseHasUuid.h"
+#import "FPFlatpackRequest.h"
 
 <api.importNames:{n | @class <n>;}; separator="\n">
+<api.endpoints:endpointRequestInterface(); separator="">
+@interface <names.classPrefix>BaseApi : FPBaseApi
 
-@interface PerkaBaseApi : FPBaseApi
+<api.endpoints:{e | 
+  <docString(e.docString)>
+  <endpointDeclaration(e)>;
+ }; separator="\n">
 
-<api.endpoints:endpointInterface(); separator="\n\n">
 @end
->>
 
-endpointInterface(endpoint) ::= <<
-  <docString(endpoint.docString)>
-  <endpoint.methodName>;
 >>
 
 api(api) ::= <<
 // Generated File - DO NOT EDIT
 
-#import "PerkaBaseApi.h"
-
-@implementation PerkaBaseApi
-
-@end
->>
-
-/**
- * Select the kind of endpoint, either one that's documented to return a FlatPackEntity
- * or just return a HttpURLConnection for anything else.
- */
-endpoint(end) ::= <<
-<docString(end.docString)>
-def <end.methodName><endpointArgList()>
+#import "<names.classPrefix>BaseApi.h"
+<api.importNames:{n | #import "<n>.h"}; separator="\n">
+<api.endpoints:endpointRequestImplementation()>
+@implementation <names.classPrefix>BaseApi
+<api.endpoints:{end |
+  <endpointDeclaration(end)> {
   <if(end.queryParameters)>
-  to_return = <end.className>.new(self<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>)
+    <end.requestBuilderClassName> *request = [[<end.requestBuilderClassName> alloc] initWithApi:self
+      method:@"<end.method>"
+      path:@"<end.pathDecoded>"<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>];
   <else>
-  to_return = Flatpack::Client::<if(end.returnType)>FlatpackRequest<else>Request<endif>.new(self, "<end.method>", "<end.pathDecoded>"<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>)
+    <if(end.returnType)>FPFlatpackRequest<else>FPBaseRequest<endif> *request = [[<if(end.returnType)>FPFlatpackRequest<else>FPBaseRequest<endif> alloc] initWithApi:self
+      method:@"<end.method>"
+      path:@"<end.pathDecoded>"<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>];
   <endif>
-  <if(end.entity)>to_return.entity = entity<endif>
-  to_return
-end
-
->>
-
-endpointPrivate(end) ::= <<
-<if(end.queryParameters)>
-class <end.className> \< Flatpack::Client::<if(end.returnType)>FlatpackRequest<else>Request<endif>
-    
-  def initialize(api, *args)
-    super(api, "<end.method>", "<end.pathDecoded>", *args)
-  end
-      
-  <end.queryParameters:endpointQueryParameterStub(); separator="\n">
-end
-    
-<endif>
->>
-
-endpointArgList() ::= <%
-<if(end.entity && end.pathParameters)>
-  (entity, <end.pathParameters:{x |<x.name>}; separator=", ">)
-<elseif(end.entity)>
-  (entity)
-<elseif(end.pathParameters)>
-  (<end.pathParameters:{x |<x.name>}; separator=", ">)
-<endif>
-%>
-
-/**
- * The names of the path parameter arguments.
- */
-endpointPathParameters() ::= <%
-<end.pathParameters:{x |<x.name>}; separator=", ">
-%>
-
-endpointQueryParameterStub(param) ::= <<
-<docString(param.docString)>
-def with_<param.underscoreName>(<param.underscoreName>)
-  query_parameter('<param.name>', <param.underscoreName>);
-end
-
+    <if(end.entity)>[request setEntity:<end.entity.name>];<endif>
+    return request; 
+  \}}; separator="\n\n">
+@end
 >>
