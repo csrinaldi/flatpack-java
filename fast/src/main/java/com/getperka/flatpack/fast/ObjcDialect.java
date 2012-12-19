@@ -71,6 +71,10 @@ public class ObjcDialect implements Dialect {
 
   private static final Logger logger = LoggerFactory.getLogger(ObjcDialect.class);
 
+  private static String downcase(String s) {
+    return Character.toLowerCase(s.charAt(0)) + s.substring(1);
+  }
+
   private static String upcase(String s) {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
@@ -127,6 +131,69 @@ public class ObjcDialect implements Dialect {
     return "objc";
   }
 
+  private String getBuilderReturnType(EndpointDescription end) {
+    // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
+    String path = end.getPath();
+    String[] parts = path.split(Pattern.quote("/"));
+    StringBuilder sb = new StringBuilder();
+    sb.append(upcase(end.getMethod().toLowerCase()));
+    for (int i = 3, j = parts.length; i < j; i++) {
+      try {
+        String part = parts[i];
+        if (part.length() == 0) {
+          continue;
+        }
+        StringBuilder decodedPart = new StringBuilder(URLDecoder
+            .decode(part, "UTF8"));
+        // Trim characters that aren't legal
+        for (int k = decodedPart.length() - 1; k >= 0; k--) {
+          if (!Character.isJavaIdentifierPart(decodedPart.charAt(k))) {
+            decodedPart.deleteCharAt(k);
+          }
+        }
+        // Append the new name part, using camel-cased names
+        String newPart = decodedPart.toString();
+        if (sb.length() > 0) {
+          newPart = upcase(newPart);
+        }
+        sb.append(newPart);
+      } catch (UnsupportedEncodingException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    sb.append("Request");
+
+    return upcase(sb.toString());
+  }
+
+  private String getMethodizedPath(EndpointDescription end) {
+    String path = end.getPath();
+    String[] parts = path.split(Pattern.quote("/"));
+    StringBuilder sb = new StringBuilder();
+    sb.append(end.getMethod().toLowerCase());
+    int paramCount = 0;
+    for (int i = 3, j = parts.length; i < j; i++) {
+      String part = parts[i];
+      if (part.length() == 0) continue;
+
+      if (part.startsWith("{") && part.endsWith("}")) {
+        String name = part.substring(1, part.length() - 1);
+        sb.append(paramCount > 0 ? name : upcase(name));
+        sb.append(":(NSString *)" + name);
+        if (i < parts.length - 1) {
+          sb.append(" ");
+        }
+        paramCount++;
+      }
+
+      else {
+        sb.append(upcase(part));
+      }
+    }
+
+    return sb.toString();
+  }
+
   private String getSafeName(String name) {
     return name + (KEYWORDS.contains(name) ? "Property" : "");
   }
@@ -151,6 +218,27 @@ public class ObjcDialect implements Dialect {
       }
     });
 
+    group.registerModelAdaptor(ApiDescription.class,
+        new ObjectModelAdaptor() {
+          @Override
+          public Object getProperty(Interpreter interp, ST self, Object o,
+              Object property, String propertyName)
+              throws STNoSuchPropertyException {
+            ApiDescription apiDescription = (ApiDescription) o;
+            if ("importNames".equals(propertyName)) {
+              List<String> imports = new ArrayList<String>();
+              for (EndpointDescription e : apiDescription.getEndpoints()) {
+                imports.add(getBuilderReturnType(e));
+                if (e.getEntity() != null) {
+                  imports.add(objcTypeForType(e.getEntity()));
+                }
+              }
+              return imports;
+            }
+            return super.getProperty(interp, self, o, property, propertyName);
+          }
+        });
+
     group.registerModelAdaptor(EndpointDescription.class,
         new ObjectModelAdaptor() {
           @Override
@@ -158,40 +246,30 @@ public class ObjcDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             EndpointDescription end = (EndpointDescription) o;
-            if ("className".equals(propertyName) || "methodName".equals(propertyName)) {
-              // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
-              String path = end.getPath();
-              String[] parts = path.split(Pattern.quote("/"));
+            if ("methodName".equals(propertyName)) {
               StringBuilder sb = new StringBuilder();
-              for (int i = 3, j = parts.length; i < j; i++) {
-                try {
-                  String part = parts[i];
-                  if (part.length() == 0) {
-                    continue;
-                  }
-                  StringBuilder decodedPart = new StringBuilder(URLDecoder
-                      .decode(part, "UTF8"));
-                  // Trim characters that aren't legal
-                  for (int k = decodedPart.length() - 1; k >= 0; k--) {
-                    if (!Character.isJavaIdentifierPart(decodedPart.charAt(k))) {
-                      decodedPart.deleteCharAt(k);
-                    }
-                  }
-                  // Append the new name part, using camel-cased names
-                  String newPart = decodedPart.toString();
-                  if (sb.length() > 0) {
-                    newPart = upcase(newPart);
-                  }
-                  sb.append(newPart);
-                } catch (UnsupportedEncodingException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-              sb.append(upcase(end.getMethod().toLowerCase()));
-              String name = sb.toString();
 
-              return "className".equals(propertyName) ? upcase(name) : name;
-            } else if ("pathDecoded".equals(propertyName)) {
+              sb.append("- (" + getBuilderReturnType(end) + " *)");
+
+              sb.append(getMethodizedPath(end));
+
+              if (end.getEntity() != null) {
+                if (end.getPathParameters() != null && end.getPathParameters().size() > 0) {
+                  sb.append(" entity");
+                }
+                String type = objcTypeForType(end.getEntity());
+                sb.append(":(" + type + " *)");
+                String paramName = type;
+                if (type.startsWith(classPrefix)) {
+                  paramName = downcase(type.substring(classPrefix.length()));
+                }
+                sb.append(paramName);
+              }
+
+              return sb.toString();
+            }
+
+            else if ("pathDecoded".equals(propertyName)) {
               // URL-decode the path in the endpoint description
               try {
                 String decoded = URLDecoder.decode(end.getPath(), "UTF8");
@@ -407,17 +485,38 @@ public class ObjcDialect implements Dialect {
     return group;
   }
 
+  private String objcFlatpackReturnType(Type type) {
+    String returnType = "void";
+    if (type != null) {
+      if (type.getListElement() != null) {
+        returnType = "NSArray *";
+      }
+      else if (type.getMapKey() != null) {
+        returnType = "NSDictionary *";
+      }
+      else if (type.getName() != null) {
+        returnType = objcTypeForType(type) + " *";
+      }
+    }
+    return returnType;
+  }
+
   private String objcTypeForProperty(Property p) {
     if (p.isEmbedded()) {
       return classPrefix + upcase(p.getType().getName());
     }
 
-    if (p.getType().getName() != null) {
-      return classPrefix + upcase(p.getType().getName());
+    return objcTypeForType(p.getType());
+  }
+
+  private String objcTypeForType(Type type) {
+
+    if (type.getName() != null) {
+      return classPrefix + upcase(type.getName());
     }
 
     String objcType = "nil";
-    switch (p.getType().getJsonKind()) {
+    switch (type.getJsonKind()) {
       case BOOLEAN:
         objcType = "NSNumber";
         break;
@@ -447,6 +546,7 @@ public class ObjcDialect implements Dialect {
     }
 
     return objcType;
+
   }
 
   private void render(ST enumST, File packageDir, String fileName)

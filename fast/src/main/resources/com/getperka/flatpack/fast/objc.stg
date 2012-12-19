@@ -116,10 +116,19 @@ apiHeader(api) ::= <<
 
 #import \<Foundation/Foundation.h\>
 #import "FPBaseApi.h"
+#import "FPBaseHasUuid.h"
+
+<api.importNames:{n | @class <n>;}; separator="\n">
 
 @interface PerkaBaseApi : FPBaseApi
 
+<api.endpoints:endpointInterface(); separator="\n\n">
 @end
+>>
+
+endpointInterface(endpoint) ::= <<
+  <docString(endpoint.docString)>
+  <endpoint.methodName>;
 >>
 
 api(api) ::= <<
