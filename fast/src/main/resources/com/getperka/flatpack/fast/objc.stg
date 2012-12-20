@@ -170,11 +170,17 @@ api(api) ::= <<
   <if(end.queryParameters)>
     <end.requestBuilderClassName> *request = [[<end.requestBuilderClassName> alloc] initWithApi:self
       method:@"<end.method>"
-      path:@"<end.pathDecoded>"<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>];
+      path:@"<end.pathDecoded>"<if(!end.pathParameters)>];<endif>
+    <if(end.pathParameters)>
+      pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
+    <endif>
   <else>
     <if(end.returnType)>FPFlatpackRequest<else>FPBaseRequest<endif> *request = [[<if(end.returnType)>FPFlatpackRequest<else>FPBaseRequest<endif> alloc] initWithApi:self
       method:@"<end.method>"
-      path:@"<end.pathDecoded>"<if(end.pathParameters)>, <end.pathParameters:{x|<x.name>}; separator=", "><endif>];
+      path:@"<end.pathDecoded>"<if(!end.pathParameters)>];<endif>
+    <if(end.pathParameters)>
+      pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
+    <endif>
   <endif>
     <if(end.entity)>[request setEntity:<end.entity.name>];<endif>
     return request; 
