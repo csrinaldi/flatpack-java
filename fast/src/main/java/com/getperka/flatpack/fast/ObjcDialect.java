@@ -12,11 +12,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+
+import static org.jvnet.inflector.Noun.pluralOf;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,9 +137,9 @@ public class ObjcDialect implements Dialect {
 
   private String getBuilderReturnType(EndpointDescription end) {
     // if the endpoint has no query parameters, we can simply use the FPFlatpackRequest
-    if (end.getQueryParameters() == null || end.getQueryParameters().size() == 0) {
-      return "FPFlatpackRequest";
-    }
+    // if (end.getQueryParameters() == null || end.getQueryParameters().size() == 0) {
+    // return "FPFlatpackRequest";
+    // }
 
     // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
     String path = end.getPath();
@@ -204,6 +208,10 @@ public class ObjcDialect implements Dialect {
     return name + (KEYWORDS.contains(name) ? "Property" : "");
   }
 
+  private boolean isRequiredImport(String type) {
+    return type != null && !type.equalsIgnoreCase("nil") && !type.startsWith("NS");
+  }
+
   /**
    * Load {@code objc.stg} from the classpath and configure a number of model adaptors to add
    * virtual properties to the objects being rendered.
@@ -232,10 +240,19 @@ public class ObjcDialect implements Dialect {
               throws STNoSuchPropertyException {
             ApiDescription apiDescription = (ApiDescription) o;
             if ("importNames".equals(propertyName)) {
-              List<String> imports = new ArrayList<String>();
+              Set<String> imports = new HashSet<String>();
               for (EndpointDescription e : apiDescription.getEndpoints()) {
                 if (e.getEntity() != null) {
-                  imports.add(objcTypeForType(e.getEntity()));
+                  String type = objcTypeForType(e.getEntity());
+                  if (isRequiredImport(type)) {
+                    imports.add(type);
+                  }
+                }
+                if (e.getReturnType() != null) {
+                  String type = objcTypeForType(e.getReturnType());
+                  if (isRequiredImport(type)) {
+                    imports.add(type);
+                  }
                 }
               }
               return imports;
@@ -274,8 +291,35 @@ public class ObjcDialect implements Dialect {
               return sb.toString();
             }
 
-            if ("requestBuilderClassName".equals(propertyName)) {
+            else if ("requestBuilderClassName".equals(propertyName)) {
               return getBuilderReturnType(end);
+            }
+
+            else if ("requestBuilderBlockName".equals(propertyName)) {
+              return getBuilderReturnType(end) + "Block";
+            }
+
+            else if ("entityReturnType".equals(propertyName)) {
+              String type = objcFlatpackReturnType(end.getReturnType());
+              return type.equals("void") ? null : type;
+            }
+
+            else if ("entityReturnName".equals(propertyName)) {
+              if (end.getReturnType() == null) return null;
+
+              String name = "result";
+              if (end.getReturnType().getName() != null) {
+                name = end.getReturnType().getName();
+              }
+
+              if (end.getReturnType().getListElement() != null) {
+                if (end.getReturnType().getListElement().getName() != null) {
+                  name = end.getReturnType().getListElement().getName();
+                }
+                name = pluralOf(name);
+              }
+
+              return name;
             }
 
             else if ("pathDecoded".equals(propertyName)) {
@@ -521,7 +565,12 @@ public class ObjcDialect implements Dialect {
   private String objcTypeForType(Type type) {
 
     if (type.getName() != null) {
-      return classPrefix + upcase(type.getName());
+      String name = type.getName();
+      String prefix = classPrefix;
+      if (name.equalsIgnoreCase("baseHasUuid")) {
+        prefix = "FP";
+      }
+      return prefix + upcase(type.getName());
     }
 
     String objcType = "nil";

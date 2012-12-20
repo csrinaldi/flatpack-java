@@ -116,25 +116,31 @@ endpointDeclaration(endpoint) ::= <<
 >>
 
 endpointRequestInterface(endpoint) ::= <<
-<if(endpoint.queryParameters)>
-
 @interface <endpoint.requestBuilderClassName> : FPFlatpackRequest
   <endpoint.queryParameters:{p | -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name>;}; separator="\n">
+  -(void)executeUsingBlock:(<endpoint.requestBuilderBlockName>)block;
 @end
-<endif>
 >>
 
 endpointRequestImplementation(endpoint) ::= <<
-<if(endpoint.queryParameters)>
-
 @implementation <endpoint.requestBuilderClassName>
-<endpoint.queryParameters:{p |
-  -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name> {
+  <if(endpoint.queryParameters)>
+  <endpoint.queryParameters:endpointWithMethod(); separator="\n\n">
+  
+  <endif>
+  -(void)executeUsingBlock:(<endpoint.requestBuilderBlockName>)block {
+    [self genericExecuteUsingBlock:^(id result) {
+      if(block != nil) block(result);
+    }];
+  }
+@end
+>>
+
+endpointWithMethod(p) ::= <<
+ -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name> {
     [self setQueryParameterWithName:@"<p.name>" value:<p.name>];
     return self;
-  \}}; separator="\n">
-@end
-<endif>
+  }
 >>
 
 apiHeader(api) ::= <<
@@ -146,7 +152,11 @@ apiHeader(api) ::= <<
 #import "FPFlatpackRequest.h"
 
 <api.importNames:{n | @class <n>;}; separator="\n">
-<api.endpoints:endpointRequestInterface(); separator="">
+
+<api.endpoints:{e | typedef void(^<e.requestBuilderBlockName>)(<if(e.entityReturnType)><e.entityReturnType><e.entityReturnName><endif>);}; separator="\n">
+
+<api.endpoints:endpointRequestInterface(); separator="\n\n">
+
 @interface <names.classPrefix>BaseApi : FPBaseApi
 
 <api.endpoints:{e | 
@@ -163,25 +173,18 @@ api(api) ::= <<
 
 #import "<names.classPrefix>BaseApi.h"
 <api.importNames:{n | #import "<n>.h"}; separator="\n">
-<api.endpoints:endpointRequestImplementation()>
+
+<api.endpoints:endpointRequestImplementation(); separator="\n\n">
+
 @implementation <names.classPrefix>BaseApi
 <api.endpoints:{end |
   <endpointDeclaration(end)> {
-  <if(end.queryParameters)>
     <end.requestBuilderClassName> *request = [[<end.requestBuilderClassName> alloc] initWithApi:self
       method:@"<end.method>"
       path:@"<end.pathDecoded>"<if(!end.pathParameters)>];<endif>
     <if(end.pathParameters)>
       pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
     <endif>
-  <else>
-    <if(end.returnType)>FPFlatpackRequest<else>FPBaseRequest<endif> *request = [[<if(end.returnType)>FPFlatpackRequest<else>FPBaseRequest<endif> alloc] initWithApi:self
-      method:@"<end.method>"
-      path:@"<end.pathDecoded>"<if(!end.pathParameters)>];<endif>
-    <if(end.pathParameters)>
-      pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
-    <endif>
-  <endif>
     <if(end.entity)>[request setEntity:<end.entity.name>];<endif>
     return request; 
   \}}; separator="\n\n">
