@@ -49,6 +49,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.UriBuilder;
 
 import com.getperka.flatpack.FlatPack;
+import com.getperka.flatpack.FlatPackEntity;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.TypeReference;
 import com.getperka.flatpack.client.dto.ApiDescription;
@@ -367,6 +368,12 @@ public class ApiDescriber {
    * referenced entities.
    */
   private Type reference(java.lang.reflect.Type t) {
+    // If t is a FlatPackEntity<Foo>, return a description of Foo
+    java.lang.reflect.Type referencedEntityType =
+        FlatPackTypes.getSingleParameterization(t, FlatPackEntity.class);
+    if (referencedEntityType != null) {
+      t = referencedEntityType;
+    }
     Type type = ctx.getCodex(t).describe();
     reference(type);
     return type;
