@@ -1,5 +1,7 @@
 package com.getperka.flatpack.fast;
 
+import static org.jvnet.inflector.Noun.pluralOf;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -18,9 +20,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static org.jvnet.inflector.Noun.pluralOf;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,6 +134,48 @@ public class ObjcDialect implements Dialect {
   @Override
   public String getDialectName() {
     return "objc";
+  }
+
+  /**
+   * Converts the given docString to be doxygen compatible
+   * 
+   * @param docString
+   * @return
+   */
+  private String doxygenDocString(String docString) {
+    if (docString == null) return docString;
+
+    String newDocString = docString;
+    try {
+      // replace <entityReference> tags with /link /endlink pairs
+      Pattern regex = Pattern.compile(
+          "<entityReference payloadName='([^']*)'>([^<]*)</entityReference>",
+          Pattern.CASE_INSENSITIVE);
+      Matcher matcher = regex.matcher(docString);
+      while (matcher.find()) {
+        Type type = new Type.Builder().withName(matcher.group(1).trim()).build();
+        String objcType = objcTypeForType(type);
+
+        String link = "\\\\link " + objcType + " " +
+          matcher.group(2).trim() + " \\\\endlink";
+        newDocString = newDocString.replaceAll(matcher.group(0), link);
+      }
+
+      // replace #getFoo() method calls to #foo() method calls
+      regex = Pattern.compile(
+          "#get([^(]*)" + Pattern.quote("()"),
+          Pattern.CASE_INSENSITIVE);
+      matcher = regex.matcher(docString);
+      while (matcher.find()) {
+        String newMethod = "#" + downcase(matcher.group(1));
+        newDocString = newDocString.replaceAll(matcher.group(0), newMethod);
+      }
+    }
+
+    catch (Exception e) {
+      logger.error("Couldn't doxygenize doc string: " + docString, e);
+    }
+    return newDocString;
   }
 
   private String getBuilderReturnType(EndpointDescription end) {
@@ -268,7 +311,10 @@ public class ObjcDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             EndpointDescription end = (EndpointDescription) o;
-            if ("methodName".equals(propertyName)) {
+            if ("docString".equals(propertyName)) {
+              return doxygenDocString(end.getDocString());
+            }
+            else if ("methodName".equals(propertyName)) {
               StringBuilder sb = new StringBuilder();
 
               sb.append("- (" + getBuilderReturnType(end) + " *)");
@@ -343,7 +389,10 @@ public class ObjcDialect implements Dialect {
               throws STNoSuchPropertyException {
 
             EntityDescription entity = (EntityDescription) o;
-            if ("payloadName".equals(propertyName)) {
+            if ("docString".equals(propertyName)) {
+              return doxygenDocString(entity.getDocString());
+            }
+            else if ("payloadName".equals(propertyName)) {
               return entity.getTypeName();
             }
 
@@ -425,7 +474,10 @@ public class ObjcDialect implements Dialect {
           Object property, String propertyName)
           throws STNoSuchPropertyException {
         Property p = (Property) o;
-        if ("requireName".equals(propertyName)) {
+        if ("docString".equals(propertyName)) {
+          return doxygenDocString(p.getDocString());
+        }
+        else if ("requireName".equals(propertyName)) {
           return requireNameForType(p.getType().getName());
         }
         else if ("objcType".equals(propertyName)) {

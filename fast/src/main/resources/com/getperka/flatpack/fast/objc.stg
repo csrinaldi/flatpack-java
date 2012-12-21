@@ -108,7 +108,8 @@ propertyAdd(property) ::= <<
  * Emit a doc string, reflowed to fit the current context.
  */
 docString(docString) ::= <<
-<if(docString)>// <docString.chunks; wrap="\n// ", separator=" "><endif>
+<if(docString)>/** <docString.chunks; wrap="\n*   ", separator=" ">
+*/<endif>
 >>
 
 endpointDeclaration(endpoint) ::= <<
