@@ -389,6 +389,26 @@ public class ObjcDialect implements Dialect {
               throws STNoSuchPropertyException {
 
             EntityDescription entity = (EntityDescription) o;
+            if ("importNames".equals(propertyName)) {
+              Set<String> imports = new HashSet<String>();
+              String type = requireNameForType(entity.getTypeName());
+              if (isRequiredImport(type)) {
+                imports.add(type);
+              }
+              for (Property p : entity.getProperties()) {
+                String name = null;
+                if (p.getType().getListElement() != null) {
+                  name = objcTypeForType(p.getType().getListElement());
+                }
+                else if (p.getType().getEnumValues() == null) {
+                  name = objcTypeForProperty(p);
+                }
+                if (name != null && isRequiredImport(name)) {
+                  imports.add(name);
+                }
+              }
+              return imports;
+            }
             if ("docString".equals(propertyName)) {
               return doxygenDocString(entity.getDocString());
             }
@@ -498,6 +518,19 @@ public class ObjcDialect implements Dialect {
         }
         else if ("safeName".equals(propertyName)) {
           return getSafeName(p.getName());
+        }
+        else if ("upcaseName".equals(propertyName)) {
+          return upcase(getSafeName(p.getName()));
+        }
+        else if ("listElementObjcType".equals(propertyName)) {
+          return objcTypeForType(p.getType().getListElement());
+        }
+        else if ("singularUpcaseName".equals(propertyName)) {
+          if (p.getType().getListElement() != null) {
+            String type = objcTypeForType(p.getType().getListElement());
+            return type.substring(2);
+          }
+          return upcase(p.getName());
         }
 
         return super.getProperty(interp, self, o, property, propertyName);

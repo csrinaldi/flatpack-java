@@ -25,13 +25,20 @@ entityHeader(entity) ::= <<
 #import "<entity.supertype.requireName>.h"
 <endif>
 
-<entity.entityProperties:{p | @class <p.requireName>;}; wrap, separator="\n">
+<entity.importNames:{n | @class <n>;}; wrap, separator="\n">
 
 <docString(entity.docString)>
 @interface <entity.requireName> : <entity.supertype.requireName>
 
 <if(entity.properties)>
 <entity.properties:property(); separator="\n\n">
+<endif>
+
+<if(entity.collectionProperties)>
+<entity.collectionProperties:{p | 
+/** Adds an item to the <p.name> collection while maintaining a proper bi-directional association
+*/
+- (void)addItemTo<p.upcaseName>:(<p.listElementObjcType> *)item;}; wrap, separator="\n\n">
 <endif>
 
 @end
@@ -42,13 +49,15 @@ entity(entity) ::= <<
 // Generated File - DO NOT EDIT
 
 #import "<entity.requireName>.h"
-<entity.entityProperties:{p | #import "<p.requireName>.h"}; wrap, separator="\n">
+<entity.importNames:{n | #import "<n>.h"}; wrap, separator="\n">
 #import "FPBaseHasUuid.h"
 #import "FPEntityDescription.h"
 #import "FPProperty.h"
 #import "NSObject+FP.h"
 
 @implementation <entity.requireName>
+
+<entity.collectionProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
 
 static FPEntityDescription *_entityDescription;
 static NSMutableArray *_allProperties;
@@ -57,7 +66,6 @@ static NSMutableArray *_allProperties;
   [super initialize];
   
   _allProperties = [NSMutableArray array];
-  
   <entity.properties:propertyAdd(); separator="\n\n">
   
   _entityDescription = [FPEntityDescription newWithDictionary:@{
@@ -83,9 +91,36 @@ static NSMutableArray *_allProperties;
   }
   return self;
 }
+
+// provide collection setters to allow non-mutable collections to be set,
+// and convenience methods to allow new items to be added to our collections
+// while maintaining bi-directional relationships
+
+<entity.collectionProperties:entityCollectionAccessors(); separator="\n\n">
+
 <endif>
 
 @end
+>>
+
+entityCollectionAccessors(property) ::= <<
+- (NSMutableArray *)<property.name> {
+  return _<property.name>;
+}
+- (void)set<property.upcaseName>:(NSMutableArray *)<property.safeName> {
+  _<property.safeName> = [<property.safeName> mutableCopy];
+  <if(property.impliedProperty)>
+  [_<property.safeName> enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+    [obj setValue:self forKey:@"<property.impliedProperty.name>"];
+  }];
+  <endif>
+}
+- (void)addItemTo<property.upcaseName>:(<property.listElementObjcType> *)item {
+  [_<property.safeName> addObject:item];
+  <if(property.impliedProperty)>
+  [item setValue:self forKey:@"<property.impliedProperty.name>"];
+  <endif>
+}
 >>
 
 property(property) ::= <%
