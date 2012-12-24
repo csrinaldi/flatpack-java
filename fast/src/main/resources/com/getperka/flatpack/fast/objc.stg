@@ -57,6 +57,7 @@ entity(entity) ::= <<
 
 @implementation <entity.requireName>
 
+<entity.entityProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
 <entity.collectionProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
 
 static FPEntityDescription *_entityDescription;
@@ -91,19 +92,15 @@ static NSMutableArray *_allProperties;
   }
   return self;
 }
-
-// provide collection setters to allow non-mutable collections to be set,
-// and convenience methods to allow new items to be added to our collections
-// while maintaining bi-directional relationships
-
-<entity.collectionProperties:entityCollectionAccessors(); separator="\n\n">
-
 <endif>
-
+<entity.properties:entityAccessors()>
 @end
 >>
 
-entityCollectionAccessors(property) ::= <<
+entityAccessors(property) ::= <<
+<if(property.type.listElement)>
+
+// <property.safeName> one-to-many accessors to maintain bi-directional relationships
 - (NSMutableArray *)<property.name> {
   return _<property.name>;
 }
@@ -121,6 +118,19 @@ entityCollectionAccessors(property) ::= <<
   [item setValue:self forKey:@"<property.impliedProperty.name>"];
   <endif>
 }
+<elseif(property.type.name && property.impliedProperty)>
+
+// <property.safeName> many-to-one accessors to maintain bi-directional relationships
+- (<property.objcType> *)<property.name>{
+  return _<property.name>;
+}
+- (void)set<property.upcaseName>:(<property.objcType> *)<property.name> {
+  _<property.name> = <property.name>;
+  if(![[_<property.name> <property.impliedProperty.name>] containsObject:self]) {
+    [[_<property.name> <property.impliedProperty.name>] addObject:self];
+  }
+}
+<endif>
 >>
 
 property(property) ::= <%
