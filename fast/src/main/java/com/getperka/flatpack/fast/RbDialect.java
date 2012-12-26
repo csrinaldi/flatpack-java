@@ -184,8 +184,8 @@ public class RbDialect implements Dialect {
   }
 
   /**
-   * Load {@code java.stg} from the classpath and configure a number of model adaptors to add
-   * virtual properties to the objects being rendered.
+   * Load {@code rb.stg} from the classpath and configure a number of model adaptors to add virtual
+   * properties to the objects being rendered.
    */
   private STGroup loadGroup() {
 

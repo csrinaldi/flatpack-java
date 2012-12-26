@@ -1,0 +1,242 @@
+/*
+ * #%L
+ * FlatPack Automatic Source Tool
+ * %%
+ * Copyright (C) 2012 Perka Inc.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+entityHeader(entity) ::= <<
+// Generated File - DO NOT EDIT
+
+#import \<Foundation/Foundation.h\>
+<if(entity.supertype.requireName)>
+#import "<entity.supertype.requireName>.h"
+<endif>
+
+<entity.importNames:{n | @class <n>;}; wrap, separator="\n">
+
+<docString(entity.docString)>
+@interface <entity.requireName> : <entity.supertype.requireName>
+
+<if(entity.properties)>
+<entity.properties:property(); separator="\n\n">
+<endif>
+
+<if(entity.collectionProperties)>
+<entity.collectionProperties:{p | 
+/** Adds an item to the <p.name> collection while maintaining a proper bi-directional association
+*/
+- (void)addItemTo<p.upcaseName>:(<p.listElementObjcType> *)item;}; wrap, separator="\n\n">
+<endif>
+
+@end
+
+>>
+
+entity(entity) ::= <<
+// Generated File - DO NOT EDIT
+
+<entity.importNames:{n | #import "<n>.h"}; wrap, separator="\n">
+#import "FPBaseHasUuid.h"
+#import "FPEntityDescription.h"
+#import "FPProperty.h"
+#import "NSObject+FP.h"
+
+@implementation <entity.requireName>
+
+<entity.entityProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
+<entity.collectionProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
+
+static FPEntityDescription *_entityDescription;
+static NSMutableArray *_allProperties;
+
++ (void)load {
+  [super load];
+  
+  _allProperties = [NSMutableArray array];
+  <entity.properties:propertyAdd(); separator="\n\n">
+  
+  _entityDescription = [FPEntityDescription newWithDictionary:@{
+    @"typeName":@"<entity.typeName>",
+    @"superType":[<entity.supertype.requireName> entityDescription],
+    @"kind":[<entity.requireName> class],
+    @"properties":_allProperties 
+  }];
+  
+  [FPEntityDescription setEntityDescription:_entityDescription forName:@"<entity.typeName>"];
+}
+
++ (FPEntityDescription *)entityDescription {
+  return _entityDescription;
+}
+
+<if(entity.collectionProperties)>
+// initialize collection properties
+- (id)init {
+  self = [super init];
+  if(self != nil) {
+    <entity.collectionProperties:{p | _<p.name> = [<p.objcType> new];}; separator="\n">
+  }
+  return self;
+}
+<endif>
+<entity.properties:entityAccessors()>
+@end
+>>
+
+entityAccessors(property) ::= <<
+<if(property.type.listElement)>
+
+// <property.safeName> one-to-many accessors to maintain bi-directional relationships
+- (NSMutableArray *)<property.name> {
+  return _<property.name>;
+}
+- (void)set<property.upcaseName>:(NSMutableArray *)<property.safeName> {
+  _<property.safeName> = [<property.safeName> mutableCopy];
+  <if(property.impliedProperty)>
+  [_<property.safeName> enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+    [obj setValue:self forKey:@"<property.impliedProperty.name>"];
+  }];
+  <endif>
+}
+- (void)addItemTo<property.upcaseName>:(<property.listElementObjcType> *)item {
+  [_<property.safeName> addObject:item];
+  <if(property.impliedProperty)>
+  [item setValue:self forKey:@"<property.impliedProperty.name>"];
+  <endif>
+}
+<elseif(property.type.name && property.impliedProperty)>
+
+// <property.safeName> many-to-one accessors to maintain bi-directional relationships
+- (<property.objcType> *)<property.name>{
+  return _<property.name>;
+}
+- (void)set<property.upcaseName>:(<property.objcType> *)<property.name> {
+  _<property.name> = <property.name>;
+  if(![[_<property.name> <property.impliedProperty.name>] containsObject:self]) {
+    [[_<property.name> <property.impliedProperty.name>] addObject:self];
+  }
+}
+<endif>
+>>
+
+property(property) ::= <%
+<if(property.docString)><docString(property.docString)><\n><endif>
+@property (<property.modifiers:{m | <m>}; separator=", ">) <property.objcType> *<property.safeName>;
+%>
+
+propertyAdd(property) ::= <<
+// <property.name>
+[_allProperties addObject:
+  [FPProperty setPropertyForUuid:@"<property.uuid>"
+                  withDictionary:@{
+                    @"name":@"<property.name>",
+                    @"kind":[<property.objcType> class]<if(property.impliedProperty)>,<endif>
+                    <if(property.impliedProperty)>@"impliedProperty":[FPProperty propertyForUuid:@"<property.impliedProperty.uuid>"]<endif>
+                  }]];
+>>
+
+/**
+ * Emit a doc string, reflowed to fit the current context.
+ */
+docString(docString) ::= <<
+<if(docString)>/** <docString.chunks; wrap="\n*   ", separator=" ">
+*/<endif>
+>>
+
+endpointDeclaration(endpoint) ::= <<
+<endpoint.methodName>
+>>
+
+endpointRequestInterface(endpoint) ::= <<
+@interface <endpoint.requestBuilderClassName> : FPFlatpackRequest
+  <endpoint.queryParameters:{p | -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name>;}; separator="\n">
+  -(<endpoint.entityReturnType>)execute;
+  -(void)executeUsingBlock:(<endpoint.requestBuilderBlockName>)block;
+@end
+>>
+
+endpointRequestImplementation(endpoint) ::= <<
+@implementation <endpoint.requestBuilderClassName>
+  <if(endpoint.queryParameters)>
+  <endpoint.queryParameters:endpointWithMethod(); separator="\n\n">
+  
+  <endif>
+  -(<endpoint.entityReturnType>)execute {
+    return [self baseExecute];
+  }
+  
+  -(void)executeUsingBlock:(<endpoint.requestBuilderBlockName>)block {
+    [self baseExecuteUsingBlock:^(id result) {
+      if(block != nil) block(result);
+    }];
+  }
+@end
+>>
+
+endpointWithMethod(p) ::= <<
+ -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name> {
+    [self setQueryParameterWithName:@"<p.name>" value:<p.name>];
+    return self;
+  }
+>>
+
+apiHeader(api) ::= <<
+// Generated File - DO NOT EDIT
+
+#import \<Foundation/Foundation.h\>
+#import "FPBaseApi.h"
+#import "FPBaseHasUuid.h"
+#import "FPFlatpackRequest.h"
+
+<api.importNames:{n | @class <n>;}; separator="\n">
+
+<api.endpoints:{e | typedef void(^<e.requestBuilderBlockName>)(<if(e.entityReturnType)><e.entityReturnType><e.entityReturnName><endif>);}; separator="\n">
+
+<api.endpoints:endpointRequestInterface(); separator="\n\n">
+
+@interface <names.classPrefix>BaseApi : FPBaseApi
+
+<api.endpoints:{e | 
+  <docString(e.docString)>
+  <endpointDeclaration(e)>;
+ }; separator="\n">
+
+@end
+
+>>
+
+api(api) ::= <<
+// Generated File - DO NOT EDIT
+
+#import "<names.classPrefix>BaseApi.h"
+<api.importNames:{n | #import "<n>.h"}; separator="\n">
+
+<api.endpoints:endpointRequestImplementation(); separator="\n\n">
+
+@implementation <names.classPrefix>BaseApi
+<api.endpoints:{end |
+  <endpointDeclaration(end)> {
+    <end.requestBuilderClassName> *request = [[<end.requestBuilderClassName> alloc] initWithApi:self
+      method:@"<end.method>"
+      path:@"<end.pathDecoded>"<if(!end.pathParameters)>];<endif>
+    <if(end.pathParameters)>
+      pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
+    <endif>
+    <if(end.entity)>[request setEntity:<end.entity.name>];<endif>
+    return request; 
+  \}}; separator="\n\n">
+@end
+>>
