@@ -282,7 +282,18 @@ public class ObjcDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             ApiDescription apiDescription = (ApiDescription) o;
-            if ("importNames".equals(propertyName)) {
+            if ("endpoints".equals(propertyName)) {
+              List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
+                  apiDescription.getEndpoints());
+              Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
+                @Override
+                public int compare(EndpointDescription e1, EndpointDescription e2) {
+                  return e1.getPath().compareTo(e2.getPath());
+                }
+              });
+              return sortedEndpoints;
+            }
+            else if ("importNames".equals(propertyName)) {
               Set<String> imports = new HashSet<String>();
               for (EndpointDescription e : apiDescription.getEndpoints()) {
                 if (e.getEntity() != null) {
@@ -298,7 +309,9 @@ public class ObjcDialect implements Dialect {
                   }
                 }
               }
-              return imports;
+              List<String> sortedImports = new ArrayList<String>(imports);
+              Collections.sort(sortedImports);
+              return sortedImports;
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }
@@ -407,7 +420,9 @@ public class ObjcDialect implements Dialect {
                   imports.add(name);
                 }
               }
-              return imports;
+              List<String> sortedImports = new ArrayList<String>(imports);
+              Collections.sort(sortedImports);
+              return sortedImports;
             }
             if ("docString".equals(propertyName)) {
               return doxygenDocString(entity.getDocString());
@@ -457,7 +472,16 @@ public class ObjcDialect implements Dialect {
                 }
               }
 
-              return propertyMap.values();
+              List<Property> sortedProperties = new ArrayList<Property>();
+              sortedProperties.addAll(propertyMap.values());
+              Collections.sort(sortedProperties, new Comparator<Property>() {
+                @Override
+                public int compare(Property p1, Property p2) {
+                  return p1.getName().compareTo(p2.getName());
+                }
+              });
+
+              return sortedProperties;
             }
 
             else if ("collectionProperties".equals(propertyName)) {
@@ -467,7 +491,15 @@ public class ObjcDialect implements Dialect {
                   properties.add(p);
                 }
               }
-              return properties;
+              List<Property> sortedProperties = new ArrayList<Property>();
+              sortedProperties.addAll(properties);
+              Collections.sort(sortedProperties, new Comparator<Property>() {
+                @Override
+                public int compare(Property p1, Property p2) {
+                  return p1.getName().compareTo(p2.getName());
+                }
+              });
+              return sortedProperties;
             }
 
             return super.getProperty(interp, self, o, property, propertyName);

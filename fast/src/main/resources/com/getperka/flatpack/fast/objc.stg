@@ -48,7 +48,6 @@ entityHeader(entity) ::= <<
 entity(entity) ::= <<
 // Generated File - DO NOT EDIT
 
-#import "<entity.requireName>.h"
 <entity.importNames:{n | #import "<n>.h"}; wrap, separator="\n">
 #import "FPBaseHasUuid.h"
 #import "FPEntityDescription.h"
