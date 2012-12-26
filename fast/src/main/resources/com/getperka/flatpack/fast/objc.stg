@@ -62,8 +62,8 @@ entity(entity) ::= <<
 static FPEntityDescription *_entityDescription;
 static NSMutableArray *_allProperties;
 
-+ (void)initialize {
-  [super initialize];
++ (void)load {
+  [super load];
   
   _allProperties = [NSMutableArray array];
   <entity.properties:propertyAdd(); separator="\n\n">
