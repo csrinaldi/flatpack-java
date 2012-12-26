@@ -143,6 +143,7 @@ propertyAdd(property) ::= <<
   [FPProperty setPropertyForUuid:@"<property.uuid>"
                   withDictionary:@{
                     @"name":@"<property.name>",
+                    <if(property.embedded)>@"embedded":@YES,<endif>
                     @"kind":[<property.objcType> class]<if(property.impliedProperty)>,<endif>
                     <if(property.impliedProperty)>@"impliedProperty":[FPProperty propertyForUuid:@"<property.impliedProperty.uuid>"]<endif>
                   }]];
