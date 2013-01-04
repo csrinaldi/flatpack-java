@@ -29,6 +29,7 @@ import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.Key;
+import com.google.inject.OutOfScopeException;
 import com.google.inject.Provider;
 import com.google.inject.Scope;
 
@@ -88,12 +89,14 @@ public class PackScope implements Scope {
       public Object get() {
         Map<Key<?>, Object> map = allData.get();
         if (map == null) {
-          return unscoped.get();
+          throw new OutOfScopeException("Not in a PackScope");
         }
-        if (!map.containsKey(key)) {
-          return unscoped.get();
+        Object toReturn = map.get(key);
+        if (toReturn == null) {
+          toReturn = unscoped.get();
+          map.put(key, toReturn);
         }
-        return map.get(key);
+        return toReturn;
       }
     });
   }
