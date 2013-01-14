@@ -110,16 +110,6 @@ public abstract class BaseContext implements Closeable {
     return principal;
   }
 
-  public List<String> getRoles() {
-    PrincipalMapper mapper = principalMapper;
-    List<String> toReturn = null;
-    if (principal != null && mapper != null) {
-      toReturn = mapper.getRoles(principal);
-    }
-    return toReturn == null ? Collections.<String> emptyList() :
-        Collections.unmodifiableList(toReturn);
-  }
-
   public Map<UUID, String> getWarnings() {
     return Collections.unmodifiableMap(warnings);
   }

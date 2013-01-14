@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +59,10 @@ import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.dto.TypeDescription;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.inject.HasInjector;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
@@ -82,11 +85,13 @@ public class ApiDescriber {
   private Set<Class<? extends HasUuid>> ignoreSubtypesOf = Collections.emptySet();
   private Set<String> limitRoles;
   private final Map<String, Class<? extends HasUuid>> payloadNamesToClasses = mapForLookup();
+  private final PropertySecurity propertySecurity;
   private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
 
   public ApiDescriber(FlatPack flatpack, Collection<Method> apiMethods) {
     this.apiMethods = apiMethods;
     ctx = flatpack.getTypeContext();
+    propertySecurity = ((HasInjector) flatpack).getInjector().getInstance(PropertySecurity.class);
   }
 
   /**
@@ -289,7 +294,10 @@ public class ApiDescriber {
 
       // Filter by roles
       if (limitRoles != null) {
-        if (!prop.mayGet(limitRoles) && !prop.maySet(limitRoles)) {
+        Set<String> interestingRoles = new HashSet<String>();
+        interestingRoles.addAll(propertySecurity.getGetterRoleNames(prop));
+        interestingRoles.addAll(propertySecurity.getSetterRoleNames(prop));
+        if (Collections.disjoint(interestingRoles, limitRoles)) {
           it.remove();
           continue;
         }

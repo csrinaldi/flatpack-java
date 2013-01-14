@@ -41,6 +41,7 @@ import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
@@ -60,9 +61,13 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   private Class<T> clazz;
   @Inject
   private EntityResolver entityResolver;
+  @Inject
+  private Provider<ImpliedPropertySetter> impliedPropertySetters;
   @com.google.inject.Inject(optional = true)
   private Provider<T> provider;
   private List<Method> preUnpackMethods;
+  @Inject
+  private PropertySecurity security;
   private List<Method> postUnpackMethods;
   @Inject
   private TypeContext typeContext;
@@ -148,12 +153,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
         }
       }
 
-      List<String> roles = context.getRoles();
       for (Property prop : typeContext.extractProperties(clazz)) {
-        if (!prop.maySet(roles)) {
-          continue;
-        }
-
         String simplePropertyName = prop.getName();
         context.pushPath("." + simplePropertyName);
         try {
@@ -189,17 +189,24 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
             continue;
           }
 
+          // Verify the new value may be set
+          if (!security.maySet(prop, context.getPrincipal(), object, value)) {
+            continue;
+          }
+
           // Perhaps set the other side of a OneToMany relationship
           Property impliedPropery = prop.getImpliedProperty();
           if (impliedPropery != null && value != null) {
             // Ensure that any linked property is also mutable
-            if (!impliedPropery.maySet(roles) || !checkAccess(value, context)) {
+            if (!checkAccess(value, context)) {
               context.addWarning(object,
                   "Ignoring property %s because the inverse relationship (%s) may not be set",
                   prop.getName(), impliedPropery.getName());
               continue;
             }
-            context.addPostWork(new ImpliedPropertySetter(context, impliedPropery, value, object));
+            ImpliedPropertySetter setter = impliedPropertySetters.get();
+            setter.setLater(impliedPropery, value, object);
+            context.addPostWork(setter);
           }
 
           // Set the value
@@ -367,7 +374,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     // Write all properties
     for (Property prop : typeContext.extractProperties(clazz)) {
       // Check access
-      if (!prop.mayGet(context.getRoles())) {
+      if (!security.mayGet(prop, context.getPrincipal(), object)) {
         continue;
       }
       // Ignore OneToMany type properties unless specifically requested

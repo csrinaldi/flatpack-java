@@ -36,12 +36,17 @@ import com.getperka.flatpack.Unpacker;
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
+import com.getperka.flatpack.ext.EntitySecurity;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.security.AllowAllEntitySecurity;
+import com.getperka.flatpack.security.AllowAllPropertySecurity;
+import com.getperka.flatpack.security.RoleEntitySecurity;
+import com.getperka.flatpack.security.RolePropertySecurity;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.PrivateModule;
-import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Providers;
 
@@ -97,8 +102,7 @@ public class FlatPackModule extends PrivateModule {
     expose(FlatPack.class);
     bind(Packer.class);
     expose(Packer.class);
-    // Bind TypeContext in singleton, because we want referential integrity
-    bind(TypeContext.class).in(Scopes.SINGLETON);
+    bind(TypeContext.class);
     expose(TypeContext.class);
     bind(Unpacker.class);
     expose(Unpacker.class);
@@ -176,21 +180,21 @@ public class FlatPackModule extends PrivateModule {
     // PrincipalMapper
     if (configuration.getPrincipalMapper() == null) {
       bind(PrincipalMapper.class).to(PermissivePrincipalMapper.class);
+      bind(EntitySecurity.class).to(AllowAllEntitySecurity.class);
     } else {
       bind(PrincipalMapper.class).toInstance(configuration.getPrincipalMapper());
+      bind(EntitySecurity.class).to(RoleEntitySecurity.class);
     }
+    expose(EntitySecurity.class);
 
-    // RoleMapper
+    // RoleMapper and PropertySecurity
     if (configuration.getRoleMapper() == null) {
       bind(RoleMapper.class).to(NullRoleMapper.class);
-      bindConstant()
-          .annotatedWith(DisableRoleChecks.class)
-          .to(true);
+      bind(PropertySecurity.class).to(AllowAllPropertySecurity.class);
     } else {
       bind(RoleMapper.class).toInstance(configuration.getRoleMapper());
-      bindConstant()
-          .annotatedWith(DisableRoleChecks.class)
-          .to(false);
+      bind(PropertySecurity.class).to(RolePropertySecurity.class);
     }
+    expose(PropertySecurity.class);
   }
 }

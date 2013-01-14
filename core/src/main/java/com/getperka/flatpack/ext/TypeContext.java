@@ -44,6 +44,7 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.inject.Provider;
+import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
@@ -64,6 +65,7 @@ import com.getperka.flatpack.util.FlatPackTypes;
  * <p>
  * Instances of TypeContext are thread-safe and intended to be long-lived.
  */
+@Singleton
 public class TypeContext {
 
   /**

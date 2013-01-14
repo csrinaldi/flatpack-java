@@ -23,10 +23,13 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import javax.inject.Inject;
+
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -35,21 +38,16 @@ import com.getperka.flatpack.util.FlatPackCollections;
  */
 @PostWorkOrder(100)
 class ImpliedPropertySetter implements Callable<Void> {
-  private final DeserializationContext context;
-  private final Property toSet;
-  private final Object target;
-  private final Object value;
+  private DeserializationContext context;
+  private PropertySecurity propertySecurity;
+  private Property toSet;
+  private Object target;
+  private Object value;
 
-  public ImpliedPropertySetter(DeserializationContext context, Property toSet, Object target,
-      Object value) {
-    if (toSet.getSetter() == null) {
-      throw new IllegalArgumentException("No setter");
-    }
-    this.context = context;
-    this.toSet = toSet;
-    this.target = target;
-    this.value = value;
-  }
+  /**
+   * Requires injection.
+   */
+  ImpliedPropertySetter() {}
 
   @Override
   public Void call() throws Exception {
@@ -85,7 +83,8 @@ class ImpliedPropertySetter implements Callable<Void> {
       }
     } else if (target instanceof Collection) {
       for (Object element : (Collection<?>) target) {
-        if (context.checkAccess((HasUuid) element)) {
+        if (context.checkAccess((HasUuid) element) &&
+          propertySecurity.maySet(toSet, context.getPrincipal(), (HasUuid) element, value)) {
           toSet.getSetter().invoke(element, value);
         }
       }
@@ -93,5 +92,27 @@ class ImpliedPropertySetter implements Callable<Void> {
       toSet.getSetter().invoke(target, value);
     }
     return null;
+  }
+
+  /**
+   * Configure the ImpliedPropertySetter.
+   * 
+   * @param toSet the property to set
+   * @param target the target entity or collection
+   * @param value the associated value to set
+   */
+  public void setLater(Property toSet, Object target, Object value) {
+    if (toSet.getSetter() == null) {
+      throw new IllegalArgumentException("No setter");
+    }
+    this.toSet = toSet;
+    this.target = target;
+    this.value = value;
+  }
+
+  @Inject
+  void inject(DeserializationContext context, PropertySecurity propertySecurity) {
+    this.context = context;
+    this.propertySecurity = propertySecurity;
   }
 }

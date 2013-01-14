@@ -19,9 +19,7 @@
  */
 package com.getperka.flatpack.ext;
 
-import java.security.Principal;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -31,16 +29,15 @@ import javax.inject.Inject;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.inject.PackScoped;
 import com.getperka.flatpack.util.FlatPackCollections;
-import com.google.inject.Provider;
 
 /**
  * Contains state relating to in-process deserialization.
  */
 @PackScoped
 public class DeserializationContext extends BaseContext {
-  @Inject
-  private Provider<PropertyPathChecker> checkers;
   private final Map<UUID, HasUuid> entities = FlatPackCollections.mapForLookup();
+  @Inject
+  private EntitySecurity entitySecurity;
   private final Map<HasUuid, Set<Property>> modified = FlatPackCollections.mapForLookup();
   @Inject
   private PrincipalMapper principalMapper;
@@ -75,25 +72,10 @@ public class DeserializationContext extends BaseContext {
     if (!wasResolved(object)) {
       return true;
     }
-    // Allow anything when there are no roles in use
-    if (getRoles().isEmpty()) {
+    if (entitySecurity.mayEdit(getPrincipal(), object)) {
       return true;
     }
-    Principal principal = getPrincipal();
-    // Check for superusers
-    if (!principalMapper.isAccessEnforced(principal, object)) {
-      return true;
-    }
-
-    List<PropertyPath> paths = typeContext.getPrincipalPaths(object.getClass());
-    PropertyPathChecker checker = checkers.get();
-    for (PropertyPath path : paths) {
-      path.evaluate(object, checker);
-      if (checker.getResult()) {
-        return true;
-      }
-    }
-    addWarning(object, "User %s does not have permission to edit this %s", principal,
+    addWarning(object, "User %s does not have permission to edit this %s", getPrincipal(),
         typeContext.getPayloadName(object.getClass()));
     return false;
   }

@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -33,9 +33,11 @@ import javax.annotation.security.DenyAll;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import com.getperka.flatpack.RoleMapper;
+import com.getperka.flatpack.security.RolePropertySecurity;
 
 public class PropertyTest {
 
@@ -65,37 +67,47 @@ public class PropertyTest {
   @RolesAllowed({})
   static void rolesAllowedZero() {}
 
+  private RolePropertySecurity security;
+
+  @Before
+  public void before() {
+    security = new RolePropertySecurity();
+    security.inject(null, new FakeRoleMapper());
+  }
+
   @Test
   public void testCheckRoles() {
     Set<Class<?>> empty = Collections.<Class<?>> emptySet();
     Set<Class<?>> full = Collections.<Class<?>> singleton(PropertyTest.class);
     Set<Class<?>> other = Collections.<Class<?>> singleton(UUID.class);
     Set<String> foobarRole = Collections.singleton("foobar");
-    RoleMapper mapper = new FakeRoleMapper();
-
-    // Access allowed when no RoleMapper is installed
-    assertTrue(Property.checkRoles(null, empty, null));
 
     // Access allowed with allRoles
-    assertTrue(Property.checkRoles(null, Property.allRoles, null));
-    assertTrue(Property.checkRoles(mapper, Property.allRoles, null));
+    assertTrue(security.checkRoles(security.allRoles, null));
+    assertTrue(security.checkRoles(security.allRoles, null));
 
     // Access denied with empty set
-    assertFalse(Property.checkRoles(mapper, null, null));
-    assertFalse(Property.checkRoles(mapper, empty, null));
+    assertFalse(security.checkRoles(null, null));
+    assertFalse(security.checkRoles(empty, null));
 
     // Access allowed
-    assertTrue(Property.checkRoles(mapper, full, foobarRole));
-    assertTrue(Property.checkRoles(mapper, Collections.<Class<?>> singleton(Object.class),
-        foobarRole));
-    assertFalse(Property.checkRoles(mapper, other, foobarRole));
+    assertTrue(security.checkRoles(full, foobarRole));
+    assertTrue(security.checkRoles(Collections.<Class<?>> singleton(Object.class), foobarRole));
+    assertFalse(security.checkRoles(other, foobarRole));
+  }
+
+  @Test
+  public void testNoMapper() {
+    security.inject(null, null);
+    // Access allowed when no RoleMapper is installed
+    assertTrue(security.checkRoles(Collections.<Class<?>> emptySet(), null));
   }
 
   @Test
   public void testRoleNameExtraction() {
     assertSame(Collections.emptySet(), names("denyAll"));
-    assertSame(Property.noRoleNames, names("noAnnotation"));
-    assertSame(Property.allRoleNames, names("permitAll"));
+    assertSame(security.noRoleNames, names("noAnnotation"));
+    assertSame(security.allRoleNames, names("permitAll"));
     assertEquals(Collections.singleton("foobar"), names("rolesAllowedOne"));
     assertSame(Collections.emptySet(), names("rolesAllowedZero"));
     assertEquals(Collections.singleton("foobar"), names(HasMethod.class, "noAnnotation"));
@@ -104,7 +116,7 @@ public class PropertyTest {
   private Set<String> names(Class<?> clazz, String methodName) {
     try {
       Method method = clazz.getDeclaredMethod(methodName);
-      return Property.extractRoleNames(method);
+      return security.extractRoleNames(method);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
