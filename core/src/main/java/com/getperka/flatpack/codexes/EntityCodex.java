@@ -154,6 +154,11 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
       }
 
       for (Property prop : typeContext.extractProperties(clazz)) {
+        // Ignore properties that cannot be set
+        if (prop.getSetter() == null) {
+          continue;
+        }
+
         String simplePropertyName = prop.getName();
         context.pushPath("." + simplePropertyName);
         try {
