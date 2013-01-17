@@ -378,6 +378,10 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
 
     // Write all properties
     for (Property prop : typeContext.extractProperties(clazz)) {
+      // Ignore set-only properties
+      if (prop.getGetter() == null) {
+        continue;
+      }
       // Check access
       if (!security.mayGet(prop, context.getPrincipal(), object)) {
         continue;

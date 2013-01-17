@@ -1,4 +1,5 @@
 package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -105,12 +106,26 @@ public class RolePropertySecurity implements PropertySecurity {
   @Override
   public boolean mayGet(Property property, Principal principal, HasUuid target) {
     PropertyRoles roles = getPropertyRoles(property);
+    // Always enforce @DenyAll
+    if (roles.getterRoles.isEmpty()) {
+      return false;
+    }
+    if (!principalMapper.isAccessEnforced(principal, target)) {
+      return true;
+    }
     return checkRoles(roles.getterRoles, principalMapper.getRoles(principal));
   }
 
   @Override
   public boolean maySet(Property property, Principal principal, HasUuid target, Object newValue) {
     PropertyRoles roles = getPropertyRoles(property);
+    // Always enforce @DenyAll
+    if (roles.setterRoles.isEmpty()) {
+      return false;
+    }
+    if (!principalMapper.isAccessEnforced(principal, target)) {
+      return true;
+    }
     return checkRoles(roles.setterRoles, principalMapper.getRoles(principal));
   }
 
