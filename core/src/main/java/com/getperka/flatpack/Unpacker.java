@@ -228,6 +228,18 @@ public class Unpacker {
       } else if ("value".equals(name)) {
         // Just stash the value element in case it occurs first
         value = jsonParser.parse(reader);
+      } else if ("warnings".equals(name)) {
+        // "warnings" : { "path" : "problem", "path2" : "problem2" }
+        reader.beginObject();
+        while (JsonToken.NAME.equals(reader.peek())) {
+          String path = reader.nextName();
+          if (JsonToken.STRING.equals(reader.peek()) || JsonToken.NUMBER.equals(reader.peek())) {
+            toReturn.addWarning(path, reader.nextString());
+          } else {
+            reader.skipValue();
+          }
+        }
+        reader.endObject();
       } else if (JsonToken.STRING.equals(reader.peek()) || JsonToken.NUMBER.equals(reader.peek())) {
         // Save off any other simple properties
         toReturn.putExtraData(name, reader.nextString());
