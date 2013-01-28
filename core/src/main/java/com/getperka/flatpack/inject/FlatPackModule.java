@@ -28,29 +28,26 @@ import org.slf4j.LoggerFactory;
 
 import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
-import com.getperka.flatpack.Packer;
 import com.getperka.flatpack.PersistenceMapper;
 import com.getperka.flatpack.RoleMapper;
 import com.getperka.flatpack.TraversalMode;
-import com.getperka.flatpack.Unpacker;
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.EntitySecurity;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.PropertySecurity;
-import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.security.AllowAllEntitySecurity;
 import com.getperka.flatpack.security.AllowAllPropertySecurity;
 import com.getperka.flatpack.security.RoleEntitySecurity;
 import com.getperka.flatpack.security.RolePropertySecurity;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
-import com.google.inject.PrivateModule;
+import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Providers;
 
-public class FlatPackModule extends PrivateModule {
+public class FlatPackModule extends AbstractModule {
   private final Configuration configuration;
 
   public FlatPackModule(Configuration configuration) {
@@ -59,8 +56,6 @@ public class FlatPackModule extends PrivateModule {
 
   @Override
   protected void configure() {
-    bindExposedTypes();
-
     // Set up a module-wide Logger
     bind(Logger.class)
         .annotatedWith(FlatPackLogger.class)
@@ -92,20 +87,6 @@ public class FlatPackModule extends PrivateModule {
     bindImplementationTypes();
     bindPackScope();
     bindUserTypes();
-  }
-
-  /**
-   * Set up explicit bindings for exposed types.
-   */
-  private void bindExposedTypes() {
-    bind(FlatPack.class);
-    expose(FlatPack.class);
-    bind(Packer.class);
-    expose(Packer.class);
-    bind(TypeContext.class);
-    expose(TypeContext.class);
-    bind(Unpacker.class);
-    expose(Unpacker.class);
   }
 
   /**
@@ -185,7 +166,6 @@ public class FlatPackModule extends PrivateModule {
       bind(PrincipalMapper.class).toInstance(configuration.getPrincipalMapper());
       bind(EntitySecurity.class).to(RoleEntitySecurity.class);
     }
-    expose(EntitySecurity.class);
 
     // RoleMapper and PropertySecurity
     if (configuration.getRoleMapper() == null) {
@@ -195,6 +175,5 @@ public class FlatPackModule extends PrivateModule {
       bind(RoleMapper.class).toInstance(configuration.getRoleMapper());
       bind(PropertySecurity.class).to(RolePropertySecurity.class);
     }
-    expose(PropertySecurity.class);
   }
 }
