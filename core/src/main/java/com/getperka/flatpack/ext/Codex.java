@@ -30,6 +30,11 @@ import com.google.gson.stream.JsonWriter;
  */
 public abstract class Codex<T> {
   /**
+   * Memoizing this value for the path-tracking saves a non-trivial amount of wall-time.
+   */
+  private final String simpleName = getClass().getSimpleName();
+
+  /**
    * Returns a type descriptor for the JSON structure created by the Codex implementation.
    */
   public abstract Type describe();
@@ -62,7 +67,7 @@ public abstract class Codex<T> {
     if (element == null || element.isJsonNull()) {
       return null;
     }
-    context.pushPath("(" + getClass().getSimpleName() + ".read())");
+    context.pushPath("(" + simpleName + ".read())");
     try {
       return readNotNull(element, context);
     } catch (Exception e) {
@@ -96,7 +101,7 @@ public abstract class Codex<T> {
     if (object == null) {
       return;
     }
-    context.pushPath("(" + getClass().getSimpleName() + ".scan())");
+    context.pushPath("(" + simpleName + ".scan())");
     try {
       scanNotNull(object, context);
     } catch (Exception e) {
@@ -127,7 +132,7 @@ public abstract class Codex<T> {
    * @param context the serialization context
    */
   public void write(T object, SerializationContext context) {
-    context.pushPath("(" + getClass().getSimpleName() + ".write())");
+    context.pushPath("(" + simpleName + ".write())");
     try {
       JsonWriter writer = context.getWriter();
       if (object == null) {
