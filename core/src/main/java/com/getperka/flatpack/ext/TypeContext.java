@@ -25,6 +25,7 @@ import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 import static com.getperka.flatpack.util.FlatPackCollections.sortedMapForIteration;
 import static com.getperka.flatpack.util.FlatPackTypes.decapitalize;
 import static com.getperka.flatpack.util.FlatPackTypes.erase;
+import static com.getperka.flatpack.util.FlatPackTypes.flatten;
 import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
 import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleName;
 
@@ -149,7 +150,10 @@ public class TypeContext {
   private final Map<String, Class<? extends HasUuid>> classes = sortedMapForIteration();
   @Inject
   private CodexMapper codexMapper;
-  private final Map<Type, Codex<?>> codexes = mapForLookup();
+  /**
+   * A map of flattened type representations to a codex capable of handling that type.
+   */
+  private final Map<List<Type>, Codex<?>> codexes = mapForLookup();
   /**
    * A DynamicCodex acts as a placeholder when type information can't be determined (which should be
    * rare).
@@ -291,7 +295,10 @@ public class TypeContext {
    * Return a Codex instance that can operate on the specified type.
    */
   public synchronized Codex<?> getCodex(Type type) {
-    Codex<?> toReturn = codexes.get(type);
+    // Use a canonical representation of the type
+    List<Type> flattened = flatten(type);
+
+    Codex<?> toReturn = codexes.get(flattened);
     if (toReturn != null) {
       return toReturn;
     }
@@ -302,7 +309,7 @@ public class TypeContext {
       toReturn = dynamicCodex;
     }
 
-    codexes.put(type, toReturn);
+    codexes.put(flattened, toReturn);
     return toReturn;
   }
 
