@@ -37,7 +37,7 @@ public abstract class FlatPack {
   /**
    * Create a new instance of FlatPack.
    */
-  public static synchronized FlatPack create(Configuration configuration) {
+  public static FlatPack create(Configuration configuration) {
     Injector createInjector = Guice.createInjector(Stage.PRODUCTION,
         new FlatPackModule(configuration));
     return createInjector.getInstance(FlatPack.class);
