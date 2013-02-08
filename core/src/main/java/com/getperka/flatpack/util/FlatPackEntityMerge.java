@@ -1,4 +1,5 @@
 package com.getperka.flatpack.util;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -51,9 +52,8 @@ public class FlatPackEntityMerge {
     return merge(Arrays.asList(packs));
   }
 
-  private final Iterator<? extends JsonElement> iterator;
-
   private final Map<String, Map<UUID, JsonObject>> data = FlatPackCollections.mapForIteration();
+  private final Iterator<? extends JsonElement> iterator;
 
   private FlatPackEntityMerge(Collection<? extends JsonElement> packs) {
     iterator = packs.iterator();
@@ -78,8 +78,14 @@ public class FlatPackEntityMerge {
 
   private JsonObject merge() {
     JsonObject toReturn = new JsonObject();
+    JsonObject last = null;
     while (iterator.hasNext()) {
-      mergeOnePack(iterator.next().getAsJsonObject(), toReturn);
+      last = iterator.next().getAsJsonObject();
+      mergeOnePack(last, toReturn);
+    }
+    // Copy only properties from the last entry
+    for (Map.Entry<String, JsonElement> entry : last.entrySet()) {
+      toReturn.add(entry.getKey(), entry.getValue());
     }
     toReturn.add("data", collateData());
     return toReturn;
@@ -120,12 +126,8 @@ public class FlatPackEntityMerge {
   }
 
   private void mergeOnePack(JsonObject source, JsonObject toReturn) {
-    for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
-      if ("data".equals(entry.getKey())) {
-        mergeDataSection(entry.getValue().getAsJsonObject());
-      } else {
-        toReturn.add(entry.getKey(), entry.getValue());
-      }
+    if (source.has("data")) {
+      mergeDataSection(source.get("data").getAsJsonObject());
     }
   }
 }
