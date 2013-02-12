@@ -58,8 +58,8 @@ import com.sun.jersey.spi.container.ContainerResponseFilter;
  * Adapts the FlatPack serialization mechanisms to the Jersey / jax-rs stack.
  */
 @Provider
-@Consumes(MediaType.APPLICATION_JSON)
-@Produces(MediaType.APPLICATION_JSON)
+@Consumes({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })
+@Produces({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })
 public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyWriter<Object>,
     ContainerRequestFilter, ContainerResponseFilter {
 
