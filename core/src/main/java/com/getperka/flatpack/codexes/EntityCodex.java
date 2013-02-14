@@ -77,8 +77,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   /**
    * Performs a minimal amount of work to create an empty stub object to fill in later.
    * 
-   * @param element a JsonObject containing a {@code uuid} property. If {@code null}, a
-   *          randomly-generated UUID will be assigned to the allocated object
+   * @param element a JsonObject containing a {@code uuid} property.
    * @param context this method will call {@link DeserializationContext#putEntity} to store the
    *          newly-allocated entity
    */
@@ -131,25 +130,32 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     }
   }
 
-  public void readProperties(T object, JsonObject element, DeserializationContext context) {
-    context.pushPath("(EntityCodex.readProperties())" + object.getUuid());
+  /**
+   * Read the properties in a payload object, reify them, and store them in the given entity.
+   * 
+   * @param entity the entity to store data into
+   * @param payload the source payload object
+   * @param context data relating to the overall deserialization process
+   */
+  public void readProperties(T entity, JsonObject payload, DeserializationContext context) {
+    context.pushPath("(EntityCodex.readProperties())" + entity.getUuid());
 
     try {
       // Ignore incoming data with just a UUID value to avoid unnecessary warnings
-      if (element.entrySet().size() == 1 && element.has("uuid")) {
+      if (payload.entrySet().size() == 1 && payload.has("uuid")) {
         return;
       }
 
-      if (!context.checkAccess(object)) {
+      if (!context.checkAccess(entity)) {
         return;
       }
 
       // Allow the object to see the data that's about to be applied
       for (Method m : preUnpackMethods) {
         if (m.getParameterTypes().length == 0) {
-          m.invoke(object);
+          m.invoke(entity);
         } else {
-          m.invoke(object, element);
+          m.invoke(entity, payload);
         }
       }
 
@@ -171,7 +177,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
             @SuppressWarnings("unchecked")
             EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) prop.getCodex();
             HasUuid embedded = codex.allocate(UUID.randomUUID(), context, false);
-            codex.readProperties(embedded, element, context);
+            codex.readProperties(embedded, payload, context);
             value = embedded;
           } else {
 
@@ -182,11 +188,11 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
             String payloadPropertyName = simplePropertyName + codex.getPropertySuffix();
 
             // Ignore undefined property values, while allowing explicit nullification
-            if (!element.has(payloadPropertyName)) {
+            if (!payload.has(payloadPropertyName)) {
               continue;
             }
 
-            value = codex.read(element.get(payloadPropertyName), context);
+            value = codex.read(payload.get(payloadPropertyName), context);
           }
 
           if (value == null && prop.getSetter().getParameterTypes()[0].isPrimitive()) {
@@ -195,7 +201,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
           }
 
           // Verify the new value may be set
-          if (!security.maySet(prop, context.getPrincipal(), object, value)) {
+          if (!security.maySet(prop, context.getPrincipal(), entity, value)) {
             continue;
           }
 
@@ -204,21 +210,21 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
           if (impliedPropery != null && value != null) {
             // Ensure that any linked property is also mutable
             if (!checkAccess(value, context)) {
-              context.addWarning(object,
+              context.addWarning(entity,
                   "Ignoring property %s because the inverse relationship (%s) may not be set",
                   prop.getName(), impliedPropery.getName());
               continue;
             }
             ImpliedPropertySetter setter = impliedPropertySetters.get();
-            setter.setLater(impliedPropery, value, object);
+            setter.setLater(impliedPropery, value, entity);
             context.addPostWork(setter);
           }
 
           // Set the value
-          prop.getSetter().invoke(object, value);
+          setProperty(prop, entity, value);
 
           // Record the value as having been set
-          context.addModified(object, prop);
+          context.addModified(entity, prop);
         } catch (Exception e) {
           context.fail(e);
         } finally {
@@ -259,18 +265,47 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     writer.value(object.getUuid().toString());
   }
 
-  public void writeProperties(T object, SerializationContext context) {
-    context.pushPath("(EntityCodex.writeProperties())" + object.getUuid());
+  /**
+   * Write an entity's properties into {@link SerializationContext#getWriter()}.
+   */
+  public void writeProperties(T entity, SerializationContext context) {
+    context.pushPath("(EntityCodex.writeProperties())" + entity.getUuid());
     try {
       JsonWriter writer = context.getWriter();
       writer.beginObject();
-      traverse(object, false, context, writer);
+      traverse(entity, false, context, writer);
       writer.endObject();
     } catch (Exception e) {
       context.fail(e);
     } finally {
       context.popPath();
     }
+  }
+
+  /**
+   * A hook point for custom subtypes to synthesize property values. The default implementation
+   * invokes the method returned from {@link Property#getGetter()}.
+   * 
+   * @param property the property being read
+   * @param target the object from which the property is being read
+   * @return the property value
+   * @throws Exception subclasses may delegate error handling to EntityCodex
+   */
+  protected Object getProperty(Property property, T target) throws Exception {
+    return property.getGetter().invoke(target);
+  }
+
+  /**
+   * A hook point for custom subtypes to synthesize property values. The default implementation
+   * invokes the method returned from {@link Property#getSetter()}.
+   * 
+   * @param property the property being read
+   * @param target the object from which the property is being read
+   * @param value the new property value
+   * @throws Exception subclasses may delegate error handling to EntityCodex
+   */
+  protected void setProperty(Property property, T target, Object value) throws Exception {
+    property.getSetter().invoke(target, value);
   }
 
   @Inject
@@ -402,7 +437,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
       try {
         // Extract the value
         prop.getGetter().setAccessible(true);
-        Object value = prop.getGetter().invoke(object);
+        Object value = getProperty(prop, object);
 
         // Figure out how to interpret the value
         @SuppressWarnings("unchecked")
