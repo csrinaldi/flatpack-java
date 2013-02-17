@@ -23,6 +23,7 @@ import java.security.Principal;
 import java.util.Collection;
 
 import org.joda.time.DateTime;
+import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,8 @@ import com.getperka.flatpack.security.RolePropertySecurity;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Providers;
 
@@ -56,10 +59,6 @@ public class FlatPackModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    // Set up a module-wide Logger
-    bind(Logger.class)
-        .annotatedWith(FlatPackLogger.class)
-        .toInstance(LoggerFactory.getLogger(FlatPack.class));
 
     // Allow spying on IO
     bind(IoObserver.class)
@@ -87,6 +86,20 @@ public class FlatPackModule extends AbstractModule {
     bindImplementationTypes();
     bindPackScope();
     bindUserTypes();
+  }
+
+  @Provides
+  @FlatPackLogger
+  @Singleton
+  protected Logger logger(@FlatPackLogger ILoggerFactory factory) {
+    return factory.getLogger(FlatPack.class.getName());
+  }
+
+  @Provides
+  @FlatPackLogger
+  @Singleton
+  protected ILoggerFactory loggerFactory() {
+    return LoggerFactory.getILoggerFactory();
   }
 
   /**
