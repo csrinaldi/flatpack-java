@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -20,6 +21,7 @@ package com.getperka.flatpack.ext;
  */
 
 import java.security.Principal;
+import java.util.Collections;
 import java.util.Set;
 
 import com.getperka.flatpack.HasUuid;
@@ -28,6 +30,15 @@ import com.getperka.flatpack.HasUuid;
  * Controls access to individual properties.
  */
 public interface PropertySecurity {
+  /**
+   * A constant wildcard set to represent all possible role names.
+   */
+  public static final Set<String> allRoleNames = Collections.singleton("*");
+
+  /**
+   * A constant set to represent no possible role names.
+   */
+  public static final Set<String> noRoleNames = Collections.singleton("");
 
   /**
    * Returns the role names that may access the property.

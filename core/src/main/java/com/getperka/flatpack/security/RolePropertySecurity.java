@@ -62,7 +62,7 @@ public class RolePropertySecurity implements PropertySecurity {
       getterRoles = security.extractRoles(getterRoleNames);
 
       Set<String> temp = security.extractRoleNames(property.getSetter());
-      if (security.noRoleNames.equals(temp)) {
+      if (noRoleNames.equals(temp)) {
         setterRoles = getterRoles;
         setterRoleNames = getterRoleNames;
       } else {
@@ -77,10 +77,8 @@ public class RolePropertySecurity implements PropertySecurity {
   private interface NoRolesView {}
 
   final Set<Class<?>> allRoles = Collections.<Class<?>> singleton(AllRolesView.class);
-  final Set<String> allRoleNames = Collections.singleton("*");
 
   final Set<Class<?>> noRoles = Collections.<Class<?>> singleton(NoRolesView.class);
-  final Set<String> noRoleNames = Collections.singleton("");
 
   private PrincipalMapper principalMapper;
   private RoleMapper roleMapper;

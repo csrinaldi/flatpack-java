@@ -297,7 +297,9 @@ public class ApiDescriber {
         Set<String> interestingRoles = new HashSet<String>();
         interestingRoles.addAll(propertySecurity.getGetterRoleNames(prop));
         interestingRoles.addAll(propertySecurity.getSetterRoleNames(prop));
-        if (Collections.disjoint(interestingRoles, limitRoles)) {
+        // Ignore the property if it's not a @PermitAll and it is disjoint from the filter roles
+        if (Collections.disjoint(interestingRoles, PropertySecurity.allRoleNames) &&
+          Collections.disjoint(interestingRoles, limitRoles)) {
           it.remove();
           continue;
         }
