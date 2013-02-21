@@ -21,6 +21,12 @@ package com.getperka.flatpack.codexes;
 
 import java.util.List;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
+
+import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.VisitorContext.ListContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -29,8 +35,18 @@ import com.getperka.flatpack.util.FlatPackCollections;
  * @param <V> the element type of the list
  */
 public class ListCodex<V> extends CollectionCodex<List<V>, V> {
+  @Inject
+  Provider<ListContext<V>> contexts;
 
   protected ListCodex() {}
+
+  @Override
+  public void acceptNotNull(PackVisitor visitor, List<V> value, VisitorContext<List<V>> context) {
+    if (visitor.visitValue(value, this, context)) {
+      contexts.get().acceptList(visitor, value, getValueCodex());
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   protected List<V> newCollection() {

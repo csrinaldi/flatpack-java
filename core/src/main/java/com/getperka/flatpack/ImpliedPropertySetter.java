@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.codexes;
+package com.getperka.flatpack;
 
 import java.util.Collection;
 import java.util.Set;
@@ -25,7 +25,6 @@ import java.util.concurrent.Callable;
 
 import javax.inject.Inject;
 
-import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;

@@ -26,14 +26,13 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.PersistenceAware;
+import com.getperka.flatpack.PackVisitor;
 import com.getperka.flatpack.PostUnpack;
 import com.getperka.flatpack.PreUnpack;
 import com.getperka.flatpack.ext.Codex;
@@ -41,11 +40,11 @@ import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.util.FlatPackCollections;
+import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
@@ -58,21 +57,90 @@ import com.google.inject.TypeLiteral;
  */
 public class EntityCodex<T extends HasUuid> extends Codex<T> {
 
+  static class PropertyContext<P> extends VisitorContext<P> {
+    private Property property;
+    private P value;
+
+    public void acceptProperty(PackVisitor visitor, HasUuid entity, Property property, P value) {
+      this.property = property;
+
+      @SuppressWarnings("unchecked")
+      Codex<P> codex = (Codex<P>) property.getCodex();
+      codex.accept(visitor, value, this);
+    }
+
+    @Override
+    public boolean canRemove() {
+      return canReplace() && !property.getSetter().getParameterTypes()[0].isPrimitive();
+    }
+
+    @Override
+    public boolean canReplace() {
+      return property.getSetter() != null;
+    }
+
+    public P getValue() {
+      return value;
+    }
+
+    @Override
+    public void remove() {
+      if (!canRemove()) {
+        super.remove();
+      }
+      value = null;
+      markRemoved();
+    }
+
+    @Override
+    public void replace(P newValue) {
+      if (!canReplace()) {
+        super.replace(newValue);
+      }
+      value = newValue;
+      markReplaced();
+    }
+  }
+
   private Class<T> clazz;
   @Inject
   private EntityResolver entityResolver;
-  @Inject
-  private Provider<ImpliedPropertySetter> impliedPropertySetters;
   @com.google.inject.Inject(optional = true)
   private Provider<T> provider;
   private List<Method> preUnpackMethods;
-  @Inject
-  private PropertySecurity security;
   private List<Method> postUnpackMethods;
   @Inject
   private TypeContext typeContext;
 
   protected EntityCodex() {}
+
+  @Override
+  public void acceptNotNull(PackVisitor visitor, T entity, VisitorContext<T> context) {
+    // See if there's a mare specific codex type that should be used instead
+    @SuppressWarnings("unchecked")
+    Codex<T> maybeSubtype = (Codex<T>) typeContext.getCodex(entity.getClass());
+    if (this != maybeSubtype) {
+      maybeSubtype.acceptNotNull(visitor, entity, context);
+      return;
+    }
+
+    if (visitor.visit(entity, context)) {
+      // Traverse all properties
+      for (Property prop : typeContext.extractProperties(clazz)) {
+        ImmutableContext<Property> ctx = new ImmutableContext<Property>();
+        if (visitor.visit(prop, ctx)) {
+          Object value = getProperty(prop, entity);
+          PropertyContext<Object> propertyContext = new PropertyContext<Object>();
+          propertyContext.acceptProperty(visitor, entity, prop, value);
+          if (propertyContext.didRemove() || propertyContext.didReplace()) {
+            setProperty(prop, entity, propertyContext.getValue());
+          }
+        }
+        visitor.endVisit(prop, ctx);
+      }
+    }
+    visitor.endVisit(entity, context);
+  }
 
   /**
    * Performs a minimal amount of work to create an empty stub object to fill in later.
@@ -89,6 +157,19 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     }
     UUID uuid = UUID.fromString(uuidElement.getAsString());
     T toReturn = allocate(uuid, context, true);
+
+    // Allow the object to see the data that's about to be applied
+    for (Method m : preUnpackMethods) {
+      try {
+        if (m.getParameterTypes().length == 0) {
+          m.invoke(toReturn);
+        } else {
+          m.invoke(toReturn, element);
+        }
+      } catch (Exception e) {
+        context.fail(e);
+      }
+    }
 
     // Register PostUnpack methods
     if (!postUnpackMethods.isEmpty()) {
@@ -131,127 +212,6 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   }
 
   /**
-   * Read the properties in a payload object, reify them, and store them in the given entity.
-   * 
-   * @param entity the entity to store data into
-   * @param payload the source payload object
-   * @param context data relating to the overall deserialization process
-   */
-  public void readProperties(T entity, JsonObject payload, DeserializationContext context) {
-    context.pushPath("(EntityCodex.readProperties())" + entity.getUuid());
-
-    try {
-      // Ignore incoming data with just a UUID value to avoid unnecessary warnings
-      if (payload.entrySet().size() == 1 && payload.has("uuid")) {
-        return;
-      }
-
-      if (!context.checkAccess(entity)) {
-        return;
-      }
-
-      // Allow the object to see the data that's about to be applied
-      for (Method m : preUnpackMethods) {
-        if (m.getParameterTypes().length == 0) {
-          m.invoke(entity);
-        } else {
-          m.invoke(entity, payload);
-        }
-      }
-
-      for (Property prop : typeContext.extractProperties(clazz)) {
-        // Ignore properties that cannot be set
-        if (prop.getSetter() == null) {
-          continue;
-        }
-
-        String simplePropertyName = prop.getName();
-        context.pushPath("." + simplePropertyName);
-        try {
-          Object value;
-          if (prop.isEmbedded()) {
-            /*
-             * Embedded objects are never referred to by uuid in the payload, so an instance will
-             * need to be allocated before reading in the properties.
-             */
-            @SuppressWarnings("unchecked")
-            EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) prop.getCodex();
-            HasUuid embedded = codex.allocate(UUID.randomUUID(), context, false);
-            codex.readProperties(embedded, payload, context);
-            value = embedded;
-          } else {
-
-            @SuppressWarnings("unchecked")
-            Codex<Object> codex = (Codex<Object>) prop.getCodex();
-
-            // merchant would become merchantUuid
-            String payloadPropertyName = simplePropertyName + codex.getPropertySuffix();
-
-            // Ignore undefined property values, while allowing explicit nullification
-            if (!payload.has(payloadPropertyName)) {
-              continue;
-            }
-
-            value = codex.read(payload.get(payloadPropertyName), context);
-          }
-
-          if (value == null && prop.getSetter().getParameterTypes()[0].isPrimitive()) {
-            // Don't try to pass a null to a primitive setter
-            continue;
-          }
-
-          // Verify the new value may be set
-          if (!security.maySet(prop, context.getPrincipal(), entity, value)) {
-            continue;
-          }
-
-          // Perhaps set the other side of a OneToMany relationship
-          Property impliedPropery = prop.getImpliedProperty();
-          if (impliedPropery != null && value != null) {
-            // Ensure that any linked property is also mutable
-            if (!checkAccess(value, context)) {
-              context.addWarning(entity,
-                  "Ignoring property %s because the inverse relationship (%s) may not be set",
-                  prop.getName(), impliedPropery.getName());
-              continue;
-            }
-            ImpliedPropertySetter setter = impliedPropertySetters.get();
-            setter.setLater(impliedPropery, value, entity);
-            context.addPostWork(setter);
-          }
-
-          // Set the value
-          setProperty(prop, entity, value);
-
-          // Record the value as having been set
-          context.addModified(entity, prop);
-        } catch (Exception e) {
-          context.fail(e);
-        } finally {
-          context.popPath();
-        }
-      }
-    } catch (Exception e) {
-      context.fail(e);
-    } finally {
-      context.popPath();
-    }
-  }
-
-  @Override
-  public void scanNotNull(T object, SerializationContext context) throws Exception {
-    // Handle subtypes of the expected type by delegating to a more specific implementation
-    Codex<HasUuid> maybeSubtype = typeContext.getCodex(object.getClass());
-    if (this == maybeSubtype) {
-      if (context.add(object)) {
-        traverse(object, false, context, null);
-      }
-    } else {
-      maybeSubtype.scanNotNull(object, context);
-    }
-  }
-
-  /**
    * For debugging use only.
    */
   @Override
@@ -266,23 +226,6 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   }
 
   /**
-   * Write an entity's properties into {@link SerializationContext#getWriter()}.
-   */
-  public void writeProperties(T entity, SerializationContext context) {
-    context.pushPath("(EntityCodex.writeProperties())" + entity.getUuid());
-    try {
-      JsonWriter writer = context.getWriter();
-      writer.beginObject();
-      traverse(entity, false, context, writer);
-      writer.endObject();
-    } catch (Exception e) {
-      context.fail(e);
-    } finally {
-      context.popPath();
-    }
-  }
-
-  /**
    * A hook point for custom subtypes to synthesize property values. The default implementation
    * invokes the method returned from {@link Property#getGetter()}.
    * 
@@ -291,8 +234,12 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
    * @return the property value
    * @throws Exception subclasses may delegate error handling to EntityCodex
    */
-  protected Object getProperty(Property property, T target) throws Exception {
-    return property.getGetter().invoke(target);
+  protected Object getProperty(Property property, HasUuid target) {
+    try {
+      return property.getGetter() == null ? null : property.getGetter().invoke(target);
+    } catch (Exception e) {
+      throw new RuntimeException("Could not retrieve property value", e);
+    }
   }
 
   /**
@@ -304,8 +251,14 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
    * @param value the new property value
    * @throws Exception subclasses may delegate error handling to EntityCodex
    */
-  protected void setProperty(Property property, T target, Object value) throws Exception {
-    property.getSetter().invoke(target, value);
+  protected void setProperty(Property property, T target, Object value) {
+    if (property.getSetter() != null) {
+      try {
+        property.getSetter().invoke(target, value);
+      } catch (Exception e) {
+        throw new RuntimeException("Could not set property value", e);
+      }
+    }
   }
 
   @Inject
@@ -373,93 +326,4 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     return toReturn;
   }
 
-  /**
-   * A fan-out to to {@link DeserializationContext#checkAccess(HasUuid)} that will accept
-   * collections.
-   */
-  private boolean checkAccess(Object object, DeserializationContext ctx) {
-    if (object instanceof HasUuid) {
-      return ctx.checkAccess((HasUuid) object);
-    }
-    if (object instanceof Iterable) {
-      for (Object obj : ((Iterable<?>) object)) {
-        if (!checkAccess(obj, ctx)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * A scuzzy method that either scans, writes, or reads based on whether or not {@code writer} is
-   * null
-   */
-  private void traverse(T object, boolean isEmbedded, SerializationContext context,
-      JsonWriter writer) throws Exception {
-
-    if (object == null) return;
-
-    Set<String> dirtyPropertyNames;
-    if (object instanceof PersistenceAware) {
-      dirtyPropertyNames = FlatPackCollections.setForIteration();
-      // Always write out uuid
-      dirtyPropertyNames.add("uuid");
-      dirtyPropertyNames.addAll(((PersistenceAware) object).dirtyPropertyNames());
-    } else {
-      dirtyPropertyNames = null;
-    }
-
-    // Write all properties
-    for (Property prop : typeContext.extractProperties(clazz)) {
-      // Ignore set-only properties
-      if (prop.getGetter() == null) {
-        continue;
-      }
-      // Check access
-      if (!security.mayGet(prop, context.getPrincipal(), object)) {
-        continue;
-      }
-      // Ignore OneToMany type properties unless specifically requested
-      if (prop.isDeepTraversalOnly() && !context.getTraversalMode().writeAllProperties()) {
-        continue;
-      }
-      // Don't emit a redundant uuid property
-      if (isEmbedded && "uuid".equals(prop.getName())) {
-        continue;
-      }
-      // Skip clean properties
-      if (dirtyPropertyNames != null && !dirtyPropertyNames.contains(prop.getName())) {
-        continue;
-      }
-      context.pushPath("." + prop.getName());
-      try {
-        // Extract the value
-        prop.getGetter().setAccessible(true);
-        Object value = getProperty(prop, object);
-
-        // Figure out how to interpret the value
-        @SuppressWarnings("unchecked")
-        Codex<Object> codex = (Codex<Object>) prop.getCodex();
-
-        if (prop.isEmbedded()) {
-          @SuppressWarnings("unchecked")
-          EntityCodex<HasUuid> embeddedCodex = (EntityCodex<HasUuid>) prop.getCodex();
-          embeddedCodex.traverse((HasUuid) value, true, context, writer);
-        } else if (writer == null) {
-          // Either scan or write the property value
-          codex.scan(value, context);
-        } else if (!(prop.isSuppressDefaultValue() && codex.isDefaultValue(value))) {
-          // Write the value of the property, optionally suppressing default values
-          writer.name(prop.getName() + codex.getPropertySuffix());
-          codex.write(value, context);
-        }
-      } catch (Exception e) {
-        context.fail(e);
-      } finally {
-        context.popPath();
-      }
-    }
-  }
 }

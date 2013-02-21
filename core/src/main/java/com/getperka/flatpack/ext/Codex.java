@@ -20,6 +20,7 @@
 package com.getperka.flatpack.ext;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.PackVisitor;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 
@@ -33,6 +34,14 @@ public abstract class Codex<T> {
    * Memoizing this value for the path-tracking saves a non-trivial amount of wall-time.
    */
   private final String simpleName = getClass().getSimpleName();
+
+  public void accept(PackVisitor visitor, T value, VisitorContext<T> context) {
+    if (value != null) {
+      acceptNotNull(visitor, value, context);
+    }
+  }
+
+  public abstract void acceptNotNull(PackVisitor visitor, T value, VisitorContext<T> context);
 
   /**
    * Returns a type descriptor for the JSON structure created by the Codex implementation.
@@ -89,39 +98,6 @@ public abstract class Codex<T> {
    */
   public abstract T readNotNull(JsonElement element, DeserializationContext context)
       throws Exception;
-
-  /**
-   * Analyze a composite value to find additional entities to serialize. If {@code object} is
-   * non-null, this method will call {@link #scanNotNull(Object, SerializationContext)}.
-   * 
-   * @param object the value to scan
-   * @param context the current serialization context
-   */
-  public void scan(T object, SerializationContext context) {
-    if (object == null) {
-      return;
-    }
-    context.pushPath("(" + simpleName + ".scan())");
-    try {
-      scanNotNull(object, context);
-    } catch (Exception e) {
-      context.fail(e);
-    } finally {
-      context.popPath();
-    }
-  }
-
-  /**
-   * Analyze a composite value to find additional entities to serialize. Implementations of this
-   * method should call {@link SerializationContext#add(HasUuid)} to enqueue the related entity for
-   * serialization.
-   * 
-   * @param object the object to scan, which is guaranteed to be non-null
-   * @param context the serialization context
-   * @throws Exception implementations of this method may throw arbitrary exceptions which will be
-   *           reported by {@link #scan(Object, SerializationContext)}
-   */
-  public abstract void scanNotNull(T object, SerializationContext context) throws Exception;
 
   /**
    * Write a value into the serialization context. If object is {@code null}, writes a null into

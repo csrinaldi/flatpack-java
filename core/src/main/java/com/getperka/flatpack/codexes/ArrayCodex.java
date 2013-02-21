@@ -25,13 +25,17 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
+import com.getperka.flatpack.PackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.VisitorContext.ArrayContext;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -43,10 +47,20 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of data contained in the array
  */
 public class ArrayCodex<T> extends Codex<T[]> {
+  @Inject
+  Provider<ArrayContext<T>> contexts;
   private Class<T> elementType;
   private Codex<T> valueCodex;
 
   protected ArrayCodex() {}
+
+  @Override
+  public void acceptNotNull(PackVisitor visitor, T[] value, VisitorContext<T[]> context) {
+    if (visitor.visitValue(value, this, context)) {
+      contexts.get().acceptArray(visitor, value, valueCodex);
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   public Type describe() {
@@ -72,16 +86,6 @@ public class ArrayCodex<T> extends Codex<T[]> {
       context.popPath();
     }
     return toReturn;
-  }
-
-  @Override
-  public void scanNotNull(T[] object, SerializationContext context) {
-    int count = 0;
-    for (T t : object) {
-      context.pushPath("[" + count++ + "]");
-      valueCodex.scan(t, context);
-      context.popPath();
-    }
   }
 
   @Override

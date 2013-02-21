@@ -23,13 +23,17 @@ import java.io.IOException;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
+import com.getperka.flatpack.PackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.VisitorContext.IterableContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -41,9 +45,21 @@ import com.google.inject.TypeLiteral;
  * @param <V> the map value type
  */
 public class StringMapCodex<V> extends Codex<Map<String, V>> {
+  @Inject
+  Provider<IterableContext<V>> valueContexts;
+
   private Codex<V> valueCodex;
 
   protected StringMapCodex() {}
+
+  @Override
+  public void acceptNotNull(PackVisitor visitor, Map<String, V> value,
+      VisitorContext<Map<String, V>> context) {
+    if (visitor.visitValue(value, this, context)) {
+      valueContexts.get().acceptIterable(visitor, value.values(), valueCodex);
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   public Type describe() {
@@ -77,18 +93,6 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
       }
     }
     return toReturn;
-  }
-
-  @Override
-  public void scanNotNull(Map<String, V> object, SerializationContext context) {
-    for (Map.Entry<String, V> entry : object.entrySet()) {
-      context.pushPath("[" + entry.getKey() + "]");
-      try {
-        valueCodex.scan(entry.getValue(), context);
-      } finally {
-        context.popPath();
-      }
-    }
   }
 
   @Override

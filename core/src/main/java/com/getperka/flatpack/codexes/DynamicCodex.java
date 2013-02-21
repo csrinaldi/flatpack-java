@@ -28,12 +28,14 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.PackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
@@ -51,6 +53,15 @@ public class DynamicCodex extends Codex<Object> {
   private TypeContext typeContext;
 
   protected DynamicCodex() {}
+
+  @Override
+  public void acceptNotNull(PackVisitor visitor, Object object, VisitorContext<Object> context) {
+    Codex<Object> actual = typeContext.getCodex(object.getClass());
+    if (actual == this) {
+      throw new UnsupportedOperationException(object.getClass().getName());
+    }
+    actual.acceptNotNull(visitor, object, context);
+  }
 
   @Override
   public Type describe() {
@@ -98,15 +109,6 @@ public class DynamicCodex extends Codex<Object> {
     context.fail(new UnsupportedOperationException("Cannot infer data type for "
       + element.toString()));
     return null;
-  }
-
-  @Override
-  public void scanNotNull(Object object, SerializationContext context) {
-    Codex<Object> actual = typeContext.getCodex(object.getClass());
-    if (actual == this) {
-      context.fail(new UnsupportedOperationException(object.getClass().getName()));
-    }
-    actual.scan(object, context);
   }
 
   @Override

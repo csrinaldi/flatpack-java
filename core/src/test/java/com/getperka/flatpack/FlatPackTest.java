@@ -175,7 +175,7 @@ public abstract class FlatPackTest {
     SerializationContext serialization = serializationContext(out);
     try {
       Codex<T> codex = codexes.get();
-      codex.scan(value, serialization);
+      // XXX codex.scan(value, serialization);
       codexes.get().write(value, serialization);
       if (scanned != null) {
         scanned.addAll(serialization.getEntities());
