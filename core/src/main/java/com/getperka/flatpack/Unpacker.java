@@ -92,7 +92,7 @@ public class Unpacker {
       throws IOException {
     packScope.enter().withPrincipal(principal);
     try {
-      return unpack(returnType, new JsonTreeReader(in), principal);
+      return doUnpack(returnType, new JsonTreeReader(in), principal);
     } finally {
       packScope.exit();
     }
@@ -112,7 +112,7 @@ public class Unpacker {
     in = ioObserver.observe(in);
     packScope.enter().withPrincipal(principal);
     try {
-      return unpack(returnType, new JsonReader(in), principal);
+      return doUnpack(returnType, new JsonReader(in), principal);
     } finally {
       packScope.exit();
     }
@@ -136,7 +136,10 @@ public class Unpacker {
     return unpack(returnType.getType(), in, principal);
   }
 
-  protected <T> FlatPackEntity<T> unpack(Type returnType, JsonReader reader, Principal principal)
+  /**
+   * The guts of Unpacker.
+   */
+  protected <T> FlatPackEntity<T> doUnpack(Type returnType, JsonReader reader, Principal principal)
       throws IOException {
     // Hold temporary state for deserialization
     DeserializationContext context = contexts.get();

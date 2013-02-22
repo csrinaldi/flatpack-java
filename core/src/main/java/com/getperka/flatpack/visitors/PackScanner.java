@@ -32,7 +32,6 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
 
-
 /**
  * Performs an initial pass over the object graph to be serialized to populate the
  * SerializationContext.
@@ -57,8 +56,10 @@ public class PackScanner extends FlatPackVisitor {
 
   @Override
   public <T extends HasUuid> void endVisit(T entity, VisitorContext<T> ctx) {
-    stack.pop();
-    context.popPath();
+    if (entity.equals(stack.peek())) {
+      stack.pop();
+      context.popPath();
+    }
   }
 
   @Override

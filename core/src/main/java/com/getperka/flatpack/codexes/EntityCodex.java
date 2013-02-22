@@ -31,8 +31,8 @@ import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.PostUnpack;
 import com.getperka.flatpack.PreUnpack;
 import com.getperka.flatpack.ext.Codex;
@@ -124,22 +124,26 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
       return;
     }
 
-    if (visitor.visit(entity, context)) {
-      // Traverse all properties
-      for (Property prop : typeContext.extractProperties(clazz)) {
-        ImmutableContext<Property> ctx = new ImmutableContext<Property>();
-        if (visitor.visit(prop, ctx)) {
-          Object value = getProperty(prop, entity);
-          PropertyContext<Object> propertyContext = new PropertyContext<Object>();
-          propertyContext.acceptProperty(visitor, entity, prop, value);
-          if (propertyContext.didRemove() || propertyContext.didReplace()) {
-            setProperty(prop, entity, propertyContext.getValue());
+    // Call visitValue first
+    if (visitor.visitValue(entity, this, context)) {
+      if (visitor.visit(entity, context)) {
+        // Traverse all properties
+        for (Property prop : typeContext.extractProperties(clazz)) {
+          ImmutableContext<Property> ctx = new ImmutableContext<Property>();
+          if (visitor.visit(prop, ctx)) {
+            Object value = getProperty(prop, entity);
+            PropertyContext<Object> propertyContext = new PropertyContext<Object>();
+            propertyContext.acceptProperty(visitor, entity, prop, value);
+            if (propertyContext.didRemove() || propertyContext.didReplace()) {
+              setProperty(prop, entity, propertyContext.getValue());
+            }
           }
+          visitor.endVisit(prop, ctx);
         }
-        visitor.endVisit(prop, ctx);
       }
+      visitor.endVisit(entity, context);
     }
-    visitor.endVisit(entity, context);
+    visitor.endVisitValue(entity, this, context);
   }
 
   /**

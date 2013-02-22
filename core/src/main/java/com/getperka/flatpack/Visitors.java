@@ -20,6 +20,9 @@ package com.getperka.flatpack;
  * #L%
  */
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.inject.Inject;
 
 import com.getperka.flatpack.ext.Codex;
@@ -37,8 +40,7 @@ public class Visitors {
 
   protected Visitors() {}
 
-  public <T> FlatPackEntity<T> visit(FlatPackVisitor visitor, FlatPackEntity<T> entity)
-      throws Exception {
+  public <T> FlatPackEntity<T> visit(FlatPackVisitor visitor, FlatPackEntity<T> entity) {
     SingletonContext<FlatPackEntity<T>> ctx = new SingletonContext<FlatPackEntity<T>>();
     if (visitor.visit(entity, ctx)) {
       if (entity.getValue() != null) {
@@ -52,8 +54,11 @@ public class Visitors {
         }
       }
       Codex<HasUuid> extraCodex = typeContext.getCodex(HasUuid.class);
-      new IterableContext<HasUuid>().acceptIterable(visitor, entity.getExtraEntities(),
-          extraCodex);
+
+      Set<HasUuid> mutable = new HashSet<HasUuid>(entity.getExtraEntities());
+      new IterableContext<HasUuid>().acceptIterable(visitor,
+          mutable, extraCodex);
+      entity.setExtraEntities(mutable);
     }
     visitor.endVisit(entity, ctx);
     if (ctx.didReplace()) {

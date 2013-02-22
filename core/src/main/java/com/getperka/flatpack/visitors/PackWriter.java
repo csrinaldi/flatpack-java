@@ -59,6 +59,7 @@ public class PackWriter extends FlatPackVisitor {
   static class State {
     Set<String> dirtyPropertyNames;
     HasUuid entity;
+    Property property;
   }
 
   @Inject
@@ -211,25 +212,8 @@ public class PackWriter extends FlatPackVisitor {
       && !state.dirtyPropertyNames.contains(prop.getName())) {
       return false;
     }
-    try {
-      // Extract the value
-      Object value = getProperty(prop, state.entity);
-
-      // Figure out how to interpret the value
-      @SuppressWarnings("unchecked")
-      Codex<Object> codex = (Codex<Object>) prop.getCodex();
-
-      if (prop.isEmbedded()) {
-        return true;
-      } else if (!(prop.isSuppressDefaultValue() && codex.isDefaultValue(value))) {
-        // Write the value of the property, optionally suppressing default values
-        context.getWriter().name(prop.getName() + codex.getPropertySuffix());
-        codex.write(value, context);
-      }
-    } catch (Exception e) {
-      context.fail(e);
-    }
-    return false;
+    state.property = prop;
+    return true;
   }
 
   @Override
@@ -256,17 +240,34 @@ public class PackWriter extends FlatPackVisitor {
     return true;
   }
 
-  /**
-   * A hook point for custom subtypes to synthesize property values. The default implementation
-   * invokes the method returned from {@link Property#getGetter()}.
-   * 
-   * @param property the property being read
-   * @param target the object from which the property is being read
-   * @return the property value
-   * @throws Exception subclasses may delegate error handling to EntityCodex
-   */
-  protected Object getProperty(Property property, HasUuid target) throws Exception {
-    return property.getGetter() == null ? null : property.getGetter().invoke(target);
+  @Override
+  public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
+    // Indicates that the visitor is looking at a top-level value
+    if (stack.isEmpty()) {
+      return true;
+    }
+
+    State state = stack.peek();
+    Property prop = state.property;
+    if (prop.isEmbedded()) {
+      // Embedded properties should immediately traverse into the related entity
+      return true;
+    }
+
+    // Write the value of the property, optionally suppressing default values
+    if (prop.isSuppressDefaultValue() && codex.isDefaultValue(value)) {
+      return false;
+    }
+
+    // Write the name and defer to the codex to write the JSON value
+    try {
+      context.getWriter().name(prop.getName() + codex.getPropertySuffix());
+    } catch (IOException e) {
+      context.fail(e);
+    }
+    codex.write(value, context);
+
+    return false;
   }
 
   /**
