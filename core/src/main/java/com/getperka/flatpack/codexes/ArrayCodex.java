@@ -27,7 +27,7 @@ import java.lang.reflect.Array;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
@@ -55,7 +55,7 @@ public class ArrayCodex<T> extends Codex<T[]> {
   protected ArrayCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, T[] value, VisitorContext<T[]> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, T[] value, VisitorContext<T[]> context) {
     if (visitor.visitValue(value, this, context)) {
       contexts.get().acceptArray(visitor, value, valueCodex);
     }

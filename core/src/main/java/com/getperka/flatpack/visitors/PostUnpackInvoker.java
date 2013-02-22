@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.codexes;
+package com.getperka.flatpack.visitors;
 
 import java.lang.reflect.Method;
 import java.util.List;

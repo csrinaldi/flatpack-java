@@ -19,8 +19,7 @@
  */
 package com.getperka.flatpack.ext;
 
-import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 
@@ -35,13 +34,16 @@ public abstract class Codex<T> {
    */
   private final String simpleName = getClass().getSimpleName();
 
-  public void accept(PackVisitor visitor, T value, VisitorContext<T> context) {
-    if (value != null) {
+  public void accept(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
+    if (value == null) {
+      visitor.visitValue(null, this, context);
+      visitor.endVisitValue(null, this, context);
+    } else {
       acceptNotNull(visitor, value, context);
     }
   }
 
-  public abstract void acceptNotNull(PackVisitor visitor, T value, VisitorContext<T> context);
+  public abstract void acceptNotNull(FlatPackVisitor visitor, T value, VisitorContext<T> context);
 
   /**
    * Returns a type descriptor for the JSON structure created by the Codex implementation.

@@ -25,7 +25,7 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
@@ -53,7 +53,7 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
   protected StringMapCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, Map<String, V> value,
+  public void acceptNotNull(FlatPackVisitor visitor, Map<String, V> value,
       VisitorContext<Map<String, V>> context) {
     if (visitor.visitValue(value, this, context)) {
       valueContexts.get().acceptIterable(visitor, value.values(), valueCodex);

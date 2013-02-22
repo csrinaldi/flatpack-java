@@ -43,8 +43,10 @@ import com.getperka.flatpack.domain.PersistentEmployee;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.SerializationContext;
+import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.getperka.flatpack.inject.FlatPackTestModule;
 import com.getperka.flatpack.inject.PackScope;
+import com.getperka.flatpack.visitors.PackScanner;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonWriter;
@@ -57,7 +59,6 @@ import com.google.inject.TypeLiteral;
  * A base test type for constructing a FlatPack stack.
  */
 public abstract class FlatPackTest {
-
   private int counter;
   @Inject
   private Provider<DeserializationContext> deserializationContexts;
@@ -75,6 +76,10 @@ public abstract class FlatPackTest {
   private Provider<PersistentEmployee> persistentEmployees;
   @Inject
   private Provider<SerializationContext> serializationContexts;
+  @Inject
+  private Provider<PackScanner> packScanners;
+  @Inject
+  private Visitors visitors;
 
   @After
   public void after() {
@@ -175,9 +180,9 @@ public abstract class FlatPackTest {
     SerializationContext serialization = serializationContext(out);
     try {
       Codex<T> codex = codexes.get();
-      // XXX codex.scan(value, serialization);
       codexes.get().write(value, serialization);
       if (scanned != null) {
+        new ImmutableContext<T>().acceptImmutable(packScanners.get(), value, codex);
         scanned.addAll(serialization.getEntities());
       }
     } finally {

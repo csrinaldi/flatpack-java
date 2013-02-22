@@ -26,7 +26,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
@@ -58,7 +58,7 @@ public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
   protected EntityMapCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, Map<K, V> value, VisitorContext<Map<K, V>> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, Map<K, V> value, VisitorContext<Map<K, V>> context) {
     if (visitor.visitValue(value, this, context)) {
       for (Map.Entry<K, V> entry : value.entrySet()) {
         keyContexts.get().acceptImmutable(visitor, entry.getKey(), keyCodex);

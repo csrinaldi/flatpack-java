@@ -1,17 +1,36 @@
 package com.getperka.flatpack.ext;
+/*
+ * #%L
+ * FlatPack serialization code
+ * %%
+ * Copyright (C) 2012 - 2013 Perka Inc.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 
 public abstract class VisitorContext<T> {
   public static class ArrayContext<T> extends VisitorContext<T> {
     private T[] array;
     private int index;
 
-    public void acceptArray(PackVisitor visitor, T[] array, Codex<T> codex)
+    public void acceptArray(FlatPackVisitor visitor, T[] array, Codex<T> codex)
     {
       this.array = array;
       index = 0;
@@ -33,7 +52,7 @@ public abstract class VisitorContext<T> {
   }
 
   public static class ImmutableContext<T> extends VisitorContext<T> {
-    public void acceptImmutable(PackVisitor visitor, T value, Codex<T> codex) {
+    public void acceptImmutable(FlatPackVisitor visitor, T value, Codex<T> codex) {
       codex.accept(visitor, value, this);
     }
   }
@@ -41,7 +60,7 @@ public abstract class VisitorContext<T> {
   public static class IterableContext<T> extends VisitorContext<T> {
     private Iterator<T> iterator;
 
-    public void acceptIterable(PackVisitor visitor, Iterable<T> iterable, Codex<T> codex)
+    public void acceptIterable(FlatPackVisitor visitor, Iterable<T> iterable, Codex<T> codex)
     {
       iterator = iterable.iterator();
       while (iterator.hasNext()) {
@@ -64,7 +83,7 @@ public abstract class VisitorContext<T> {
   public static class ListContext<T> extends VisitorContext<T> {
     private ListIterator<T> iterator;
 
-    public void acceptList(PackVisitor visitor, List<T> list, Codex<T> codex) {
+    public void acceptList(FlatPackVisitor visitor, List<T> list, Codex<T> codex) {
       iterator = list.listIterator();
       while (iterator.hasNext()) {
         codex.accept(visitor, iterator.next(), this);
@@ -124,7 +143,7 @@ public abstract class VisitorContext<T> {
   public static class SingletonContext<T> extends VisitorContext<T> {
     private T value;
 
-    public void acceptSingleton(PackVisitor visitor, T singleton, Codex<T> codex) {
+    public void acceptSingleton(FlatPackVisitor visitor, T singleton, Codex<T> codex) {
       codex.accept(visitor, singleton, this);
     }
 

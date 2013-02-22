@@ -32,7 +32,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.PostUnpack;
 import com.getperka.flatpack.PreUnpack;
 import com.getperka.flatpack.ext.Codex;
@@ -61,7 +61,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     private Property property;
     private P value;
 
-    public void acceptProperty(PackVisitor visitor, HasUuid entity, Property property, P value) {
+    public void acceptProperty(FlatPackVisitor visitor, HasUuid entity, Property property, P value) {
       this.property = property;
 
       @SuppressWarnings("unchecked")
@@ -115,7 +115,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   protected EntityCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, T entity, VisitorContext<T> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, T entity, VisitorContext<T> context) {
     // See if there's a mare specific codex type that should be used instead
     @SuppressWarnings("unchecked")
     Codex<T> maybeSubtype = (Codex<T>) typeContext.getCodex(entity.getClass());
@@ -156,26 +156,11 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
         + element.toString()));
     }
     UUID uuid = UUID.fromString(uuidElement.getAsString());
-    T toReturn = allocate(uuid, context, true);
+    return allocate(uuid, element, context, true);
+  }
 
-    // Allow the object to see the data that's about to be applied
-    for (Method m : preUnpackMethods) {
-      try {
-        if (m.getParameterTypes().length == 0) {
-          m.invoke(toReturn);
-        } else {
-          m.invoke(toReturn, element);
-        }
-      } catch (Exception e) {
-        context.fail(e);
-      }
-    }
-
-    // Register PostUnpack methods
-    if (!postUnpackMethods.isEmpty()) {
-      context.addPostWork(new PostUnpackInvoker(toReturn, postUnpackMethods));
-    }
-    return toReturn;
+  public T allocateEmbedded(JsonElement element, DeserializationContext context) {
+    return allocate(UUID.randomUUID(), element, context, false);
   }
 
   @Override
@@ -184,6 +169,14 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
         .withJsonKind(JsonKind.STRING)
         .withName(typeContext.getPayloadName(clazz))
         .build();
+  }
+
+  public List<Method> getPostUnpackMethods() {
+    return postUnpackMethods;
+  }
+
+  public List<Method> getPreUnpackMethods() {
+    return preUnpackMethods;
   }
 
   @Override
@@ -201,7 +194,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
      * will be created if possible.
      */
     if (entity == null) {
-      entity = allocate(uuid, context, true);
+      entity = allocate(uuid, element, context, true);
     }
     try {
       return clazz.cast(entity);
@@ -300,7 +293,8 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
         Collections.unmodifiableList(post);
   }
 
-  private T allocate(UUID uuid, DeserializationContext context, boolean useResolvers) {
+  private T allocate(UUID uuid, JsonElement element, DeserializationContext context,
+      boolean useResolvers) {
     T toReturn = null;
     boolean resolved = false;
 
@@ -323,6 +317,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
 
     toReturn.setUuid(uuid);
     context.putEntity(uuid, toReturn, resolved);
+
     return toReturn;
   }
 

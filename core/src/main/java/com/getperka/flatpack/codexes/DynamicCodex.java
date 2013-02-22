@@ -28,7 +28,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
@@ -55,7 +55,7 @@ public class DynamicCodex extends Codex<Object> {
   protected DynamicCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, Object object, VisitorContext<Object> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, Object object, VisitorContext<Object> context) {
     Codex<Object> actual = typeContext.getCodex(object.getClass());
     if (actual == this) {
       throw new UnsupportedOperationException(object.getClass().getName());

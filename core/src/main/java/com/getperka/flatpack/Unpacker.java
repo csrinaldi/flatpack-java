@@ -24,8 +24,6 @@ import java.io.Reader;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.security.Principal;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,18 +35,14 @@ import org.slf4j.Logger;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
-import com.getperka.flatpack.ext.EntitySecurity;
-import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.inject.IgnoreUnresolvableTypes;
 import com.getperka.flatpack.inject.PackScope;
-import com.getperka.flatpack.inject.PackScoped;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.IoObserver;
+import com.getperka.flatpack.visitors.PackReader;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -62,168 +56,6 @@ import com.google.gson.stream.JsonToken;
  * @see FlatPack#getUnpacker()
  */
 public class Unpacker {
-  @PackScoped
-  static class PackReader extends PackVisitor {
-    static class State {
-      HasUuid entity;
-    }
-
-    @Inject
-    DeserializationContext context;
-
-    @Inject
-    EntitySecurity entitySecurity;
-    @Inject
-    Provider<ImpliedPropertySetter> impliedPropertySetters;
-    @Inject
-    PropertySecurity security;
-    private final Deque<State> stack = new ArrayDeque<State>();
-
-    private JsonObject payload;
-
-    @Override
-    public void endVisit(Property prop, VisitorContext<Property> ctx) {
-      context.pushPath("." + prop.getName());
-      try {
-        // Ignore properties that cannot be set
-        if (prop.getSetter() == null) {
-          return;
-        }
-        String simplePropertyName = prop.getName();
-        context.pushPath("." + simplePropertyName);
-        try {
-          Object value;
-          if (prop.isEmbedded()) {
-            /*
-             * Embedded objects are never referred to by uuid in the payload, so an instance will
-             * need to be allocated before reading in the properties.
-             */
-            @SuppressWarnings("unchecked")
-            EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) prop.getCodex();
-            HasUuid embedded = codex.allocate(payload, context);
-            embedded.setUuid(UUID.randomUUID());
-            new ImmutableContext<HasUuid>().acceptImmutable(this, embedded, codex);
-            value = embedded;
-          } else {
-
-            @SuppressWarnings("unchecked")
-            Codex<Object> codex = (Codex<Object>) prop.getCodex();
-
-            // merchant would become merchantUuid
-            String payloadPropertyName = simplePropertyName + codex.getPropertySuffix();
-
-            // Ignore undefined property values, while allowing explicit nullification
-            if (!payload.has(payloadPropertyName)) {
-              return;
-            }
-
-            value = codex.read(payload.get(payloadPropertyName), context);
-          }
-
-          if (value == null && prop.getSetter().getParameterTypes()[0].isPrimitive()) {
-            // Don't try to pass a null to a primitive setter
-            return;
-          }
-
-          // Verify the new value may be set
-          if (!security.maySet(prop, context.getPrincipal(), stack.peek().entity, value)) {
-            return;
-          }
-
-          // Perhaps set the other side of a OneToMany relationship
-          Property impliedPropery = prop.getImpliedProperty();
-          if (impliedPropery != null && value != null) {
-            // Ensure that any linked property is also mutable
-            if (!checkAccess(value, context)) {
-              context.addWarning(stack.peek().entity,
-                  "Ignoring property %s because the inverse relationship (%s) may not be set",
-                  prop.getName(), impliedPropery.getName());
-              return;
-            }
-            ImpliedPropertySetter setter = impliedPropertySetters.get();
-            setter.setLater(impliedPropery, value, stack.peek().entity);
-            context.addPostWork(setter);
-          }
-
-          // Set the value
-          setProperty(prop, stack.peek().entity, value);
-
-          // Record the value as having been set
-          context.addModified(stack.peek().entity, prop);
-        } catch (Exception e) {
-          context.fail(e);
-        } finally {
-          context.popPath();
-        }
-      } finally {
-        context.popPath();
-      }
-    }
-
-    @Override
-    public <Q extends HasUuid> void endVisit(Q entity, VisitorContext<Q> ctx) {
-      stack.pop();
-      context.popPath();
-    }
-
-    public void setPayload(JsonObject payload) {
-      this.payload = payload;
-    }
-
-    @Override
-    public <Q extends HasUuid> boolean visit(Q entity, VisitorContext<Q> ctx) {
-      context.pushPath("." + entity.getUuid());
-      if (payload.entrySet().size() == 1 && payload.has("uuid")) {
-        return false;
-      }
-      if (!context.checkAccess(entity)) {
-        return false;
-      }
-      State state = new State();
-      state.entity = entity;
-      stack.push(state);
-      return true;
-    }
-
-    /**
-     * A hook point for custom subtypes to synthesize property values. The default implementation
-     * invokes the method returned from {@link Property#getSetter()}.
-     * 
-     * @param property the property being read
-     * @param target the object from which the property is being read
-     * @param value the new property value
-     * @throws Exception subclasses may delegate error handling to EntityCodex
-     */
-    protected void setProperty(Property property, HasUuid target, Object value) {
-      if (property.getSetter() != null) {
-        try {
-          property.getSetter().invoke(target, value);
-        } catch (Exception e) {
-          throw new RuntimeException("Could not set property value", e);
-        }
-      }
-    }
-
-    /**
-     * A fan-out to to {@link DeserializationContext#checkAccess(HasUuid)} that will accept
-     * collections.
-     */
-    private boolean checkAccess(Object object, DeserializationContext ctx) {
-      if (object instanceof HasUuid) {
-        return ctx.checkAccess((HasUuid) object);
-      }
-      if (object instanceof Iterable) {
-        for (Object obj : ((Iterable<?>) object)) {
-          if (!checkAccess(obj, ctx)) {
-            return false;
-          }
-        }
-        return true;
-      }
-      return false;
-    }
-  }
-
   @Inject
   private Provider<DeserializationContext> contexts;
   @Inject
@@ -242,6 +74,8 @@ public class Unpacker {
   private Provider<PackReader> packReaders;
   @Inject
   private TypeContext typeContext;
+  @Inject
+  private Visitors visitors;
 
   protected Unpacker() {}
 
@@ -302,7 +136,7 @@ public class Unpacker {
     return unpack(returnType.getType(), in, principal);
   }
 
-  private <T> FlatPackEntity<T> unpack(Type returnType, JsonReader reader, Principal principal)
+  protected <T> FlatPackEntity<T> unpack(Type returnType, JsonReader reader, Principal principal)
       throws IOException {
     // Hold temporary state for deserialization
     DeserializationContext context = contexts.get();
@@ -393,7 +227,7 @@ public class Unpacker {
           JsonObject metaElement = jsonParser.parse(reader).getAsJsonObject();
           PackReader packReader = packReaders.get();
           packReader.setPayload(metaElement);
-          new ImmutableContext<EntityMetadata>().acceptImmutable(packReader, meta, metaCodex.get());
+          meta = visitors.visit(packReader, meta);
           toReturn.addMetadata(meta);
         }
 

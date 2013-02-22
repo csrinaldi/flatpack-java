@@ -24,7 +24,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.ext.VisitorContext.IterableContext;
 import com.getperka.flatpack.util.FlatPackCollections;
@@ -42,7 +42,7 @@ public class SetCodex<V> extends CollectionCodex<Set<V>, V> {
   protected SetCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, Set<V> value, VisitorContext<Set<V>> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, Set<V> value, VisitorContext<Set<V>> context) {
     if (visitor.visitValue(value, this, context)) {
       contexts.get().acceptIterable(visitor, value, getValueCodex());
     }

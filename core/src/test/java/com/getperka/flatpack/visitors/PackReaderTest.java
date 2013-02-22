@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.codex;
+package com.getperka.flatpack.visitors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -28,22 +28,29 @@ import java.io.StringWriter;
 import java.util.UUID;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 import org.junit.Test;
 
 import com.getperka.flatpack.FlatPackTest;
+import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.domain.Employee;
 import com.getperka.flatpack.ext.DeserializationContext;
-import com.getperka.flatpack.ext.SerializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 
-public class EntityCodexTest extends FlatPackTest {
+public class PackReaderTest extends FlatPackTest {
 
   @Inject
   private EntityCodex<Employee> employeeCodex;
+  @Inject
+  private Provider<PackReader> readers;
+  @Inject
+  private Visitors visitors;
+  @Inject
+  private Provider<PackWriter> writers;
 
   @Test
   public void testReadWriteProperties() {
@@ -52,9 +59,9 @@ public class EntityCodexTest extends FlatPackTest {
     Employee e1 = makeEmployee();
 
     StringWriter out = new StringWriter();
-    SerializationContext ctx = serializationContext(out);
+    serializationContext(out);
     try {
-      // XXX employeeCodex.writeProperties(e1, ctx);
+      visitors.visit(writers.get(), e1);
     } finally {
       closeContext();
     }
@@ -68,7 +75,10 @@ public class EntityCodexTest extends FlatPackTest {
     DeserializationContext d = deserializationContext();
     try {
       e2 = employeeCodex.allocate(obj, d);
-      // XXX employeeCodex.readProperties(e2, obj, d);
+
+      PackReader reader = readers.get();
+      reader.setPayload(obj);
+      visitors.visit(reader, e2);
 
       // Check referential integrity
       assertSame(e2, employeeCodex.read(new JsonPrimitive(e2.getUuid().toString()), d));
@@ -100,16 +110,18 @@ public class EntityCodexTest extends FlatPackTest {
     DeserializationContext d = deserializationContext();
     try {
       e = employeeCodex.allocate(obj, d);
-      // XXX employeeCodex.readProperties(e, obj, d);
+      PackReader reader = readers.get();
+      reader.setPayload(obj);
+      visitors.visit(reader, e);
     } finally {
       closeContext();
     }
     assertEquals("Hello World!", e.writeOnlyProperty);
 
     StringWriter out = new StringWriter();
-    SerializationContext s = serializationContext(out);
+    serializationContext(out);
     try {
-      // XXX employeeCodex.writeProperties(e, s);
+      visitors.visit(writers.get(), e);
     } finally {
       closeContext();
     }

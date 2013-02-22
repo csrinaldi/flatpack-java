@@ -19,7 +19,7 @@
  */
 package com.getperka.flatpack.codexes;
 
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.VisitorContext;
 
@@ -30,7 +30,7 @@ import com.getperka.flatpack.ext.VisitorContext;
  */
 public abstract class ValueCodex<T> extends Codex<T> {
   @Override
-  public void acceptNotNull(PackVisitor visitor, T value, VisitorContext<T> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
     if (visitor.visitValue(value, this, context)) {
       // Nothing to do here
     }

@@ -19,31 +19,33 @@
  */
 package com.getperka.flatpack.codexes;
 
+import java.util.Collection;
 import java.util.List;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
-
-import com.getperka.flatpack.PackVisitor;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.VisitorContext.IterableContext;
 import com.getperka.flatpack.ext.VisitorContext.ListContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
- * List support.
+ * List support. This class is parameterized with {@link Collection} to gracefully handle receiving
+ * set or other collection types.
  * 
  * @param <V> the element type of the list
  */
-public class ListCodex<V> extends CollectionCodex<List<V>, V> {
-  @Inject
-  Provider<ListContext<V>> contexts;
-
+public class ListCodex<V> extends CollectionCodex<Collection<V>, V> {
   protected ListCodex() {}
 
   @Override
-  public void acceptNotNull(PackVisitor visitor, List<V> value, VisitorContext<List<V>> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, Collection<V> value,
+      VisitorContext<Collection<V>> context) {
     if (visitor.visitValue(value, this, context)) {
-      contexts.get().acceptList(visitor, value, getValueCodex());
+      if (value instanceof List) {
+        new ListContext<V>().acceptList(visitor, (List<V>) value, getValueCodex());
+      } else {
+        new IterableContext<V>().acceptIterable(visitor, value, getValueCodex());
+      }
     }
     visitor.endVisitValue(value, this, context);
   }
