@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -30,8 +31,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.junit.Test;
 
+import com.getperka.flatpack.FlatPackTest;
 import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.codexes.ValueCodex;
 import com.getperka.flatpack.ext.VisitorContext.ArrayContext;
@@ -44,7 +48,7 @@ import com.google.gson.JsonElement;
 /**
  * Verify behaviors of standard {@link VisitorContext} implementations.
  */
-public class VisitorContextTest {
+public class VisitorContextTest extends FlatPackTest {
   /**
    * Just used as a trivial codex to pump {@link FlatPackVisitor#visitValue}.
    */
@@ -78,6 +82,9 @@ public class VisitorContextTest {
     }
   }
 
+  @Inject
+  PassthroughCodex passthrough;
+
   @Test
   public void testArrayContext() {
     ArrayContext<Object> ctx = new ArrayContext<Object>();
@@ -86,15 +93,14 @@ public class VisitorContextTest {
     final Object replacement = "c";
     ValueRecorder recorder = new ValueRecorder() {
       @Override
-      @SuppressWarnings("unchecked")
       public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
-        ctx.replace((T) replacement);
+        ctx.replace(codex.cast(replacement));
         return super.visitValue(value, codex, ctx);
       }
 
     };
     Object[] array = new Object[] { "a", "b" };
-    ctx.acceptArray(recorder, array, new PassthroughCodex());
+    ctx.acceptArray(recorder, array, passthrough);
     assertTrue(ctx.didReplace());
     assertEquals(Arrays.asList("a", "a", "b", "b"), recorder.values);
     assertEquals(Arrays.asList("c", "c"), Arrays.asList(array));
@@ -132,7 +138,7 @@ public class VisitorContextTest {
 
     ValueRecorder recorder = new ValueRecorder();
     Object value = new Object();
-    ctx.acceptImmutable(recorder, value, new PassthroughCodex());
+    ctx.acceptImmutable(recorder, value, passthrough);
     assertEquals(Arrays.asList(value, value), recorder.values);
   }
 
@@ -150,7 +156,7 @@ public class VisitorContextTest {
 
     };
     List<Object> iterable = new ArrayList<Object>(Arrays.asList("a", "b"));
-    ctx.acceptIterable(recorder, iterable, new PassthroughCodex());
+    ctx.acceptIterable(recorder, iterable, passthrough);
     assertEquals(Arrays.asList("a", "a", "b", "b"), recorder.values);
     assertTrue(iterable.isEmpty());
   }
@@ -170,11 +176,11 @@ public class VisitorContextTest {
         switch (count) {
           case 0:
             assertEquals("a", value);
-            ctx.insertBefore((T) String.valueOf(count));
+            ctx.insertBefore(codex.cast(String.valueOf(count)));
             break;
           case 1:
             assertEquals("b", value);
-            ctx.insertAfter((T) String.valueOf(count));
+            ctx.insertAfter(codex.cast(String.valueOf(count)));
             break;
           case 2:
             assertEquals("c", value);
@@ -182,7 +188,7 @@ public class VisitorContextTest {
             break;
           case 3:
             assertEquals("d", value);
-            ctx.replace((T) String.valueOf(count));
+            ctx.replace(codex.cast(String.valueOf(count)));
             break;
           default:
             throw new RuntimeException(String.valueOf(count));
@@ -193,7 +199,7 @@ public class VisitorContextTest {
 
     };
     List<Object> list = new ArrayList<Object>(Arrays.asList("a", "b", "c", "d"));
-    ctx.acceptList(recorder, list, new PassthroughCodex());
+    ctx.acceptList(recorder, list, passthrough);
     assertEquals(Arrays.asList("0", "a", "b", "1", "3"), list);
     assertEquals(Arrays.asList("a", "a", "b", "b", "c", "c", "d", "d"), recorder.values);
     assertTrue(ctx.didInsert());
@@ -212,7 +218,7 @@ public class VisitorContextTest {
     assertSame(value, ctx.getValue());
 
     ValueRecorder recorder = new ValueRecorder();
-    ctx.acceptSingleton(recorder, value, new PassthroughCodex());
+    ctx.acceptSingleton(recorder, value, passthrough);
     assertEquals(Arrays.asList(value, value), recorder.values);
   }
 }

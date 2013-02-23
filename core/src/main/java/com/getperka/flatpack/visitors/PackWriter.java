@@ -88,7 +88,7 @@ public class PackWriter extends FlatPackVisitor {
   }
 
   @Override
-  public <Q extends HasUuid> void endVisit(Q entity, VisitorContext<Q> ctx) {
+  public <Q extends HasUuid> void endVisit(Q entity, EntityCodex<Q> codex, VisitorContext<Q> ctx) {
     stack.pop();
     if (stack.isEmpty()) {
       try {
@@ -101,7 +101,8 @@ public class PackWriter extends FlatPackVisitor {
   }
 
   @Override
-  public <T> boolean visit(FlatPackEntity<T> entity, VisitorContext<FlatPackEntity<T>> ctx) {
+  public <T> boolean visit(FlatPackEntity<T> entity, Codex<T> codex,
+      VisitorContext<FlatPackEntity<T>> ctx) {
     JsonWriter json = context.getWriter();
     try {
       json.beginObject();
@@ -125,8 +126,6 @@ public class PackWriter extends FlatPackVisitor {
 
       // value : ['type', 'uuid']
       json.name("value");
-      @SuppressWarnings("unchecked")
-      Codex<T> codex = (Codex<T>) typeContext.getCodex(entity.getType());
       codex.write(entity.getValue(), context);
 
       // errors : { 'foo.bar.baz' : 'May not be null' }
@@ -217,7 +216,7 @@ public class PackWriter extends FlatPackVisitor {
   }
 
   @Override
-  public <T extends HasUuid> boolean visit(T entity, VisitorContext<T> ctx) {
+  public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
     PackWriter.State state = new State();
     state.entity = entity;

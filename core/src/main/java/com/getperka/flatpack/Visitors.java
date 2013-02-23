@@ -20,14 +20,15 @@ package com.getperka.flatpack;
  * #L%
  */
 
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 import javax.inject.Inject;
 
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.ext.VisitorContext.IterableContext;
+import com.getperka.flatpack.ext.VisitorContext.ListContext;
 import com.getperka.flatpack.ext.VisitorContext.SingletonContext;
 
 /**
@@ -42,11 +43,10 @@ public class Visitors {
 
   public <T> FlatPackEntity<T> visit(FlatPackVisitor visitor, FlatPackEntity<T> entity) {
     SingletonContext<FlatPackEntity<T>> ctx = new SingletonContext<FlatPackEntity<T>>();
-    if (visitor.visit(entity, ctx)) {
+    @SuppressWarnings("unchecked")
+    Codex<T> codex = (Codex<T>) typeContext.getCodex(entity.getType());
+    if (visitor.visit(entity, codex, ctx)) {
       if (entity.getValue() != null) {
-        @SuppressWarnings("unchecked")
-        Codex<T> codex = (Codex<T>) typeContext.getCodex(entity.getType());
-
         SingletonContext<T> valueContext = new SingletonContext<T>();
         valueContext.acceptSingleton(visitor, entity.getValue(), codex);
         if (valueContext.didReplace()) {
@@ -55,12 +55,12 @@ public class Visitors {
       }
       Codex<HasUuid> extraCodex = typeContext.getCodex(HasUuid.class);
 
-      Set<HasUuid> mutable = new HashSet<HasUuid>(entity.getExtraEntities());
-      new IterableContext<HasUuid>().acceptIterable(visitor,
-          mutable, extraCodex);
-      entity.setExtraEntities(mutable);
+      // Traverse the extra entities as a list, to allow insertion
+      List<HasUuid> mutable = new ArrayList<HasUuid>(entity.getExtraEntities());
+      new ListContext<HasUuid>().acceptList(visitor, mutable, extraCodex);
+      entity.setExtraEntities(new HashSet<HasUuid>(mutable));
     }
-    visitor.endVisit(entity, ctx);
+    visitor.endVisit(entity, codex, ctx);
     if (ctx.didReplace()) {
       entity = ctx.getValue();
     }
@@ -69,7 +69,8 @@ public class Visitors {
 
   public <T extends HasUuid> T visit(FlatPackVisitor visitor, T entity) {
     @SuppressWarnings("unchecked")
-    Codex<T> codex = (Codex<T>) typeContext.getCodex(entity.getClass());
+    Class<T> clazz = (Class<T>) entity.getClass();
+    Codex<T> codex = typeContext.getCodex(clazz);
     SingletonContext<T> ctx = new SingletonContext<T>();
     ctx.acceptSingleton(visitor, entity, codex);
     return ctx.didReplace() ? ctx.getValue() : entity;

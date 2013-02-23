@@ -26,6 +26,7 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
@@ -55,7 +56,7 @@ public class PackScanner extends FlatPackVisitor {
   }
 
   @Override
-  public <T extends HasUuid> void endVisit(T entity, VisitorContext<T> ctx) {
+  public <T extends HasUuid> void endVisit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     if (entity.equals(stack.peek())) {
       stack.pop();
       context.popPath();
@@ -78,7 +79,7 @@ public class PackScanner extends FlatPackVisitor {
   }
 
   @Override
-  public <T extends HasUuid> boolean visit(T entity, VisitorContext<T> ctx) {
+  public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     // TODO: EntitySecurity.mayRead() ?
     context.pushPath("." + entity.getUuid());
     stack.push(entity);

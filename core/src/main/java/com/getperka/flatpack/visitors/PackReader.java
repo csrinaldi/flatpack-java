@@ -147,7 +147,7 @@ public class PackReader extends FlatPackVisitor {
   }
 
   @Override
-  public <Q extends HasUuid> void endVisit(Q entity, VisitorContext<Q> ctx) {
+  public <Q extends HasUuid> void endVisit(Q entity, EntityCodex<Q> codex, VisitorContext<Q> ctx) {
     stack.pop();
     context.popPath();
   }
@@ -165,7 +165,7 @@ public class PackReader extends FlatPackVisitor {
   }
 
   @Override
-  public <Q extends HasUuid> boolean visit(Q entity, VisitorContext<Q> ctx) {
+  public <Q extends HasUuid> boolean visit(Q entity, EntityCodex<Q> codex, VisitorContext<Q> ctx) {
     context.pushPath("." + entity.getUuid());
 
     PackReader.State state = new State();
@@ -179,7 +179,6 @@ public class PackReader extends FlatPackVisitor {
     }
 
     // Allow the object to see the data that's about to be applied
-    EntityCodex<?> codex = (EntityCodex<?>) typeContext.getCodex(entity.getClass());
     for (Method m : codex.getPreUnpackMethods()) {
       try {
         if (m.getParameterTypes().length == 0) {

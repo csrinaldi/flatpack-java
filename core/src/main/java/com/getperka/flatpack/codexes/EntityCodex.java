@@ -56,52 +56,6 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of entity to encode
  */
 public class EntityCodex<T extends HasUuid> extends Codex<T> {
-
-  static class PropertyContext<P> extends VisitorContext<P> {
-    private Property property;
-    private P value;
-
-    public void acceptProperty(FlatPackVisitor visitor, HasUuid entity, Property property, P value) {
-      this.property = property;
-
-      @SuppressWarnings("unchecked")
-      Codex<P> codex = (Codex<P>) property.getCodex();
-      codex.accept(visitor, value, this);
-    }
-
-    @Override
-    public boolean canRemove() {
-      return canReplace() && !property.getSetter().getParameterTypes()[0].isPrimitive();
-    }
-
-    @Override
-    public boolean canReplace() {
-      return property.getSetter() != null;
-    }
-
-    public P getValue() {
-      return value;
-    }
-
-    @Override
-    public void remove() {
-      if (!canRemove()) {
-        super.remove();
-      }
-      value = null;
-      markRemoved();
-    }
-
-    @Override
-    public void replace(P newValue) {
-      if (!canReplace()) {
-        super.replace(newValue);
-      }
-      value = newValue;
-      markReplaced();
-    }
-  }
-
   private Class<T> clazz;
   @Inject
   private EntityResolver entityResolver;
@@ -126,13 +80,13 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
 
     // Call visitValue first
     if (visitor.visitValue(entity, this, context)) {
-      if (visitor.visit(entity, context)) {
+      if (visitor.visit(entity, this, context)) {
         // Traverse all properties
         for (Property prop : typeContext.extractProperties(clazz)) {
           ImmutableContext<Property> ctx = new ImmutableContext<Property>();
           if (visitor.visit(prop, ctx)) {
             Object value = getProperty(prop, entity);
-            PropertyContext<Object> propertyContext = new PropertyContext<Object>();
+            VisitorContext.PropertyContext<Object> propertyContext = new VisitorContext.PropertyContext<Object>();
             propertyContext.acceptProperty(visitor, entity, prop, value);
             if (propertyContext.didRemove() || propertyContext.didReplace()) {
               setProperty(prop, entity, propertyContext.getValue());
@@ -141,7 +95,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
           visitor.endVisit(prop, ctx);
         }
       }
-      visitor.endVisit(entity, context);
+      visitor.endVisit(entity, this, context);
     }
     visitor.endVisitValue(entity, this, context);
   }

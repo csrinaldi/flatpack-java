@@ -19,6 +19,9 @@
  */
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.util.FlatPackTypes.erase;
+import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
+
 import com.getperka.flatpack.FlatPackVisitor;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -32,8 +35,25 @@ public abstract class Codex<T> {
   /**
    * Memoizing this value for the path-tracking saves a non-trivial amount of wall-time.
    */
-  private final String simpleName = getClass().getSimpleName();
+  private final String simpleName;
+  private final Class<T> parameterization;
 
+  protected Codex() {
+    simpleName = getClass().getSimpleName();
+    parameterization = erase(getSingleParameterization(getClass(), Codex.class));
+  }
+
+  /**
+   * Visit a value using the supplied visitor.
+   * <p>
+   * The default implementation delegates to {@link #acceptNotNull} or calls
+   * {@link FlatPackVisitor#visitValue visitValue()} / {@link FlatPackVisitor#endVisitValue
+   * endVisitValue()} if {@code value} is {@code null}.
+   * 
+   * @param visitor the visitor that is traversing the object graph
+   * @param value the value being traversed
+   * @param context allows mutation of the object graph
+   */
   public void accept(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
     if (value == null) {
       visitor.visitValue(null, this, context);
@@ -43,7 +63,22 @@ public abstract class Codex<T> {
     }
   }
 
+  /**
+   * Visit a non-null value using the supplied visitor.
+   * 
+   * @param visitor the visitor that is traversing the object graph
+   * @param value the value being traversed
+   * @param context allows mutation of the object graph
+   */
   public abstract void acceptNotNull(FlatPackVisitor visitor, T value, VisitorContext<T> context);
+
+  /**
+   * Returns {@code value} if it conforms to the {@code T} type parameter. Due to erasure, this
+   * method can only partially verify objects of a parameterized type.
+   */
+  public T cast(Object value) {
+    return parameterization.cast(value);
+  }
 
   /**
    * Returns a type descriptor for the JSON structure created by the Codex implementation.
