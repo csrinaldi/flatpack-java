@@ -37,7 +37,6 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.getperka.flatpack.inject.PackScoped;
 import com.google.gson.JsonObject;
 
@@ -88,8 +87,7 @@ public class PackReader extends FlatPackVisitor {
           @SuppressWarnings("unchecked")
           EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) prop.getCodex();
           HasUuid embedded = codex.allocateEmbedded(payload, context);
-          new ImmutableContext<HasUuid>().acceptImmutable(this, embedded, codex);
-          value = embedded;
+          value = ctx.walkImmutable(codex).accept(this, embedded);
         } else {
 
           @SuppressWarnings("unchecked")

@@ -44,7 +44,7 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
+import com.getperka.flatpack.ext.VisitorContext.Walker;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
@@ -56,6 +56,29 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of entity to encode
  */
 public class EntityCodex<T extends HasUuid> extends Codex<T> {
+  class PropertyWalker implements Walker<Property> {
+    private final T entity;
+
+    PropertyWalker(T entity) {
+      this.entity = entity;
+    }
+
+    @Override
+    public void walk(FlatPackVisitor visitor, Property prop, VisitorContext<Property> context) {
+      if (visitor.visit(prop, context)) {
+        @SuppressWarnings("unchecked")
+        Codex<Object> codex = (Codex<Object>) prop.getCodex();
+        Object value = getProperty(prop, entity);
+        Object newValue = context.walkProperty(prop, codex).accept(visitor, value);
+        // Object comparison intentional
+        if (value != newValue) {
+          setProperty(prop, entity, newValue);
+        }
+      }
+      visitor.endVisit(prop, context);
+    }
+  }
+
   private Class<T> clazz;
   @Inject
   private EntityResolver entityResolver;
@@ -63,6 +86,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   private Provider<T> provider;
   private List<Method> preUnpackMethods;
   private List<Method> postUnpackMethods;
+
   @Inject
   private TypeContext typeContext;
 
@@ -82,17 +106,9 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     if (visitor.visitValue(entity, this, context)) {
       if (visitor.visit(entity, this, context)) {
         // Traverse all properties
+        PropertyWalker walker = new PropertyWalker(entity);
         for (Property prop : typeContext.extractProperties(clazz)) {
-          ImmutableContext<Property> ctx = new ImmutableContext<Property>();
-          if (visitor.visit(prop, ctx)) {
-            Object value = getProperty(prop, entity);
-            VisitorContext.PropertyContext<Object> propertyContext = new VisitorContext.PropertyContext<Object>();
-            propertyContext.acceptProperty(visitor, entity, prop, value);
-            if (propertyContext.didRemove() || propertyContext.didReplace()) {
-              setProperty(prop, entity, propertyContext.getValue());
-            }
-          }
-          visitor.endVisit(prop, ctx);
+          context.walkImmutable(walker).accept(visitor, prop);
         }
       }
       visitor.endVisit(entity, this, context);

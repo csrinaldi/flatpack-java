@@ -43,7 +43,6 @@ import com.getperka.flatpack.domain.PersistentEmployee;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.SerializationContext;
-import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.getperka.flatpack.inject.FlatPackTestModule;
 import com.getperka.flatpack.inject.PackScope;
 import com.getperka.flatpack.visitors.PackScanner;
@@ -182,7 +181,7 @@ public abstract class FlatPackTest {
       Codex<T> codex = codexes.get();
       codexes.get().write(value, serialization);
       if (scanned != null) {
-        new ImmutableContext<T>().acceptImmutable(packScanners.get(), value, codex);
+        visitors.getRoot().walkImmutable(codex).accept(packScanners.get(), value);
         scanned.addAll(serialization.getEntities());
       }
     } finally {

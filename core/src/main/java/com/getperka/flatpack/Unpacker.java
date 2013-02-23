@@ -36,7 +36,6 @@ import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.inject.IgnoreUnresolvableTypes;
 import com.getperka.flatpack.inject.PackScope;
@@ -225,12 +224,13 @@ public class Unpacker {
       } else if ("metadata".equals(name)) {
         reader.beginArray();
 
+        Codex<EntityMetadata> metaCodex = typeContext.getCodex(EntityMetadata.class);
         while (!JsonToken.END_ARRAY.equals(reader.peek())) {
           EntityMetadata meta = new EntityMetadata();
           JsonObject metaElement = jsonParser.parse(reader).getAsJsonObject();
           PackReader packReader = packReaders.get();
           packReader.setPayload(metaElement);
-          meta = visitors.visit(packReader, meta);
+          meta = visitors.getRoot().walkSingleton(metaCodex).accept(packReader, meta);
           toReturn.addMetadata(meta);
         }
 
@@ -268,7 +268,7 @@ public class Unpacker {
       EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) typeContext
           .getCodex(entity.getClass());
       packReader.setPayload(entry.getValue());
-      new ImmutableContext<HasUuid>().acceptImmutable(packReader, entity, codex);
+      visitors.getRoot().walkImmutable(codex).accept(packReader, entity);
     }
 
     @SuppressWarnings("unchecked")

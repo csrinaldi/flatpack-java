@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 
 import javax.inject.Inject;
-import javax.inject.Provider;
 
 import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
@@ -35,7 +34,6 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.VisitorContext.ArrayContext;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -47,8 +45,6 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of data contained in the array
  */
 public class ArrayCodex<T> extends Codex<T[]> {
-  @Inject
-  Provider<ArrayContext<T>> contexts;
   private Class<T> elementType;
   private Codex<T> valueCodex;
 
@@ -57,7 +53,7 @@ public class ArrayCodex<T> extends Codex<T[]> {
   @Override
   public void acceptNotNull(FlatPackVisitor visitor, T[] value, VisitorContext<T[]> context) {
     if (visitor.visitValue(value, this, context)) {
-      contexts.get().acceptArray(visitor, value, valueCodex);
+      context.walkArray(valueCodex).accept(visitor, value);
     }
     visitor.endVisitValue(value, this, context);
   }

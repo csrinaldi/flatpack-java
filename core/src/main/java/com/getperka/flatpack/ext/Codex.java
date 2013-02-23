@@ -23,6 +23,7 @@ import static com.getperka.flatpack.util.FlatPackTypes.erase;
 import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
 
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.VisitorContext.Walker;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 
@@ -31,7 +32,7 @@ import com.google.gson.stream.JsonWriter;
  * 
  * @param <T> the type of data that the instance operates on
  */
-public abstract class Codex<T> {
+public abstract class Codex<T> implements Walker<T> {
   /**
    * Memoizing this value for the path-tracking saves a non-trivial amount of wall-time.
    */
@@ -54,7 +55,8 @@ public abstract class Codex<T> {
    * @param value the value being traversed
    * @param context allows mutation of the object graph
    */
-  public void accept(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
+  @Override
+  public void walk(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
     if (value == null) {
       visitor.visitValue(null, this, context);
       visitor.endVisitValue(null, this, context);

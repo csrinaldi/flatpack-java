@@ -23,10 +23,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import javax.inject.Inject;
-import javax.inject.Provider;
 
-import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
@@ -34,8 +33,6 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
-import com.getperka.flatpack.ext.VisitorContext.SingletonContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -49,23 +46,19 @@ public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
   private EntityCodex<K> keyCodex;
   private Codex<V> valueCodex;
 
-  @Inject
-  Provider<ImmutableContext<K>> keyContexts;
-
-  @Inject
-  Provider<SingletonContext<V>> valueContexts;
-
   protected EntityMapCodex() {}
 
   @Override
-  public void acceptNotNull(FlatPackVisitor visitor, Map<K, V> value, VisitorContext<Map<K, V>> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, Map<K, V> value,
+      VisitorContext<Map<K, V>> context) {
     if (visitor.visitValue(value, this, context)) {
       for (Map.Entry<K, V> entry : value.entrySet()) {
-        keyContexts.get().acceptImmutable(visitor, entry.getKey(), keyCodex);
-        SingletonContext<V> valueContext = valueContexts.get();
-        valueContext.acceptSingleton(visitor, entry.getValue(), valueCodex);
-        if (valueContext.didReplace()) {
-          entry.setValue(valueContext.getValue());
+        context.walkImmutable(keyCodex).accept(visitor, entry.getKey());
+        V oldValue = entry.getValue();
+        V newValue = context.walkSingleton(valueCodex).accept(visitor, oldValue);
+        // Object comparison intentional
+        if (oldValue != newValue) {
+          entry.setValue(newValue);
         }
       }
     }

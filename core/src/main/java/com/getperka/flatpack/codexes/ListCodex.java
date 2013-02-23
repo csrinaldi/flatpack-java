@@ -24,8 +24,6 @@ import java.util.List;
 
 import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.VisitorContext.IterableContext;
-import com.getperka.flatpack.ext.VisitorContext.ListContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -42,9 +40,9 @@ public class ListCodex<V> extends CollectionCodex<Collection<V>, V> {
       VisitorContext<Collection<V>> context) {
     if (visitor.visitValue(value, this, context)) {
       if (value instanceof List) {
-        new ListContext<V>().acceptList(visitor, (List<V>) value, getValueCodex());
+        context.walkList(getValueCodex()).accept(visitor, (List<V>) value);
       } else {
-        new IterableContext<V>().acceptIterable(visitor, value, getValueCodex());
+        context.walkIterable(getValueCodex()).accept(visitor, value);
       }
     }
     visitor.endVisitValue(value, this, context);

@@ -29,6 +29,7 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -42,6 +43,7 @@ import com.getperka.flatpack.ext.VisitorContext.ArrayContext;
 import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
 import com.getperka.flatpack.ext.VisitorContext.IterableContext;
 import com.getperka.flatpack.ext.VisitorContext.ListContext;
+import com.getperka.flatpack.ext.VisitorContext.NullableContext;
 import com.getperka.flatpack.ext.VisitorContext.SingletonContext;
 import com.google.gson.JsonElement;
 
@@ -100,8 +102,7 @@ public class VisitorContextTest extends FlatPackTest {
 
     };
     Object[] array = new Object[] { "a", "b" };
-    ctx.acceptArray(recorder, array, passthrough);
-    assertTrue(ctx.didReplace());
+    ctx.walkArray(passthrough).accept(recorder, array);
     assertEquals(Arrays.asList("a", "a", "b", "b"), recorder.values);
     assertEquals(Arrays.asList("c", "c"), Arrays.asList(array));
   }
@@ -138,7 +139,7 @@ public class VisitorContextTest extends FlatPackTest {
 
     ValueRecorder recorder = new ValueRecorder();
     Object value = new Object();
-    ctx.acceptImmutable(recorder, value, passthrough);
+    ctx.walkImmutable(passthrough).accept(recorder, value);
     assertEquals(Arrays.asList(value, value), recorder.values);
   }
 
@@ -156,7 +157,7 @@ public class VisitorContextTest extends FlatPackTest {
 
     };
     List<Object> iterable = new ArrayList<Object>(Arrays.asList("a", "b"));
-    ctx.acceptIterable(recorder, iterable, passthrough);
+    ctx.walkIterable(passthrough).accept(recorder, iterable);
     assertEquals(Arrays.asList("a", "a", "b", "b"), recorder.values);
     assertTrue(iterable.isEmpty());
   }
@@ -190,6 +191,10 @@ public class VisitorContextTest extends FlatPackTest {
             assertEquals("d", value);
             ctx.replace(codex.cast(String.valueOf(count)));
             break;
+          case 4:
+            assertEquals("e", value);
+            ctx.insertBefore(codex.cast(String.valueOf(count)));
+            break;
           default:
             throw new RuntimeException(String.valueOf(count));
         }
@@ -198,27 +203,81 @@ public class VisitorContextTest extends FlatPackTest {
       }
 
     };
-    List<Object> list = new ArrayList<Object>(Arrays.asList("a", "b", "c", "d"));
-    ctx.acceptList(recorder, list, passthrough);
-    assertEquals(Arrays.asList("0", "a", "b", "1", "3"), list);
-    assertEquals(Arrays.asList("a", "a", "b", "b", "c", "c", "d", "d"), recorder.values);
-    assertTrue(ctx.didInsert());
-    assertTrue(ctx.didRemove());
+    List<Object> list = new ArrayList<Object>(Arrays.asList("a", "b", "c", "d", "e"));
+    ctx.walkList(passthrough).accept(recorder, list);
+    assertEquals(Arrays.asList("0", "a", "b", "1", "3", "4", "e"), list);
+    assertEquals(Arrays.asList("a", "a", "b", "b", "c", "c", "d", "d", "e", "e"), recorder.values);
+  }
+
+  @Test
+  public void testListContextEmpty() {
+    ListContext<Object> ctx = new ListContext<Object>();
+    ValueRecorder recorder = new ValueRecorder() {
+      @Override
+      public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
+        fail("Should not see this with an empty list");
+        return super.visitValue(value, codex, ctx);
+      }
+    };
+
+    ctx.walkList(passthrough).accept(recorder, Collections.emptyList());
+    assertTrue(recorder.values.isEmpty());
+  }
+
+  @Test
+  public void testListContextRemoveBefore() {
+    ListContext<Object> ctx = new ListContext<Object>();
+    ValueRecorder recorder = new ValueRecorder() {
+      @Override
+      public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
+        assertEquals("Hello", value);
+        ctx.remove();
+        ctx.insertBefore(codex.cast("World!"));
+        return super.visitValue(value, codex, ctx);
+      }
+    };
+    List<Object> list = new ArrayList<Object>(Arrays.asList("Hello"));
+    ctx.walkList(passthrough).accept(recorder, list);
+    assertEquals(Collections.singletonList("World!"), list);
+    assertEquals(Arrays.asList("Hello", "Hello"), recorder.values);
+  }
+
+  @Test
+  public void testNullableContext() {
+    NullableContext<Object> ctx = new NullableContext<Object>();
+    assertTrue(ctx.canRemove());
+    assertTrue(ctx.canReplace());
+    assertNull(ctx.getValue(null));
+
+    Object value = new Object();
+    ctx.replace(value);
     assertTrue(ctx.didReplace());
+    assertSame(value, ctx.getValue(new Object()));
+
+    ctx.remove();
+    assertNull(ctx.getValue(new Object()));
+
+    // Verify that re-replacing the value will restore
+    ctx.replace(value);
+    assertSame(value, ctx.getValue(new Object()));
+
+    ValueRecorder recorder = new ValueRecorder();
+    ctx.walkSingleton(passthrough).accept(recorder, value);
+    assertEquals(Arrays.asList(value, value), recorder.values);
   }
 
   @Test
   public void testSingletonContext() {
     SingletonContext<Object> ctx = new SingletonContext<Object>();
     assertTrue(ctx.canReplace());
-    assertNull(ctx.getValue());
+    assertNull(ctx.getValue(null));
     Object value = new Object();
     ctx.replace(value);
     assertTrue(ctx.didReplace());
-    assertSame(value, ctx.getValue());
+    assertSame(value, ctx.getValue(new Object()));
 
     ValueRecorder recorder = new ValueRecorder();
-    ctx.acceptSingleton(recorder, value, passthrough);
+    ctx.walkSingleton(passthrough).accept(recorder, value);
     assertEquals(Arrays.asList(value, value), recorder.values);
   }
 }

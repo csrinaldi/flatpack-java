@@ -28,51 +28,52 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.ext.VisitorContext.ListContext;
-import com.getperka.flatpack.ext.VisitorContext.SingletonContext;
+import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.VisitorContext.Walker;
 
 /**
  * A utility class that allows visitors to be written to traverse a FlatPack object graph.
  */
 public class Visitors {
+  class FlatPackEntityWalker<T> implements Walker<FlatPackEntity<T>> {
+    @Override
+    public void walk(FlatPackVisitor visitor, FlatPackEntity<T> entity,
+        VisitorContext<FlatPackEntity<T>> context) {
+      @SuppressWarnings("unchecked")
+      Codex<T> codex = (Codex<T>) typeContext.getCodex(entity.getType());
+      if (visitor.visit(entity, codex, context)) {
+        entity.withValue(context.walkSingleton(codex).accept(visitor, entity.getValue()));
+
+        // Traverse the extra entities as a list, to allow insertion
+        Codex<HasUuid> extraCodex = typeContext.getCodex(HasUuid.class);
+        List<HasUuid> mutable = new ArrayList<HasUuid>(entity.getExtraEntities());
+        context.walkList(extraCodex).accept(visitor, mutable);
+        entity.setExtraEntities(new HashSet<HasUuid>(mutable));
+      }
+      visitor.endVisit(entity, codex, context);
+    }
+  }
 
   @Inject
-  private TypeContext typeContext;
+  TypeContext typeContext;
+
+  @Inject
+  VisitorContext<Void> rootContext;
 
   protected Visitors() {}
 
-  public <T> FlatPackEntity<T> visit(FlatPackVisitor visitor, FlatPackEntity<T> entity) {
-    SingletonContext<FlatPackEntity<T>> ctx = new SingletonContext<FlatPackEntity<T>>();
-    @SuppressWarnings("unchecked")
-    Codex<T> codex = (Codex<T>) typeContext.getCodex(entity.getType());
-    if (visitor.visit(entity, codex, ctx)) {
-      if (entity.getValue() != null) {
-        SingletonContext<T> valueContext = new SingletonContext<T>();
-        valueContext.acceptSingleton(visitor, entity.getValue(), codex);
-        if (valueContext.didReplace()) {
-          entity.withValue(valueContext.getValue());
-        }
-      }
-      Codex<HasUuid> extraCodex = typeContext.getCodex(HasUuid.class);
+  public VisitorContext<Void> getRoot() {
+    return rootContext;
+  }
 
-      // Traverse the extra entities as a list, to allow insertion
-      List<HasUuid> mutable = new ArrayList<HasUuid>(entity.getExtraEntities());
-      new ListContext<HasUuid>().acceptList(visitor, mutable, extraCodex);
-      entity.setExtraEntities(new HashSet<HasUuid>(mutable));
-    }
-    visitor.endVisit(entity, codex, ctx);
-    if (ctx.didReplace()) {
-      entity = ctx.getValue();
-    }
-    return entity;
+  public <T> FlatPackEntity<T> visit(FlatPackVisitor visitor, FlatPackEntity<T> entity) {
+    return getRoot().walkSingleton(new FlatPackEntityWalker<T>()).accept(visitor, entity);
   }
 
   public <T extends HasUuid> T visit(FlatPackVisitor visitor, T entity) {
     @SuppressWarnings("unchecked")
     Class<T> clazz = (Class<T>) entity.getClass();
     Codex<T> codex = typeContext.getCodex(clazz);
-    SingletonContext<T> ctx = new SingletonContext<T>();
-    ctx.acceptSingleton(visitor, entity, codex);
-    return ctx.didReplace() ? ctx.getValue() : entity;
+    return getRoot().walkSingleton(codex).accept(visitor, entity);
   }
 }
