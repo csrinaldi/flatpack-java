@@ -25,15 +25,18 @@ import java.util.HashSet;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.VisitorContext.Walker;
+import com.getperka.flatpack.ext.Walkers;
+import com.getperka.flatpack.ext.Walkers.Walker;
 
 /**
  * A utility class that allows visitors to be written to traverse a FlatPack object graph.
  */
+@Singleton
 public class Visitors {
   class FlatPackEntityWalker<T> implements Walker<FlatPackEntity<T>> {
     @Override
@@ -58,22 +61,40 @@ public class Visitors {
   TypeContext typeContext;
 
   @Inject
-  VisitorContext<Void> rootContext;
+  Walkers walkers;
 
   protected Visitors() {}
 
-  public VisitorContext<Void> getRoot() {
-    return rootContext;
+  /**
+   * Returns a {@link VisitorContext} for performing ad-hoc traversals.
+   */
+  public Walkers getWalkers() {
+    return walkers;
   }
 
+  /**
+   * Visit a {@link FlatPackEntity}, including its {@link FlatPackEntity#getValue() value} and
+   * {@link FlatPackEntity#getExtraEntities() extra entities};
+   * 
+   * @param visitor the visitor to receive the object graph
+   * @param entity the FlatPackEntity to traverse
+   * @return {@code entity} or its replacement
+   */
   public <T> FlatPackEntity<T> visit(FlatPackVisitor visitor, FlatPackEntity<T> entity) {
-    return getRoot().walkSingleton(new FlatPackEntityWalker<T>()).accept(visitor, entity);
+    return getWalkers().walkSingleton(new FlatPackEntityWalker<T>()).accept(visitor, entity);
   }
 
+  /**
+   * Visit an entity.
+   * 
+   * @param visitor the visitor to receive the object graph
+   * @param entity the entity to traverse
+   * @return {@code entity} or its replacement
+   */
   public <T extends HasUuid> T visit(FlatPackVisitor visitor, T entity) {
     @SuppressWarnings("unchecked")
     Class<T> clazz = (Class<T>) entity.getClass();
     Codex<T> codex = typeContext.getCodex(clazz);
-    return getRoot().walkSingleton(codex).accept(visitor, entity);
+    return getWalkers().walkSingleton(codex).accept(visitor, entity);
   }
 }

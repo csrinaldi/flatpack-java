@@ -23,7 +23,7 @@ import static com.getperka.flatpack.util.FlatPackTypes.erase;
 import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
 
 import com.getperka.flatpack.FlatPackVisitor;
-import com.getperka.flatpack.ext.VisitorContext.Walker;
+import com.getperka.flatpack.ext.Walkers.Walker;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 
@@ -42,27 +42,6 @@ public abstract class Codex<T> implements Walker<T> {
   protected Codex() {
     simpleName = getClass().getSimpleName();
     parameterization = erase(getSingleParameterization(getClass(), Codex.class));
-  }
-
-  /**
-   * Visit a value using the supplied visitor.
-   * <p>
-   * The default implementation delegates to {@link #acceptNotNull} or calls
-   * {@link FlatPackVisitor#visitValue visitValue()} / {@link FlatPackVisitor#endVisitValue
-   * endVisitValue()} if {@code value} is {@code null}.
-   * 
-   * @param visitor the visitor that is traversing the object graph
-   * @param value the value being traversed
-   * @param context allows mutation of the object graph
-   */
-  @Override
-  public void walk(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
-    if (value == null) {
-      visitor.visitValue(null, this, context);
-      visitor.endVisitValue(null, this, context);
-    } else {
-      acceptNotNull(visitor, value, context);
-    }
   }
 
   /**
@@ -137,6 +116,27 @@ public abstract class Codex<T> implements Walker<T> {
    */
   public abstract T readNotNull(JsonElement element, DeserializationContext context)
       throws Exception;
+
+  /**
+   * Visit a value using the supplied visitor.
+   * <p>
+   * The default implementation delegates to {@link #acceptNotNull} or calls
+   * {@link FlatPackVisitor#visitValue visitValue()} / {@link FlatPackVisitor#endVisitValue
+   * endVisitValue()} if {@code value} is {@code null}.
+   * 
+   * @param visitor the visitor that is traversing the object graph
+   * @param value the value being traversed
+   * @param context allows mutation of the object graph
+   */
+  @Override
+  public void walk(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
+    if (value == null) {
+      visitor.visitValue(null, this, context);
+      visitor.endVisitValue(null, this, context);
+    } else {
+      acceptNotNull(visitor, value, context);
+    }
+  }
 
   /**
    * Write a value into the serialization context. If object is {@code null}, writes a null into

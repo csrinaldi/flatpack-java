@@ -230,7 +230,7 @@ public class Unpacker {
           JsonObject metaElement = jsonParser.parse(reader).getAsJsonObject();
           PackReader packReader = packReaders.get();
           packReader.setPayload(metaElement);
-          meta = visitors.getRoot().walkSingleton(metaCodex).accept(packReader, meta);
+          meta = visitors.getWalkers().walkSingleton(metaCodex).accept(packReader, meta);
           toReturn.addMetadata(meta);
         }
 
@@ -268,7 +268,7 @@ public class Unpacker {
       EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) typeContext
           .getCodex(entity.getClass());
       packReader.setPayload(entry.getValue());
-      visitors.getRoot().walkImmutable(codex).accept(packReader, entity);
+      visitors.getWalkers().walkImmutable(codex).accept(packReader, entity);
     }
 
     @SuppressWarnings("unchecked")

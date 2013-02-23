@@ -1,4 +1,5 @@
 package com.getperka.flatpack.util;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -18,7 +19,6 @@ package com.getperka.flatpack.util;
  * limitations under the License.
  * #L%
  */
-
 import java.util.HashSet;
 import java.util.Set;
 

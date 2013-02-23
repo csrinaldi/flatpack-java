@@ -59,7 +59,6 @@ public class FlatPackModule extends AbstractModule {
 
   @Override
   protected void configure() {
-
     // Allow spying on IO
     bind(IoObserver.class)
         .to(configuration.isVerbose() ? IoObserver.Verbose.class : IoObserver.Null.class);

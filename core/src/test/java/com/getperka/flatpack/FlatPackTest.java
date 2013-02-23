@@ -181,7 +181,7 @@ public abstract class FlatPackTest {
       Codex<T> codex = codexes.get();
       codexes.get().write(value, serialization);
       if (scanned != null) {
-        visitors.getRoot().walkImmutable(codex).accept(packScanners.get(), value);
+        visitors.getWalkers().walkImmutable(codex).accept(packScanners.get(), value);
         scanned.addAll(serialization.getEntities());
       }
     } finally {

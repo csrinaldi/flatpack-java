@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.visitors;
 
 /*
  * #%L
@@ -38,13 +38,13 @@ import org.junit.Test;
 
 import com.getperka.flatpack.FlatPackTest;
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.codexes.ValueCodex;
-import com.getperka.flatpack.ext.VisitorContext.ArrayContext;
-import com.getperka.flatpack.ext.VisitorContext.ImmutableContext;
-import com.getperka.flatpack.ext.VisitorContext.IterableContext;
-import com.getperka.flatpack.ext.VisitorContext.ListContext;
-import com.getperka.flatpack.ext.VisitorContext.NullableContext;
-import com.getperka.flatpack.ext.VisitorContext.SingletonContext;
+import com.getperka.flatpack.ext.Codex;
+import com.getperka.flatpack.ext.DeserializationContext;
+import com.getperka.flatpack.ext.SerializationContext;
+import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.google.gson.JsonElement;
 
 /**
@@ -87,22 +87,23 @@ public class VisitorContextTest extends FlatPackTest {
   @Inject
   PassthroughCodex passthrough;
 
+  @Inject
+  Visitors visitors;
+
   @Test
   public void testArrayContext() {
-    ArrayContext<Object> ctx = new ArrayContext<Object>();
-    assertTrue(ctx.canReplace());
-
     final Object replacement = "c";
     ValueRecorder recorder = new ValueRecorder() {
       @Override
       public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
+        assertTrue(ctx.canReplace());
         ctx.replace(codex.cast(replacement));
         return super.visitValue(value, codex, ctx);
       }
 
     };
     Object[] array = new Object[] { "a", "b" };
-    ctx.walkArray(passthrough).accept(recorder, array);
+    visitors.getWalkers().walkArray(passthrough).accept(recorder, array);
     assertEquals(Arrays.asList("a", "a", "b", "b"), recorder.values);
     assertEquals(Arrays.asList("c", "c"), Arrays.asList(array));
   }
@@ -113,7 +114,7 @@ public class VisitorContextTest extends FlatPackTest {
    */
   @Test
   public void testImmutableContext() {
-    ImmutableContext<Object> ctx = new ImmutableContext<Object>();
+    VisitorContext<?> ctx = (VisitorContext<?>) visitors.getWalkers().walkImmutable(passthrough);
     assertFalse(ctx.canInsert());
     assertFalse(ctx.canRemove());
     assertFalse(ctx.canReplace());
@@ -145,7 +146,7 @@ public class VisitorContextTest extends FlatPackTest {
 
   @Test
   public void testIterableContext() {
-    IterableContext<Object> ctx = new IterableContext<Object>();
+    VisitorContext<?> ctx = (VisitorContext<?>) visitors.getWalkers().walkIterable(passthrough);
     assertTrue(ctx.canRemove());
 
     ValueRecorder recorder = new ValueRecorder() {
@@ -164,7 +165,7 @@ public class VisitorContextTest extends FlatPackTest {
 
   @Test
   public void testListContext() {
-    ListContext<Object> ctx = new ListContext<Object>();
+    VisitorContext<?> ctx = (VisitorContext<?>) visitors.getWalkers().walkList(passthrough);
     assertTrue(ctx.canInsert());
     assertTrue(ctx.canReplace());
     assertTrue(ctx.canRemove());
@@ -211,7 +212,6 @@ public class VisitorContextTest extends FlatPackTest {
 
   @Test
   public void testListContextEmpty() {
-    ListContext<Object> ctx = new ListContext<Object>();
     ValueRecorder recorder = new ValueRecorder() {
       @Override
       public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
@@ -220,13 +220,12 @@ public class VisitorContextTest extends FlatPackTest {
       }
     };
 
-    ctx.walkList(passthrough).accept(recorder, Collections.emptyList());
+    visitors.getWalkers().walkList(passthrough).accept(recorder, Collections.emptyList());
     assertTrue(recorder.values.isEmpty());
   }
 
   @Test
   public void testListContextRemoveBefore() {
-    ListContext<Object> ctx = new ListContext<Object>();
     ValueRecorder recorder = new ValueRecorder() {
       @Override
       public <T> boolean visitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
@@ -237,14 +236,15 @@ public class VisitorContextTest extends FlatPackTest {
       }
     };
     List<Object> list = new ArrayList<Object>(Arrays.asList("Hello"));
-    ctx.walkList(passthrough).accept(recorder, list);
+    visitors.getWalkers().walkList(passthrough).accept(recorder, list);
     assertEquals(Collections.singletonList("World!"), list);
     assertEquals(Arrays.asList("Hello", "Hello"), recorder.values);
   }
 
   @Test
   public void testNullableContext() {
-    NullableContext<Object> ctx = new NullableContext<Object>();
+    NullableContext<Object> ctx = (NullableContext<Object>) visitors.getWalkers()
+        .walkNullable(passthrough);
     assertTrue(ctx.canRemove());
     assertTrue(ctx.canReplace());
     assertNull(ctx.getValue(null));
@@ -268,7 +268,8 @@ public class VisitorContextTest extends FlatPackTest {
 
   @Test
   public void testSingletonContext() {
-    SingletonContext<Object> ctx = new SingletonContext<Object>();
+    SingletonContext<Object> ctx = (SingletonContext<Object>) visitors.getWalkers()
+        .walkSingleton(passthrough);
     assertTrue(ctx.canReplace());
     assertNull(ctx.getValue(null));
     Object value = new Object();
