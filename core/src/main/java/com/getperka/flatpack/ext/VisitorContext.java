@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -46,6 +47,7 @@ public abstract class VisitorContext<T> {
 
     @Override
     public void replace(T newValue) {
+      markReplaced();
       array[index] = newValue;
     }
 
@@ -109,7 +111,6 @@ public abstract class VisitorContext<T> {
     public void insertAfter(T newValue) {
       markInserted();
       iterator.add(newValue);
-      iterator.next();
     }
 
     @Override
@@ -121,7 +122,6 @@ public abstract class VisitorContext<T> {
         iterator.previous();
       }
       iterator.add(newValue);
-      iterator.next();
       if (didBackUp) {
         iterator.next();
       }
@@ -213,11 +213,9 @@ public abstract class VisitorContext<T> {
 
   protected void markRemoved() {
     removed = true;
-    replaced = false;
   }
 
   protected void markReplaced() {
-    removed = false;
     replaced = true;
   }
 }
