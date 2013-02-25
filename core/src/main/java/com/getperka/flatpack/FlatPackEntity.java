@@ -352,4 +352,8 @@ public class FlatPackEntity<T> extends TypeReference<T> {
     return metadata == null ? Collections.<EntityMetadata> emptyList() :
         Collections.unmodifiableList(metadata);
   }
+
+  void setExtraEntities(Set<HasUuid> extraEntities) {
+    this.extraEntities = extraEntities;
+  }
 }

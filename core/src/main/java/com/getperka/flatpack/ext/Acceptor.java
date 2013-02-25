@@ -1,8 +1,9 @@
+package com.getperka.flatpack.ext;
 /*
  * #%L
  * FlatPack serialization code
  * %%
- * Copyright (C) 2012 Perka Inc.
+ * Copyright (C) 2012 - 2013 Perka Inc.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +18,21 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.codexes;
 
 import com.getperka.flatpack.FlatPackVisitor;
-import com.getperka.flatpack.ext.Codex;
-import com.getperka.flatpack.ext.VisitorContext;
 
 /**
- * A base class for Codex implementations that process values that cannot contain any entities.
+ * Acceptors encapsulate a {@link Walker} that is ready to receive an object to traverse.
  * 
- * @param <T> the type of data that the instance operates on
+ * @param <T> the type of data to traverse, typically an aggregate of some sort
  */
-public abstract class ValueCodex<T> extends Codex<T> {
-  @Override
-  public void acceptNotNull(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
-    if (visitor.visitValue(value, this, context)) {
-      // Nothing to do here
-    }
-    visitor.endVisitValue(value, this, context);
-  }
-
+public interface Acceptor<T> {
+  /**
+   * Visit a value with a {@link FlatPackVisitor}.
+   * 
+   * @param visitor the visitor to apply the value to
+   * @param value the value, which may be {@code null}
+   * @return {@code value} or its replacement, which may be {@code null}
+   */
+  T accept(FlatPackVisitor visitor, T value);
 }

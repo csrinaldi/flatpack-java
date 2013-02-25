@@ -19,18 +19,34 @@
  */
 package com.getperka.flatpack.codexes;
 
+import java.util.Collection;
 import java.util.List;
 
+import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
- * List support.
+ * List support. This class is parameterized with {@link Collection} to gracefully handle receiving
+ * set or other collection types.
  * 
  * @param <V> the element type of the list
  */
-public class ListCodex<V> extends CollectionCodex<List<V>, V> {
-
+public class ListCodex<V> extends CollectionCodex<Collection<V>, V> {
   protected ListCodex() {}
+
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, Collection<V> value,
+      VisitorContext<Collection<V>> context) {
+    if (visitor.visitValue(value, this, context)) {
+      if (value instanceof List) {
+        context.walkList(getValueCodex()).accept(visitor, (List<V>) value);
+      } else {
+        context.walkIterable(getValueCodex()).accept(visitor, value);
+      }
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   protected List<V> newCollection() {

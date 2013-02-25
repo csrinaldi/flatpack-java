@@ -62,11 +62,8 @@ public abstract class BaseContext implements Closeable {
 
   private final Deque<String> path = new ArrayDeque<String>();
   private final List<Callable<?>> postWork = listForAny();
-
   @Inject
   private Principal principal;
-  @Inject
-  private PrincipalMapper principalMapper;
   private final Map<UUID, String> warnings = mapForIteration();
 
   BaseContext() {

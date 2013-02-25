@@ -26,12 +26,14 @@ import java.lang.reflect.Array;
 
 import javax.inject.Inject;
 
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -47,6 +49,14 @@ public class ArrayCodex<T> extends Codex<T[]> {
   private Codex<T> valueCodex;
 
   protected ArrayCodex() {}
+
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, T[] value, VisitorContext<T[]> context) {
+    if (visitor.visitValue(value, this, context)) {
+      context.walkArray(valueCodex).accept(visitor, value);
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   public Type describe() {
@@ -72,16 +82,6 @@ public class ArrayCodex<T> extends Codex<T[]> {
       context.popPath();
     }
     return toReturn;
-  }
-
-  @Override
-  public void scanNotNull(T[] object, SerializationContext context) {
-    int count = 0;
-    for (T t : object) {
-      context.pushPath("[" + count++ + "]");
-      valueCodex.scan(t, context);
-      context.popPath();
-    }
   }
 
   @Override

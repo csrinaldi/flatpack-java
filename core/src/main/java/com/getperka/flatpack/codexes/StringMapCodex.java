@@ -24,12 +24,14 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -44,6 +46,15 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
   private Codex<V> valueCodex;
 
   protected StringMapCodex() {}
+
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, Map<String, V> value,
+      VisitorContext<Map<String, V>> context) {
+    if (visitor.visitValue(value, this, context)) {
+      context.walkIterable(valueCodex).accept(visitor, value.values());
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   public Type describe() {
@@ -77,18 +88,6 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
       }
     }
     return toReturn;
-  }
-
-  @Override
-  public void scanNotNull(Map<String, V> object, SerializationContext context) {
-    for (Map.Entry<String, V> entry : object.entrySet()) {
-      context.pushPath("[" + entry.getKey() + "]");
-      try {
-        valueCodex.scan(entry.getValue(), context);
-      } finally {
-        context.popPath();
-      }
-    }
   }
 
   @Override

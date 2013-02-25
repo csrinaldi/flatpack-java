@@ -1,8 +1,10 @@
+package com.getperka.flatpack.visitors;
+
 /*
  * #%L
  * FlatPack serialization code
  * %%
- * Copyright (C) 2012 Perka Inc.
+ * Copyright (C) 2012 - 2013 Perka Inc.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,33 +19,42 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.codexes;
-
-import java.util.Set;
 
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.Acceptor;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
- * Support for Sets.
+ * Allows arrays to be visited.
  * 
- * @param <V> the element type of the set
+ * @param <T> the component type of the array
  */
-public class SetCodex<V> extends CollectionCodex<Set<V>, V> {
+public class ArrayContext<T> extends VisitorContext<T> implements Acceptor<T[]> {
+  private T[] array;
+  private int index;
 
-  protected SetCodex() {}
+  protected ArrayContext() {}
 
   @Override
-  public void acceptNotNull(FlatPackVisitor visitor, Set<V> value, VisitorContext<Set<V>> context) {
-    if (visitor.visitValue(value, this, context)) {
-      context.walkIterable(getValueCodex()).accept(visitor, value);
+  public T[] accept(FlatPackVisitor visitor, T[] array)
+  {
+    this.array = array;
+    index = 0;
+    for (int j = array.length; index < j; index++) {
+      getWalker().walk(visitor, array[index], this);
     }
-    visitor.endVisitValue(value, this, context);
+    return array;
   }
 
   @Override
-  protected Set<V> newCollection() {
-    return FlatPackCollections.setForIteration();
+  public boolean canReplace() {
+    return true;
+  }
+
+  @Override
+  public void replace(T newValue) {
+    ensure(canReplace());
+    markReplaced();
+    array[index] = newValue;
   }
 }

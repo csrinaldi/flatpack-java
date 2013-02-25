@@ -24,6 +24,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
@@ -31,6 +32,7 @@ import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -45,6 +47,23 @@ public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
   private Codex<V> valueCodex;
 
   protected EntityMapCodex() {}
+
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, Map<K, V> value,
+      VisitorContext<Map<K, V>> context) {
+    if (visitor.visitValue(value, this, context)) {
+      for (Map.Entry<K, V> entry : value.entrySet()) {
+        context.walkImmutable(keyCodex).accept(visitor, entry.getKey());
+        V oldValue = entry.getValue();
+        V newValue = context.walkSingleton(valueCodex).accept(visitor, oldValue);
+        // Object comparison intentional
+        if (oldValue != newValue) {
+          entry.setValue(newValue);
+        }
+      }
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   public Type describe() {
@@ -78,19 +97,6 @@ public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
   }
 
   @Override
-  public void scanNotNull(Map<K, V> object, SerializationContext context) {
-    for (Map.Entry<K, V> entry : object.entrySet()) {
-      context.pushPath("." + entry.getKey().getUuid());
-      try {
-        keyCodex.scan(entry.getKey(), context);
-        valueCodex.scan(entry.getValue(), context);
-      } finally {
-        context.popPath();
-      }
-    }
-  }
-
-  @Override
   public void writeNotNull(Map<K, V> object, SerializationContext context) throws IOException {
     JsonWriter writer = context.getWriter();
     writer.beginObject();
@@ -113,5 +119,4 @@ public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
     this.keyCodex = keyCodex;
     this.valueCodex = (Codex<V>) typeContext.getCodex(valueType.getType());
   }
-
 }

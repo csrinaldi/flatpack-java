@@ -78,16 +78,6 @@ public abstract class CollectionCodex<T extends Collection<V>, V> extends Codex<
   }
 
   @Override
-  public void scanNotNull(T collection, SerializationContext context) throws Exception {
-    int count = 0;
-    for (V t : collection) {
-      context.pushPath("[" + count++ + "]");
-      valueCodex.scan(t, context);
-      context.popPath();
-    }
-  }
-
-  @Override
   public void writeNotNull(T collection, SerializationContext context) throws IOException {
     JsonWriter writer = context.getWriter();
     writer.beginArray();
@@ -98,6 +88,13 @@ public abstract class CollectionCodex<T extends Collection<V>, V> extends Codex<
       context.popPath();
     }
     writer.endArray();
+  }
+
+  /**
+   * The codex for the elements in the collection.
+   */
+  protected Codex<V> getValueCodex() {
+    return valueCodex;
   }
 
   protected abstract T newCollection();

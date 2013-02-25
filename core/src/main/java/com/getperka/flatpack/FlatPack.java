@@ -61,6 +61,11 @@ public abstract class FlatPack {
   public abstract Unpacker getUnpacker();
 
   /**
+   * Returns a utility class that allows visitors to traverse FlatPack-compatible object graphs.
+   */
+  public abstract Visitors getVisitors();
+
+  /**
    * Returns {@code true} if the given type is an entity or may contain a reference to an entity.
    */
   public abstract boolean isRootType(Type clazz);

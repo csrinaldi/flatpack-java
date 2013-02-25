@@ -1,4 +1,5 @@
 package com.getperka.flatpack;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -37,15 +38,14 @@ import com.google.inject.Injector;
 class FlatPackImpl extends FlatPack implements HasInjector {
   @Inject
   private Injector injector;
-
   @Inject
   private Packer packer;
-
   @Inject
   private TypeContext types;
-
   @Inject
   private Unpacker unpacker;
+  @Inject
+  private Visitors visitors;
 
   FlatPackImpl() {}
 
@@ -67,6 +67,10 @@ class FlatPackImpl extends FlatPack implements HasInjector {
   @Override
   public Unpacker getUnpacker() {
     return unpacker;
+  }
+
+  public Visitors getVisitors() {
+    return visitors;
   }
 
   @Override
