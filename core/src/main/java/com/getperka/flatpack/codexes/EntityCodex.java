@@ -44,7 +44,7 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.Walkers.Walker;
+import com.getperka.flatpack.ext.Walker;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;

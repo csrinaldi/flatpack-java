@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.ListIterator;
 
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.Acceptor;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.Walkers.Acceptor;
 
 /**
  * Allows a {@link List} to be traversed via its {@link ListIterator}.

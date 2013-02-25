@@ -30,8 +30,8 @@ import javax.inject.Singleton;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.ext.Walker;
 import com.getperka.flatpack.ext.Walkers;
-import com.getperka.flatpack.ext.Walkers.Walker;
 
 /**
  * A utility class that allows visitors to be written to traverse a FlatPack object graph.

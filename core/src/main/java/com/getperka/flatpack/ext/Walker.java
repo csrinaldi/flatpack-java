@@ -1,4 +1,4 @@
-package com.getperka.flatpack.visitors;
+package com.getperka.flatpack.ext;
 /*
  * #%L
  * FlatPack serialization code
@@ -20,20 +20,21 @@ package com.getperka.flatpack.visitors;
  */
 
 import com.getperka.flatpack.FlatPackVisitor;
-import com.getperka.flatpack.ext.Acceptor;
-import com.getperka.flatpack.ext.VisitorContext;
 
 /**
- * Disallows all mutations for a single scalar value.
+ * A Walker embeds a traversal strategy for a type of container object. That is, it is aware of
+ * the internal structure of a data type and is used to invoke the methods on a visitor.
  * 
- * @param <T> the type of data being visited
+ * @param <T> the type of data that the Walker operates on
+ * @see Walkers
  */
-public class ImmutableContext<T> extends VisitorContext<T> implements Acceptor<T> {
-  protected ImmutableContext() {}
-
-  @Override
-  public T accept(FlatPackVisitor visitor, T value) {
-    getWalker().walk(visitor, value, this);
-    return value;
-  }
+public interface Walker<T> {
+  /**
+   * Invoke the various methods on a visitor to inform it about {@code value}.
+   * 
+   * @param visitor the visitor to operate on
+   * @param value the value the visitor should be informed of
+   * @param context the context in which the value is being visited
+   */
+  void walk(FlatPackVisitor visitor, T value, VisitorContext<T> context);
 }

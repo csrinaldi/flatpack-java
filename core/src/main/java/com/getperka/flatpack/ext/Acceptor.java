@@ -1,4 +1,4 @@
-package com.getperka.flatpack.visitors;
+package com.getperka.flatpack.ext;
 /*
  * #%L
  * FlatPack serialization code
@@ -20,20 +20,19 @@ package com.getperka.flatpack.visitors;
  */
 
 import com.getperka.flatpack.FlatPackVisitor;
-import com.getperka.flatpack.ext.Acceptor;
-import com.getperka.flatpack.ext.VisitorContext;
 
 /**
- * Disallows all mutations for a single scalar value.
+ * Acceptors encapsulate a {@link Walker} that is ready to receive an object to traverse.
  * 
- * @param <T> the type of data being visited
+ * @param <T> the type of data to traverse, typically an aggregate of some sort
  */
-public class ImmutableContext<T> extends VisitorContext<T> implements Acceptor<T> {
-  protected ImmutableContext() {}
-
-  @Override
-  public T accept(FlatPackVisitor visitor, T value) {
-    getWalker().walk(visitor, value, this);
-    return value;
-  }
+public interface Acceptor<T> {
+  /**
+   * Visit a value with a {@link FlatPackVisitor}.
+   * 
+   * @param visitor the visitor to apply the value to
+   * @param value the value, which may be {@code null}
+   * @return {@code value} or its replacement, which may be {@code null}
+   */
+  T accept(FlatPackVisitor visitor, T value);
 }

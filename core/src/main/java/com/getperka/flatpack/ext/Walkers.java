@@ -24,7 +24,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.visitors.ArrayContext;
 import com.getperka.flatpack.visitors.ImmutableContext;
 import com.getperka.flatpack.visitors.IterableContext;
@@ -33,35 +33,20 @@ import com.getperka.flatpack.visitors.NullableContext;
 import com.getperka.flatpack.visitors.SingletonContext;
 import com.google.inject.Injector;
 
+/**
+ * A utility class for constructing {@link Acceptor} instances that operate on a variety of common
+ * collection types.
+ * 
+ * @see Visitors#getWalkers()
+ */
 public class Walkers {
 
-  /**
-   * Acceptors encapsulate a {@link Walker} that is ready to receive an object to traverse.
-   * 
-   * @param <T> the type of data to traverse, typically an aggregate of some sort
-   */
-  public interface Acceptor<T> {
-    T accept(FlatPackVisitor visitor, T value);
-  }
-
-  /**
-   * A Walker embeds a traversal strategy for a type of container object. That is, it is aware of
-   * the internal structure of a data type and is used to invoke the methods on a visitor.
-   * 
-   * @param <T> the type of data that the Walker operates on
-   */
-  public interface Walker<T> {
-    /**
-     * Invoke the various methods on a visitor to inform it about {@code value}.
-     * 
-     * @param visitor the visitor to operate on
-     * @param value the value the visitor should be informed of
-     * @param context the context in which the value is being visited
-     */
-    void walk(FlatPackVisitor visitor, T value, VisitorContext<T> context);
-  }
-
   private Injector injector;
+
+  /**
+   * Requires injection.
+   */
+  protected Walkers() {}
 
   /**
    * Construct an acceptor to apply a walker to the elements of an array.
@@ -112,6 +97,9 @@ public class Walkers {
     }
   }
 
+  /**
+   * Construct an acceptor that allows a single value to be replaced.
+   */
   public <E> Acceptor<E> walkSingleton(Walker<E> element) {
     return create(SingletonContext.class, element);
   }

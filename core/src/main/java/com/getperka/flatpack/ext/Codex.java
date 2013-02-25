@@ -23,7 +23,6 @@ import static com.getperka.flatpack.util.FlatPackTypes.erase;
 import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
 
 import com.getperka.flatpack.FlatPackVisitor;
-import com.getperka.flatpack.ext.Walkers.Walker;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 

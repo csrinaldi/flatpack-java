@@ -21,8 +21,8 @@ package com.getperka.flatpack.visitors;
  */
 
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.Acceptor;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.Walkers.Acceptor;
 
 /**
  * Allows arrays to be visited.

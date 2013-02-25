@@ -22,8 +22,8 @@ package com.getperka.flatpack.visitors;
 import java.util.Iterator;
 
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.Acceptor;
 import com.getperka.flatpack.ext.VisitorContext;
-import com.getperka.flatpack.ext.Walkers.Acceptor;
 
 /**
  * Allows an {@link Iterable} to be traversed via its {@link Iterator}.

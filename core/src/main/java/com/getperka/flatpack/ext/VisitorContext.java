@@ -1,6 +1,5 @@
 package com.getperka.flatpack.ext;
 
-
 /*
  * #%L
  * FlatPack serialization code
