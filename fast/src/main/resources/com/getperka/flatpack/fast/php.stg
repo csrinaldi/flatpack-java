@@ -99,6 +99,14 @@ public function set<property.upcaseName>($<property.name>) {
     $this->_<property.name>->addItemTo<property.impliedProperty.name>($this);
   }
 }
+<else>
+// <property.safeName> accessors
+public function <property.name>() {
+  return $this->_<property.name>;
+}
+public function set<property.upcaseName>($<property.name>) {
+  $this->_<property.name> = $<property.name>;
+} 
 <endif>
 >>
 
