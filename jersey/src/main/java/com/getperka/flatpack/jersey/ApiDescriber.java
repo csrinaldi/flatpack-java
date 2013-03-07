@@ -193,7 +193,7 @@ public class ApiDescriber {
       boolean needsComma = false;
       for (java.lang.reflect.Type paramType : method.getGenericParameterTypes()) {
         if (needsComma) {
-          methodKeyBuilder.append(",");
+          methodKeyBuilder.append(", ");
         } else {
           needsComma = true;
         }
