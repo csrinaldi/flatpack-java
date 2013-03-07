@@ -1,0 +1,124 @@
+/*
+ * #%L
+ * FlatPack Automatic Source Tool
+ * %%
+ * Copyright (C) 2012 Perka Inc.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+ 
+entity(entity) ::= <<
+\<?php
+// Generated File - DO NOT EDIT
+
+class <entity.requireName><if(entity.supertype.requireName)> extends <entity.supertype.requireName><endif> {
+
+  <if(entity.properties)>
+  <entity.properties:property(); separator="\n">
+  <endif>
+  
+  private static $_entityDescription;
+  private static $_allProperties;
+
+  <if(entity.collectionProperties)>
+  // initialize collection properties
+  function __construct() {
+    <entity.collectionProperties:{p | if(!isset($this->_<p.name>)) $this->_<p.name> = array();}; separator="\n">
+  }
+  <endif>
+
+  public static function initialize() {
+  
+    self::$_allProperties = array();
+    <entity.properties:propertyAdd(); separator="\n\n">
+  
+    self::$_entityDescription = FPEntityDescription::newWithDictionary(
+      array(
+        "typeName" => "<entity.typeName>",
+        "superType" => <entity.supertype.requireName>::entityDescription(),
+        "kind" => "<entity.requireName>",
+        "properties" => self::$_allProperties)); 
+    
+    FPEntityDescription::setEntityDescription(self::$_entityDescription, "<entity.typeName>");
+  }
+
+  public static function entityDescription() {
+    return self::$_entityDescription;
+  }
+
+
+  <entity.properties:entityAccessors()>
+}
+
+<entity.requireName>::initialize();
+?\>
+>>
+ 
+entityAccessors(property) ::= <<
+<if(property.type.listElement)>
+
+// <property.safeName> one-to-many accessors to maintain bi-directional relationships
+public function <property.name>() {
+  return $this->_<property.name>;
+}
+public function set<property.upcaseName>($<property.safeName>) {
+  $this->_<property.safeName> = (array)$<property.safeName>;
+  <if(property.impliedProperty)>
+  foreach($this-><property.safeName> as $obj){
+    $obj->set<property.impliedProperty.upcaseName>($this);
+  }
+  <endif>
+}
+public function addItemTo<property.upcaseName>($item) {
+  array_push($this->_<property.safeName>, $item);
+  <if(property.impliedProperty)>
+  $item->set<property.impliedProperty.upcaseName>($this);
+  <endif>
+}
+<elseif(property.type.name && property.impliedProperty)>
+
+// <property.safeName> many-to-one accessors to maintain bi-directional relationships
+public function <property.name>() {
+  return $this->_<property.name>;
+}
+public function set<property.upcaseName>($<property.name>) {
+  $this->_<property.name> = $<property.name>;
+  if(!in_array($this, $this->_<property.name>-><property.impliedProperty.name>())) { 
+    // I think i need to update this to use the getSetterStr function
+    $this->_<property.name>->addItemTo<property.impliedProperty.name>($this);
+  }
+}
+<endif>
+>>
+
+property(property) ::= <%
+private $_<property.safeName>;
+%>
+
+propertyAdd(property) ::= <<
+// <property.name>
+array_push(self::$_allProperties,
+  FPProperty::setPropertyForUuid("<property.uuid>",
+    <if(property.impliedProperty)>
+    array(
+      "name" => "<property.name>",
+      <if(property.embedded)>"embedded" => true,<endif>
+      "kind" => "<property.objcType>",
+      "impliedProperty" => FPProperty::propertyForUuid("<property.impliedProperty.uuid>"))));<else>
+    array(
+      "name" => "<property.name>",
+      <if(property.embedded)>"embedded" => true,<endif>
+      "kind" => "<property.objcType>")));<endif>
+>>
+ 
