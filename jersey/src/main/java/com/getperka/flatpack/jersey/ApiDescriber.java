@@ -29,6 +29,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -159,6 +160,51 @@ public class ApiDescriber {
     return this;
   }
 
+  protected String keyForType(java.lang.reflect.Type t) {
+    if (t instanceof Class) {
+      return ((Class<?>) t).getName();
+    }
+
+    if (t instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) t;
+      StringBuilder sb = new StringBuilder();
+      sb.append(keyForType(pt.getRawType())).append("<");
+      boolean needsComma = false;
+      for (java.lang.reflect.Type param : pt.getActualTypeArguments()) {
+        if (needsComma) {
+          sb.append(",");
+        } else {
+          needsComma = true;
+        }
+        sb.append(keyForType(param));
+      }
+      sb.append(">");
+      return sb.toString();
+    }
+
+    throw new UnsupportedOperationException(t.getClass().getName());
+  }
+
+  protected String methodKey(Class<?> declaringClass, Method method) {
+    String methodKey;
+    {
+      StringBuilder methodKeyBuilder = new StringBuilder(declaringClass.getName())
+          .append(":").append(method.getName()).append("(");
+      boolean needsComma = false;
+      for (java.lang.reflect.Type paramType : method.getGenericParameterTypes()) {
+        if (needsComma) {
+          methodKeyBuilder.append(",");
+        } else {
+          needsComma = true;
+        }
+        methodKeyBuilder.append(keyForType(paramType));
+      }
+      methodKeyBuilder.append(")");
+      methodKey = methodKeyBuilder.toString();
+    }
+    return methodKey;
+  }
+
   private EndpointDescription describeEndpoint(Method method) throws IOException {
     Class<?> declaringClass = method.getDeclaringClass();
 
@@ -176,22 +222,7 @@ public class ApiDescriber {
     }
 
     // Create a key for looking up the method's doc strings
-    String methodKey;
-    {
-      StringBuilder methodKeyBuilder = new StringBuilder(declaringClass.getName())
-          .append(":").append(method.getName()).append("(");
-      boolean needsComma = false;
-      for (Class<?> clazz : method.getParameterTypes()) {
-        if (needsComma) {
-          methodKeyBuilder.append(", ");
-        } else {
-          needsComma = true;
-        }
-        methodKeyBuilder.append(clazz.getName());
-      }
-      methodKeyBuilder.append(")");
-      methodKey = methodKeyBuilder.toString();
-    }
+    String methodKey = methodKey(declaringClass, method);
 
     // Determine the endpoint path
     UriBuilder builder = UriBuilder.fromPath("");
