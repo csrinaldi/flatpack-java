@@ -49,7 +49,7 @@ public class PhpDialect implements Dialect {
 
   @Flag(tag = "classPrefix",
       help = "The prefix to add to all class names",
-      defaultValue = "FP")
+      defaultValue = "PK")
   static String classPrefix;
 
   private static final List<String> KEYWORDS = Arrays.asList(

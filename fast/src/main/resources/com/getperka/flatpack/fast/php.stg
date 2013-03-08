@@ -56,8 +56,6 @@ class <entity.requireName><if(entity.supertype.requireName)> extends <entity.sup
   public static function entityDescription() {
     return self::$_entityDescription;
   }
-
-
   <entity.properties:entityAccessors()>
 }
 
@@ -75,7 +73,7 @@ public function <property.name>() {
 public function set<property.upcaseName>($<property.safeName>) {
   $this->_<property.safeName> = (array)$<property.safeName>;
   <if(property.impliedProperty)>
-  foreach($this-><property.safeName> as $obj){
+  foreach($this->_<property.safeName> as $obj){
     $obj->set<property.impliedProperty.upcaseName>($this);
   }
   <endif>
@@ -95,11 +93,11 @@ public function <property.name>() {
 public function set<property.upcaseName>($<property.name>) {
   $this->_<property.name> = $<property.name>;
   if(!in_array($this, $this->_<property.name>-><property.impliedProperty.name>())) { 
-    // I think i need to update this to use the getSetterStr function
-    $this->_<property.name>->addItemTo<property.impliedProperty.name>($this);
+    $this->_<property.name>->addItemTo<property.impliedProperty.upcaseName>($this);
   }
 }
 <else>
+
 // <property.safeName> accessors
 public function <property.name>() {
   return $this->_<property.name>;
