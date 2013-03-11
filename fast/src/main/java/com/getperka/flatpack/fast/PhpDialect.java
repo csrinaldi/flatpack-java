@@ -125,10 +125,8 @@ public class PhpDialect implements Dialect {
     }
 
     // render api stubs
-    // ST apiHeaderST = group.getInstanceOf("apiHeader").add("api", api);
-    // render(apiHeaderST, outputDir, "BaseApi.h");
-    // ST apiST = group.getInstanceOf("api").add("api", api);
-    // render(apiST, outputDir, "BaseApi.m");
+    ST apiST = group.getInstanceOf("api").add("api", api);
+    render(apiST, outputDir, "BaseApi.php");
 
   }
 
@@ -231,11 +229,17 @@ public class PhpDialect implements Dialect {
       if (part.length() == 0) continue;
 
       if (part.startsWith("{") && part.endsWith("}")) {
+        if (paramCount == 0) {
+          sb.append("(");
+        }
         String name = part.substring(1, part.length() - 1);
-        sb.append(paramCount > 0 ? name : upcase(name));
-        sb.append(":(NSString *)" + name);
+        // sb.append(paramCount > 0 ? name : upcase(name));
+        sb.append("$" + name);
         if (i < parts.length - 1) {
-          sb.append(" ");
+          sb.append(", ");
+        }
+        else {
+          sb.append(")");
         }
         paramCount++;
       }
@@ -243,6 +247,10 @@ public class PhpDialect implements Dialect {
       else {
         sb.append(upcase(part));
       }
+    }
+
+    if ((end.getEntity() == null) && (paramCount == 0)) {
+      sb.append("()");
     }
 
     return sb.toString();
@@ -331,22 +339,27 @@ public class PhpDialect implements Dialect {
             else if ("methodName".equals(propertyName)) {
               StringBuilder sb = new StringBuilder();
 
-              sb.append("- (" + getBuilderReturnType(end) + " *)");
-
-              sb.append(getMethodizedPath(end));
+              sb.append("public function " + getMethodizedPath(end));
 
               if (end.getEntity() != null) {
                 if (end.getPathParameters() != null && end.getPathParameters().size() > 0) {
                   sb.append(" entity");
                 }
                 String type = phpTypeForType(end.getEntity());
-                sb.append(":(" + type + " *)");
                 String paramName = type;
                 if (type.startsWith(classPrefix)) {
                   paramName = downcase(type.substring(classPrefix.length()));
                 }
-                sb.append(paramName);
+                sb.append("($" + paramName + ")");
               }
+
+              /*
+               * if (end.getEntity() != null) { if (end.getPathParameters() != null &&
+               * end.getPathParameters().size() > 0) { sb.append(" entity"); } String type =
+               * objcTypeForType(end.getEntity()); sb.append(":(" + type + " *)"); String paramName
+               * = type; if (type.startsWith(classPrefix)) { paramName =
+               * downcase(type.substring(classPrefix.length())); } sb.append(paramName); }
+               */
 
               return sb.toString();
             }
