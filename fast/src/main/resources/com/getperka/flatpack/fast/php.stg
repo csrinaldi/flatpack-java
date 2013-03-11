@@ -149,7 +149,7 @@ endpointRequestInterface(endpoint) ::= <<
 >>
 
 endpointRequestImplementation(endpoint) ::= <<
-class <endpoint.requestBuilderClassName> : FPFlatpackRequest {
+class <endpoint.requestBuilderClassName> extends FPFlatpackRequest {
   <if(endpoint.queryParameters)>
   <endpoint.queryParameters:endpointWithMethod(); separator="\n\n">
   
@@ -199,7 +199,7 @@ api(api) ::= <<
 
 <api.endpoints:endpointRequestImplementation(); separator="\n\n">
 
-class <names.classPrefix>BaseApi : FPBaseApi {
+class <names.classPrefix>BaseApi extends FPBaseApi {
 <api.endpoints:{end |
   <docString(end.docString)>
   <endpointDeclaration(end)> {
