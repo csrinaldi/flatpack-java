@@ -76,6 +76,8 @@ public class PackReader extends FlatPackVisitor {
         return;
       }
       String simplePropertyName = prop.getName();
+      if (simplePropertyName.equals("uuid")) return;
+
       context.pushPath("." + simplePropertyName);
       try {
         Object value;
