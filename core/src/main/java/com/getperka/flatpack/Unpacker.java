@@ -226,10 +226,11 @@ public class Unpacker {
 
         Codex<EntityMetadata> metaCodex = typeContext.getCodex(EntityMetadata.class);
         while (!JsonToken.END_ARRAY.equals(reader.peek())) {
-          EntityMetadata meta = new EntityMetadata();
           JsonObject metaElement = jsonParser.parse(reader).getAsJsonObject();
           PackReader packReader = packReaders.get();
           packReader.setPayload(metaElement);
+          EntityMetadata meta = new EntityMetadata();
+          meta.setUuid(UUID.fromString(metaElement.get("uuid").getAsString()));
           meta = visitors.getWalkers().walkSingleton(metaCodex).accept(packReader, meta);
           toReturn.addMetadata(meta);
         }
