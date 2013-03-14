@@ -31,10 +31,11 @@ class <entity.requireName><if(entity.supertype.requireName)> extends <entity.sup
   private static $_entityDescription;
   private static $_allProperties;
 
-  <if(entity.collectionProperties)>
+  <if(entity.collectionProperties || entity.supertype.requireName)>
   // initialize collection properties
   function __construct() {
-    <entity.collectionProperties:{p | if(!isset($this->_<p.name>)) $this->_<p.name> = array();}; separator="\n">
+    <if(entity.supertype.requireName)>parent::__construct();<endif>
+    <if(entity.collectionProperties)><entity.collectionProperties:{p | if(!isset($this->_<p.name>)) $this->_<p.name> = array();}; separator="\n"><endif>
   }
   <endif>
 
