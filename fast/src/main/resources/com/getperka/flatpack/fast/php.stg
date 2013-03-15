@@ -40,7 +40,7 @@ class <entity.requireName><if(entity.supertype.requireName)> extends <entity.sup
   <endif>
 
   public static function initialize() {
-  
+    
     self::$_allProperties = array();
     <entity.properties:propertyAdd(); separator="\n\n">
   
@@ -210,6 +210,18 @@ class <names.classPrefix>BaseApi extends FPBaseApi {
     return $request; 
   \}}; separator="\n\n">
 }
+?\>
+>>
+
+base(base, dir) ::= <<
+\<?php
+// Generated File - DO NOT EDIT
+
+$allEntities = array(
+  <base :{n | "<n.requireName>"}; separator=",\n">
+);
+
+
 ?\>
 >>
  

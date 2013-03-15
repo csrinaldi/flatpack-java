@@ -128,6 +128,11 @@ public class PhpDialect implements Dialect {
     ST apiST = group.getInstanceOf("api").add("api", api);
     render(apiST, outputDir, "BaseApi.php");
 
+    // render initial include file
+    ST baseIncludeST = group.getInstanceOf("base").add("base", allEntities.values())
+        .add("dir", outputDir.toString().substring(0, outputDir.toString().length() - 1));
+
+    render(baseIncludeST, outputDir, "BaseInclude.php");
   }
 
   @Override
