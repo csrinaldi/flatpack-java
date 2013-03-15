@@ -21,13 +21,10 @@ package com.getperka.flatpack;
 
 import java.lang.reflect.Type;
 
-import javax.inject.Inject;
-
-import com.getperka.flatpack.codexes.ValueCodex;
-import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackModule;
 import com.google.inject.Guice;
+import com.google.inject.ImplementedBy;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
 
@@ -35,53 +32,41 @@ import com.google.inject.Stage;
  * The main entry-point to the FlatPack API. This type exists to provide a central point for
  * configuring instances of {@link Packer} and {@link Unpacker}.
  */
-public class FlatPack {
+@ImplementedBy(FlatPackImpl.class)
+public abstract class FlatPack {
   /**
    * Create a new instance of FlatPack.
    */
-  public static synchronized FlatPack create(Configuration configuration) {
+  public static FlatPack create(Configuration configuration) {
     Injector createInjector = Guice.createInjector(Stage.PRODUCTION,
         new FlatPackModule(configuration));
     return createInjector.getInstance(FlatPack.class);
   }
-
-  @Inject
-  private Packer packer;
-
-  @Inject
-  private TypeContext types;
-
-  @Inject
-  private Unpacker unpacker;
 
   FlatPack() {}
 
   /**
    * Returns a configured instance of {@link Packer}.
    */
-  public Packer getPacker() {
-    return packer;
-  }
+  public abstract Packer getPacker();
 
   /**
    * Returns a reference to the typesystem introspection logic.
    */
-  public TypeContext getTypeContext() {
-    return types;
-  }
+  public abstract TypeContext getTypeContext();
 
   /**
    * Returns a configured instance of {@link Unpacker}.
    */
-  public Unpacker getUnpacker() {
-    return unpacker;
-  }
+  public abstract Unpacker getUnpacker();
+
+  /**
+   * Returns a utility class that allows visitors to traverse FlatPack-compatible object graphs.
+   */
+  public abstract Visitors getVisitors();
 
   /**
    * Returns {@code true} if the given type is an entity or may contain a reference to an entity.
    */
-  public boolean isRootType(Type clazz) {
-    Codex<?> codex = types.getCodex(clazz);
-    return codex != null && !(codex instanceof ValueCodex);
-  }
+  public abstract boolean isRootType(Type clazz);
 }

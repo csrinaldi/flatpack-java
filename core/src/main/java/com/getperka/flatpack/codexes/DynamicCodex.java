@@ -28,12 +28,14 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
@@ -45,17 +47,21 @@ public class DynamicCodex extends Codex<Object> {
   private static final Pattern UUID_PATTERN = Pattern
       .compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
-  @Inject
+  // Use Provider to prevent cyclic reference
+  private Provider<ListCodex<Object>> listCodex;
+  private Provider<StringMapCodex<Object>> mapCodex;
   private TypeContext typeContext;
 
-  // Use Provider to prevent cyclic reference
-  @Inject
-  private Provider<ListCodex<Object>> listCodex;
+  protected DynamicCodex() {}
 
-  @Inject
-  private Provider<StringMapCodex<Object>> mapCodex;
-
-  DynamicCodex() {}
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, Object object, VisitorContext<Object> context) {
+    Codex<Object> actual = typeContext.getCodex(object.getClass());
+    if (actual == this) {
+      throw new UnsupportedOperationException(object.getClass().getName());
+    }
+    actual.acceptNotNull(visitor, object, context);
+  }
 
   @Override
   public Type describe() {
@@ -106,17 +112,16 @@ public class DynamicCodex extends Codex<Object> {
   }
 
   @Override
-  public void scanNotNull(Object object, SerializationContext context) {
-    Codex<Object> actual = typeContext.getCodex(object.getClass());
-    if (actual == this) {
-      context.fail(new UnsupportedOperationException(object.getClass().getName()));
-    }
-    actual.scan(object, context);
-  }
-
-  @Override
   public void writeNotNull(Object object, SerializationContext context) throws IOException {
     Codex<Object> actual = typeContext.getCodex(object.getClass());
     actual.write(object, context);
+  }
+
+  @Inject
+  void inject(TypeContext typeContext, Provider<ListCodex<Object>> listCodex,
+      Provider<StringMapCodex<Object>> mapCodex) {
+    this.listCodex = listCodex;
+    this.mapCodex = mapCodex;
+    this.typeContext = typeContext;
   }
 }

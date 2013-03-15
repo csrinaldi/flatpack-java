@@ -29,20 +29,25 @@ import java.util.UUID;
 import javax.annotation.security.PermitAll;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.ext.Type;
 
 /**
  * Describes an {@code HTTP} request endpoint.
  */
+@PermitAll
 public class EndpointDescription extends BaseHasUuid {
   private String docString;
   private Type entity;
+  private List<TypeDescription> extraReturnData;
   private String method;
   private String path;
   private List<ParameterDescription> pathParameters;
   private List<ParameterDescription> queryParameters;
+  private String returnDocString;
   private Type returnType;
   private Set<String> roleNames;
+  private TraversalMode traversalMode;
 
   public EndpointDescription(String method, String path) {
     this.method = method;
@@ -54,7 +59,9 @@ public class EndpointDescription extends BaseHasUuid {
    */
   EndpointDescription() {}
 
-  @PermitAll
+  /**
+   * A documentation string describing the endpoint.
+   */
   public String getDocString() {
     return docString;
   }
@@ -62,15 +69,21 @@ public class EndpointDescription extends BaseHasUuid {
   /**
    * The expected entity type for the request. Generally, the {@code HTTP POST} body.
    */
-  @PermitAll
   public Type getEntity() {
     return entity;
   }
 
   /**
+   * Describes entities that may be added to a "bag-style" payload in addition to entities directly
+   * reachable from the payload's {@code value}.
+   */
+  public List<TypeDescription> getExtraReturnData() {
+    return extraReturnData;
+  }
+
+  /**
    * The HTTP method used to access the endpoint.
    */
-  @PermitAll
   public String getMethod() {
     return method;
   }
@@ -78,7 +91,6 @@ public class EndpointDescription extends BaseHasUuid {
   /**
    * The path used to access the endpoint.
    */
-  @PermitAll
   public String getPath() {
     return path;
   }
@@ -86,7 +98,6 @@ public class EndpointDescription extends BaseHasUuid {
   /**
    * Describes any parameters embedded in {@link #getPath()}.
    */
-  @PermitAll
   public List<ParameterDescription> getPathParameters() {
     return pathParameters;
   }
@@ -94,15 +105,21 @@ public class EndpointDescription extends BaseHasUuid {
   /**
    * Describes any query parameters for the endpoint.
    */
-  @PermitAll
   public List<ParameterDescription> getQueryParameters() {
     return queryParameters;
   }
 
   /**
+   * Provides additional information about the return value. This is analogous to a JavaDoc
+   * {@literal @return}.
+   */
+  public String getReturnDocString() {
+    return returnDocString;
+  }
+
+  /**
    * The expected contents for the HTTP response.
    */
-  @PermitAll
   public Type getReturnType() {
     return returnType;
   }
@@ -111,9 +128,15 @@ public class EndpointDescription extends BaseHasUuid {
    * Return the role names that are allowed to access the endpoint. A {@code null} value means that
    * all roles are allowed, while a zero-length value means that no roles are allowed.
    */
-  @PermitAll
   public Set<String> getRoleNames() {
     return roleNames;
+  }
+
+  /**
+   * The default traversal mode for data returned from the endpoint.
+   */
+  public TraversalMode getTraversalMode() {
+    return traversalMode;
   }
 
   public void setDocString(String docString) {
@@ -122,6 +145,10 @@ public class EndpointDescription extends BaseHasUuid {
 
   public void setEntity(Type entity) {
     this.entity = entity;
+  }
+
+  public void setExtraReturnData(List<TypeDescription> extraReturnData) {
+    this.extraReturnData = extraReturnData;
   }
 
   public void setMethod(String method) {
@@ -140,12 +167,20 @@ public class EndpointDescription extends BaseHasUuid {
     this.queryParameters = parameters;
   }
 
+  public void setReturnDocString(String returnDocumentation) {
+    this.returnDocString = returnDocumentation;
+  }
+
   public void setReturnType(Type returnType) {
     this.returnType = returnType;
   }
 
   public void setRoleNames(Set<String> roleNames) {
     this.roleNames = roleNames;
+  }
+
+  public void setTraversalMode(TraversalMode traversalMode) {
+    this.traversalMode = traversalMode;
   }
 
   @Override

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.codexes;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -23,6 +24,7 @@ import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.ext.TypeHint;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 
@@ -31,11 +33,14 @@ import com.google.gson.JsonPrimitive;
  */
 public class CharacterCodex extends ValueCodex<Character> {
 
-  CharacterCodex() {}
+  protected CharacterCodex() {}
 
   @Override
   public Type describe() {
-    return new Type.Builder().withJsonKind(JsonKind.STRING).build();
+    return new Type.Builder()
+        .withJsonKind(JsonKind.STRING)
+        .withTypeHint(TypeHint.create(Character.class))
+        .build();
   }
 
   @Override

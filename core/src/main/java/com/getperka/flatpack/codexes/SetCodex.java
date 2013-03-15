@@ -21,6 +21,8 @@ package com.getperka.flatpack.codexes;
 
 import java.util.Set;
 
+import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -29,7 +31,16 @@ import com.getperka.flatpack.util.FlatPackCollections;
  * @param <V> the element type of the set
  */
 public class SetCodex<V> extends CollectionCodex<Set<V>, V> {
-  SetCodex() {}
+
+  protected SetCodex() {}
+
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, Set<V> value, VisitorContext<Set<V>> context) {
+    if (visitor.visitValue(value, this, context)) {
+      context.walkIterable(getValueCodex()).accept(visitor, value);
+    }
+    visitor.endVisitValue(value, this, context);
+  }
 
   @Override
   protected Set<V> newCollection() {

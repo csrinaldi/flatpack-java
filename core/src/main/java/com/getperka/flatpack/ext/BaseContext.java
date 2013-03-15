@@ -62,11 +62,8 @@ public abstract class BaseContext implements Closeable {
 
   private final Deque<String> path = new ArrayDeque<String>();
   private final List<Callable<?>> postWork = listForAny();
-
   @Inject
   private Principal principal;
-  @Inject
-  private PrincipalMapper principalMapper;
   private final Map<UUID, String> warnings = mapForIteration();
 
   BaseContext() {
@@ -108,16 +105,6 @@ public abstract class BaseContext implements Closeable {
 
   public Principal getPrincipal() {
     return principal;
-  }
-
-  public List<String> getRoles() {
-    PrincipalMapper mapper = principalMapper;
-    List<String> toReturn = null;
-    if (principal != null && mapper != null) {
-      toReturn = mapper.getRoles(principal);
-    }
-    return toReturn == null ? Collections.<String> emptyList() :
-        Collections.unmodifiableList(toReturn);
   }
 
   public Map<UUID, String> getWarnings() {

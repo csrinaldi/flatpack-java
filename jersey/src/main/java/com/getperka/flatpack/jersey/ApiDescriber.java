@@ -29,11 +29,13 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -49,15 +51,20 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.UriBuilder;
 
 import com.getperka.flatpack.FlatPack;
+import com.getperka.flatpack.FlatPackEntity;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.TypeReference;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
+import com.getperka.flatpack.client.dto.TypeDescription;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.inject.HasInjector;
+import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
@@ -79,11 +86,13 @@ public class ApiDescriber {
   private Set<Class<? extends HasUuid>> ignoreSubtypesOf = Collections.emptySet();
   private Set<String> limitRoles;
   private final Map<String, Class<? extends HasUuid>> payloadNamesToClasses = mapForLookup();
+  private final PropertySecurity propertySecurity;
   private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
 
   public ApiDescriber(FlatPack flatpack, Collection<Method> apiMethods) {
     this.apiMethods = apiMethods;
     ctx = flatpack.getTypeContext();
+    propertySecurity = ((HasInjector) flatpack).getInjector().getInstance(PropertySecurity.class);
   }
 
   /**
@@ -151,6 +160,51 @@ public class ApiDescriber {
     return this;
   }
 
+  protected String keyForType(java.lang.reflect.Type t) {
+    if (t instanceof Class) {
+      return ((Class<?>) t).getName();
+    }
+
+    if (t instanceof ParameterizedType) {
+      ParameterizedType pt = (ParameterizedType) t;
+      StringBuilder sb = new StringBuilder();
+      sb.append(keyForType(pt.getRawType())).append("<");
+      boolean needsComma = false;
+      for (java.lang.reflect.Type param : pt.getActualTypeArguments()) {
+        if (needsComma) {
+          sb.append(",");
+        } else {
+          needsComma = true;
+        }
+        sb.append(keyForType(param));
+      }
+      sb.append(">");
+      return sb.toString();
+    }
+
+    throw new UnsupportedOperationException(t.getClass().getName());
+  }
+
+  protected String methodKey(Class<?> declaringClass, Method method) {
+    String methodKey;
+    {
+      StringBuilder methodKeyBuilder = new StringBuilder(declaringClass.getName())
+          .append(":").append(method.getName()).append("(");
+      boolean needsComma = false;
+      for (java.lang.reflect.Type paramType : method.getGenericParameterTypes()) {
+        if (needsComma) {
+          methodKeyBuilder.append(", ");
+        } else {
+          needsComma = true;
+        }
+        methodKeyBuilder.append(keyForType(paramType));
+      }
+      methodKeyBuilder.append(")");
+      methodKey = methodKeyBuilder.toString();
+    }
+    return methodKey;
+  }
+
   private EndpointDescription describeEndpoint(Method method) throws IOException {
     Class<?> declaringClass = method.getDeclaringClass();
 
@@ -168,22 +222,7 @@ public class ApiDescriber {
     }
 
     // Create a key for looking up the method's doc strings
-    String methodKey;
-    {
-      StringBuilder methodKeyBuilder = new StringBuilder(declaringClass.getName())
-          .append(":").append(method.getName()).append("(");
-      boolean needsComma = false;
-      for (Class<?> clazz : method.getParameterTypes()) {
-        if (needsComma) {
-          methodKeyBuilder.append(", ");
-        } else {
-          needsComma = true;
-        }
-        methodKeyBuilder.append(clazz.getName());
-      }
-      methodKeyBuilder.append(")");
-      methodKey = methodKeyBuilder.toString();
-    }
+    String methodKey = methodKey(declaringClass, method);
 
     // Determine the endpoint path
     UriBuilder builder = UriBuilder.fromPath("");
@@ -233,7 +272,19 @@ public class ApiDescriber {
     FlatPackResponse responseAnnotation = method.getAnnotation(FlatPackResponse.class);
     if (responseAnnotation != null) {
       Type returnType = reference(FlatPackTypes.createType(responseAnnotation.value()));
+      desc.setReturnDocString(
+          responseAnnotation.description().isEmpty() ? null : responseAnnotation.description());
       desc.setReturnType(returnType);
+      desc.setTraversalMode(responseAnnotation.traversalMode());
+
+      List<TypeDescription> extraTypeDescriptions = new ArrayList<TypeDescription>();
+      for (ExtraEntity extra : responseAnnotation.extra()) {
+        TypeDescription typeDescription = new TypeDescription();
+        typeDescription.setDocString(extra.description());
+        typeDescription.setType(reference(FlatPackTypes.createType(extra.type())));
+        extraTypeDescriptions.add(typeDescription);
+      }
+      desc.setExtraReturnData(extraTypeDescriptions.isEmpty() ? null : extraTypeDescriptions);
     }
 
     String docString = getDocStrings(declaringClass).get(methodKey);
@@ -274,7 +325,12 @@ public class ApiDescriber {
 
       // Filter by roles
       if (limitRoles != null) {
-        if (!prop.mayGet(limitRoles) && !prop.maySet(limitRoles)) {
+        Set<String> interestingRoles = new HashSet<String>();
+        interestingRoles.addAll(propertySecurity.getGetterRoleNames(prop));
+        interestingRoles.addAll(propertySecurity.getSetterRoleNames(prop));
+        // Ignore the property if it's not a @PermitAll and it is disjoint from the filter roles
+        if (Collections.disjoint(interestingRoles, PropertySecurity.allRoleNames) &&
+          Collections.disjoint(interestingRoles, limitRoles)) {
           it.remove();
           continue;
         }
@@ -353,6 +409,12 @@ public class ApiDescriber {
    * referenced entities.
    */
   private Type reference(java.lang.reflect.Type t) {
+    // If t is a FlatPackEntity<Foo>, return a description of Foo
+    java.lang.reflect.Type referencedEntityType =
+        FlatPackTypes.getSingleParameterization(t, FlatPackEntity.class);
+    if (referencedEntityType != null) {
+      t = referencedEntityType;
+    }
     Type type = ctx.getCodex(t).describe();
     reference(type);
     return type;

@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -92,12 +93,12 @@ public class CollectionCodexTest extends FlatPackTest {
   @Test
   public void testList() {
     List<String> in = Arrays.asList("Hello", " ", "", null, "World!");
-    List<String> out = testCodex(listString, in);
+    Collection<String> out = testCodex(listString, in);
     assertEquals(in, out);
 
     Set<HasUuid> scanned = FlatPackCollections.setForIteration();
     List<Person> in2 = Arrays.<Person> asList(employee, null, employee);
-    List<Person> out2 = testCodex(listPerson, in2, scanned);
+    Collection<Person> out2 = testCodex(listPerson, in2, scanned);
 
     assertEquals(Collections.singleton(employee), scanned);
 
@@ -106,7 +107,7 @@ public class CollectionCodexTest extends FlatPackTest {
      * is created with the same UUID. The concrete type would normally be specified in the data
      * section, however it is missing, so we expect the configured type of the codex instead.
      */
-    Person p = out2.get(0);
+    Person p = ((List<Person>) out2).get(0);
     assertNotNull(p);
     assertEquals(Person.class, p.getClass());
     assertEquals(employee.getUuid(), p.getUuid());

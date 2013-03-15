@@ -26,12 +26,14 @@ import java.lang.reflect.Array;
 
 import javax.inject.Inject;
 
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -43,14 +45,17 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of data contained in the array
  */
 public class ArrayCodex<T> extends Codex<T[]> {
-  private final Class<T> elementType;
-  private final Codex<T> valueCodex;
+  private Class<T> elementType;
+  private Codex<T> valueCodex;
 
-  @Inject
-  @SuppressWarnings("unchecked")
-  ArrayCodex(TypeLiteral<T> elementType, TypeContext context) {
-    this.elementType = erase(elementType.getType());
-    this.valueCodex = (Codex<T>) context.getCodex(elementType.getType());
+  protected ArrayCodex() {}
+
+  @Override
+  public void acceptNotNull(FlatPackVisitor visitor, T[] value, VisitorContext<T[]> context) {
+    if (visitor.visitValue(value, this, context)) {
+      context.walkArray(valueCodex).accept(visitor, value);
+    }
+    visitor.endVisitValue(value, this, context);
   }
 
   @Override
@@ -80,16 +85,6 @@ public class ArrayCodex<T> extends Codex<T[]> {
   }
 
   @Override
-  public void scanNotNull(T[] object, SerializationContext context) {
-    int count = 0;
-    for (T t : object) {
-      context.pushPath("[" + count++ + "]");
-      valueCodex.scan(t, context);
-      context.popPath();
-    }
-  }
-
-  @Override
   public void writeNotNull(T[] object, SerializationContext context) throws IOException {
     JsonWriter writer = context.getWriter();
     writer.beginArray();
@@ -100,5 +95,12 @@ public class ArrayCodex<T> extends Codex<T[]> {
       context.popPath();
     }
     writer.endArray();
+  }
+
+  @Inject
+  @SuppressWarnings("unchecked")
+  void inject(TypeLiteral<T> elementType, TypeContext context) {
+    this.elementType = erase(elementType.getType());
+    this.valueCodex = (Codex<T>) context.getCodex(elementType.getType());
   }
 }

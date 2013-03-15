@@ -26,7 +26,7 @@ import javax.annotation.security.PermitAll;
  * corresponds to the UUID of the entity it describes.
  */
 @PermitAll
-class EntityMetadata extends BaseHasUuid {
+public class EntityMetadata extends BaseHasUuid {
   private boolean isPersistent;
 
   public boolean isPersistent() {

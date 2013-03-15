@@ -149,21 +149,8 @@ public class JavaDialect implements Dialect {
 
     Map<String, EntityDescription> allEntities = FlatPackCollections.mapForIteration();
     for (EntityDescription entity : api.getEntities()) {
-      allEntities.put(entity.getTypeName(), entity);
-      for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
-        Property prop = it.next();
-        if ("uuid".equals(prop.getName())) {
-          // Crop the UUID property
-          it.remove();
-        } else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
-          // Remove properties not declared in the current type
-          it.remove();
-        }
-      }
+      addEntity(allEntities, entity);
     }
-    // Ensure that the "real" implementations are used
-    allEntities.remove("baseHasUuid");
-    allEntities.remove("hasUuid");
 
     // Render entities
     for (EntityDescription entity : allEntities.values()) {
@@ -208,6 +195,44 @@ public class JavaDialect implements Dialect {
   @Override
   public String getDialectName() {
     return "java";
+  }
+
+  /**
+   * Adds an entity and its supertypes to a map. The properties defined by the entity will be pruned
+   * so that the entity contains only its declared properties.
+   * 
+   * @param allEntities an accumulator map of entity payload names to descriptions
+   * @param entity the entity to add
+   */
+  protected void addEntity(Map<String, EntityDescription> allEntities, EntityDescription entity) {
+    if (entity == null) {
+      return;
+    }
+
+    String typeName = entity.getTypeName();
+
+    if (allEntities.containsKey(typeName)) {
+      // Already processed
+      return;
+    } else if ("baseHasUuid".equals(typeName) || "hasUuid".equals(typeName)) {
+      // Ensure that the "real" implementations are used
+      return;
+    }
+
+    allEntities.put(typeName, entity);
+    for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
+      Property prop = it.next();
+      if ("uuid".equals(prop.getName())) {
+        // Crop the UUID property
+        it.remove();
+      } else if (!prop.getEnclosingTypeName().equals(typeName)) {
+        // Remove properties not declared in the current type
+        it.remove();
+      }
+    }
+
+    // Add the supertype
+    addEntity(allEntities, entity.getSupertype());
   }
 
   /**

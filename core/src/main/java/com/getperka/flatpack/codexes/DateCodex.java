@@ -1,4 +1,5 @@
 package com.getperka.flatpack.codexes;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -30,6 +31,7 @@ import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.ext.TypeHint;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.inject.TypeLiteral;
@@ -43,21 +45,16 @@ import com.google.inject.TypeLiteral;
  * @param <D> the concrete type of Date to instantiate.
  */
 public class DateCodex<D extends Date> extends ValueCodex<D> {
-  private final Constructor<D> constructor;
+  private Constructor<D> constructor;
 
-  @Inject
-  @SuppressWarnings("unchecked")
-  DateCodex(TypeLiteral<D> dateType) {
-    try {
-      this.constructor = (Constructor<D>) dateType.getRawType().getConstructor(long.class);
-    } catch (NoSuchMethodException e) {
-      throw new RuntimeException("Should not use DateCodex with a " + dateType);
-    }
-  }
+  protected DateCodex() {}
 
   @Override
   public Type describe() {
-    return new Type.Builder().withJsonKind(JsonKind.STRING).build();
+    return new Type.Builder()
+        .withJsonKind(JsonKind.STRING)
+        .withTypeHint(TypeHint.create(constructor.getDeclaringClass()))
+        .build();
   }
 
   @Override
@@ -79,5 +76,15 @@ public class DateCodex<D extends Date> extends ValueCodex<D> {
   public void writeNotNull(D object, SerializationContext context) throws Exception {
     String value = ISODateTimeFormat.dateTime().print(object.getTime());
     context.getWriter().value(value);
+  }
+
+  @Inject
+  @SuppressWarnings("unchecked")
+  void inject(TypeLiteral<D> dateType) {
+    try {
+      this.constructor = (Constructor<D>) dateType.getRawType().getConstructor(long.class);
+    } catch (NoSuchMethodException e) {
+      throw new RuntimeException("Should not use DateCodex with a " + dateType);
+    }
   }
 }

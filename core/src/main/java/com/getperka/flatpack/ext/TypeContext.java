@@ -25,6 +25,7 @@ import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 import static com.getperka.flatpack.util.FlatPackCollections.sortedMapForIteration;
 import static com.getperka.flatpack.util.FlatPackTypes.decapitalize;
 import static com.getperka.flatpack.util.FlatPackTypes.erase;
+import static com.getperka.flatpack.util.FlatPackTypes.flatten;
 import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
 import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleName;
 
@@ -44,6 +45,7 @@ import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.inject.Provider;
+import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
@@ -57,6 +59,7 @@ import com.getperka.flatpack.SparseCollection;
 import com.getperka.flatpack.codexes.DynamicCodex;
 import com.getperka.flatpack.inject.AllTypes;
 import com.getperka.flatpack.inject.FlatPackLogger;
+import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 
 /**
@@ -64,6 +67,7 @@ import com.getperka.flatpack.util.FlatPackTypes;
  * <p>
  * Instances of TypeContext are thread-safe and intended to be long-lived.
  */
+@Singleton
 public class TypeContext {
 
   /**
@@ -147,7 +151,10 @@ public class TypeContext {
   private final Map<String, Class<? extends HasUuid>> classes = sortedMapForIteration();
   @Inject
   private CodexMapper codexMapper;
-  private final Map<Type, Codex<?>> codexes = mapForLookup();
+  /**
+   * A map of flattened type representations to a codex capable of handling that type.
+   */
+  private final Map<List<Type>, Codex<?>> codexes = mapForLookup();
   /**
    * A DynamicCodex acts as a placeholder when type information can't be determined (which should be
    * rare).
@@ -202,6 +209,9 @@ public class TypeContext {
     // Start by collecting all supertype properties
     toReturn.addAll(extractProperties(clazz.getSuperclass()));
 
+    // Link implied properties after all other properties have been stubbed out
+    Map<Property.Builder, String> impliedPropertiesToLink = FlatPackCollections.mapForIteration();
+
     // Examine each declared method on the type and assemble Property objects
     Map<String, Property.Builder> builders = mapForIteration();
     for (Method m : clazz.getDeclaredMethods()) {
@@ -222,25 +232,12 @@ public class TypeContext {
         builder.withDeepTraversalOnly(isDeepTraversalOnly(m));
         /*
          * Disable traversal of Implied / OneToMany properties unless requested. Also wire up the
-         * implication relationships between properties in the two models.
+         * implication relationships between properties in the two models after all Properties have
+         * been constructed.
          */
         String impliedPropertyName = getImpliedPropertyName(m);
         if (impliedPropertyName != null) {
-          Type elementType = getSingleParameterization(m.getGenericReturnType(), Collection.class);
-
-          if (elementType == null) {
-            logger.error("Method {}.{} defines a OneToMany / Implies relationship but the " +
-              "return type is not a Collection", clazz.getName(), m.getName());
-          } else {
-            Class<?> otherModel = erase(elementType);
-            for (Property otherProperty : extractProperties(otherModel)) {
-              if (otherProperty.getName().equals(impliedPropertyName)) {
-                builder.withImpliedProperty(otherProperty);
-                otherProperty.setImpliedProperty(builder.peek());
-                break;
-              }
-            }
-          }
+          impliedPropertiesToLink.put(builder, impliedPropertyName);
         } else if (HasUuid.class.isAssignableFrom(m.getReturnType())) {
           /*
            * If the current property is a target of a OneToMany annotation on the other side of the
@@ -254,6 +251,28 @@ public class TypeContext {
         Property.Builder builder = getBuilderForProperty(builders, beanPropertyName(m));
         builder.withSetter(m);
         setJsonPropertyName(builder);
+      }
+    }
+
+    // Wire the implied properties in the current class
+    for (Map.Entry<Property.Builder, String> entry : impliedPropertiesToLink.entrySet()) {
+      Property.Builder builder = entry.getKey();
+      String impliedPropertyName = entry.getValue();
+      Method getter = builder.peek().getGetter();
+      Type elementType = getSingleParameterization(getter.getGenericReturnType(), Collection.class);
+
+      if (elementType == null) {
+        logger.error("Method {}.{} defines a OneToMany / Implies relationship but the " +
+          "return type is not a Collection", clazz.getName(), getter.getName());
+      } else {
+        Class<?> otherModel = erase(elementType);
+        for (Property otherProperty : extractProperties(otherModel)) {
+          if (otherProperty.getName().equals(impliedPropertyName)) {
+            builder.withImpliedProperty(otherProperty);
+            otherProperty.setImpliedProperty(builder.peek());
+            break;
+          }
+        }
       }
     }
 
@@ -289,7 +308,10 @@ public class TypeContext {
    * Return a Codex instance that can operate on the specified type.
    */
   public synchronized Codex<?> getCodex(Type type) {
-    Codex<?> toReturn = codexes.get(type);
+    // Use a canonical representation of the type
+    List<Type> flattened = flatten(type);
+
+    Codex<?> toReturn = codexes.get(flattened);
     if (toReturn != null) {
       return toReturn;
     }
@@ -300,7 +322,7 @@ public class TypeContext {
       toReturn = dynamicCodex;
     }
 
-    codexes.put(type, toReturn);
+    codexes.put(flattened, toReturn);
     return toReturn;
   }
 

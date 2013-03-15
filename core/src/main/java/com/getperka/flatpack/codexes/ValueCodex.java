@@ -19,8 +19,9 @@
  */
 package com.getperka.flatpack.codexes;
 
+import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
-import com.getperka.flatpack.ext.SerializationContext;
+import com.getperka.flatpack.ext.VisitorContext;
 
 /**
  * A base class for Codex implementations that process values that cannot contain any entities.
@@ -29,5 +30,11 @@ import com.getperka.flatpack.ext.SerializationContext;
  */
 public abstract class ValueCodex<T> extends Codex<T> {
   @Override
-  public void scanNotNull(T object, SerializationContext context) throws Exception {}
+  public void acceptNotNull(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
+    if (visitor.visitValue(value, this, context)) {
+      // Nothing to do here
+    }
+    visitor.endVisitValue(value, this, context);
+  }
+
 }

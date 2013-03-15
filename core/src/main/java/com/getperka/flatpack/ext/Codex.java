@@ -19,7 +19,10 @@
  */
 package com.getperka.flatpack.ext;
 
-import com.getperka.flatpack.HasUuid;
+import static com.getperka.flatpack.util.FlatPackTypes.erase;
+import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
+
+import com.getperka.flatpack.FlatPackVisitor;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 
@@ -28,7 +31,35 @@ import com.google.gson.stream.JsonWriter;
  * 
  * @param <T> the type of data that the instance operates on
  */
-public abstract class Codex<T> {
+public abstract class Codex<T> implements Walker<T> {
+  /**
+   * Memoizing this value for the path-tracking saves a non-trivial amount of wall-time.
+   */
+  private final String simpleName;
+  private final Class<T> parameterization;
+
+  protected Codex() {
+    simpleName = getClass().getSimpleName();
+    parameterization = erase(getSingleParameterization(getClass(), Codex.class));
+  }
+
+  /**
+   * Visit a non-null value using the supplied visitor.
+   * 
+   * @param visitor the visitor that is traversing the object graph
+   * @param value the value being traversed
+   * @param context allows mutation of the object graph
+   */
+  public abstract void acceptNotNull(FlatPackVisitor visitor, T value, VisitorContext<T> context);
+
+  /**
+   * Returns {@code value} if it conforms to the {@code T} type parameter. Due to erasure, this
+   * method can only partially verify objects of a parameterized type.
+   */
+  public T cast(Object value) {
+    return parameterization.cast(value);
+  }
+
   /**
    * Returns a type descriptor for the JSON structure created by the Codex implementation.
    */
@@ -62,7 +93,7 @@ public abstract class Codex<T> {
     if (element == null || element.isJsonNull()) {
       return null;
     }
-    context.pushPath("(" + getClass().getSimpleName() + ".read())");
+    context.pushPath("(" + simpleName + ".read())");
     try {
       return readNotNull(element, context);
     } catch (Exception e) {
@@ -86,37 +117,25 @@ public abstract class Codex<T> {
       throws Exception;
 
   /**
-   * Analyze a composite value to find additional entities to serialize. If {@code object} is
-   * non-null, this method will call {@link #scanNotNull(Object, SerializationContext)}.
+   * Visit a value using the supplied visitor.
+   * <p>
+   * The default implementation delegates to {@link #acceptNotNull} or calls
+   * {@link FlatPackVisitor#visitValue visitValue()} / {@link FlatPackVisitor#endVisitValue
+   * endVisitValue()} if {@code value} is {@code null}.
    * 
-   * @param object the value to scan
-   * @param context the current serialization context
+   * @param visitor the visitor that is traversing the object graph
+   * @param value the value being traversed
+   * @param context allows mutation of the object graph
    */
-  public void scan(T object, SerializationContext context) {
-    if (object == null) {
-      return;
-    }
-    context.pushPath("(" + getClass().getSimpleName() + ".scan())");
-    try {
-      scanNotNull(object, context);
-    } catch (Exception e) {
-      context.fail(e);
-    } finally {
-      context.popPath();
+  @Override
+  public void walk(FlatPackVisitor visitor, T value, VisitorContext<T> context) {
+    if (value == null) {
+      visitor.visitValue(null, this, context);
+      visitor.endVisitValue(null, this, context);
+    } else {
+      acceptNotNull(visitor, value, context);
     }
   }
-
-  /**
-   * Analyze a composite value to find additional entities to serialize. Implementations of this
-   * method should call {@link SerializationContext#add(HasUuid)} to enqueue the related entity for
-   * serialization.
-   * 
-   * @param object the object to scan, which is guaranteed to be non-null
-   * @param context the serialization context
-   * @throws Exception implementations of this method may throw arbitrary exceptions which will be
-   *           reported by {@link #scan(Object, SerializationContext)}
-   */
-  public abstract void scanNotNull(T object, SerializationContext context) throws Exception;
 
   /**
    * Write a value into the serialization context. If object is {@code null}, writes a null into
@@ -127,7 +146,7 @@ public abstract class Codex<T> {
    * @param context the serialization context
    */
   public void write(T object, SerializationContext context) {
-    context.pushPath("(" + getClass().getSimpleName() + ".write())");
+    context.pushPath("(" + simpleName + ".write())");
     try {
       JsonWriter writer = context.getWriter();
       if (object == null) {

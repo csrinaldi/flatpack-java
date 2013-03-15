@@ -25,26 +25,19 @@ import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleNa
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.security.DenyAll;
 import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.management.RuntimeErrorException;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.InheritPrincipal;
 import com.getperka.flatpack.JsonProperty;
-import com.getperka.flatpack.RoleMapper;
 import com.getperka.flatpack.SuppressDefaultValue;
-import com.getperka.flatpack.inject.DisableRoleChecks;
-import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
  * An immutable view of a property that should be serialized.
@@ -55,11 +48,6 @@ public class Property extends BaseHasUuid {
    * Constructs {@link Property} instances.
    */
   static class Builder {
-
-    @Inject
-    @DisableRoleChecks
-    private boolean allowAll;
-
     @Inject
     private Property prop;
 
@@ -74,17 +62,6 @@ public class Property extends BaseHasUuid {
 
       Method getter = toReturn.getGetter();
       Method setter = toReturn.getSetter();
-      if (allowAll) {
-        toReturn.getterRoles = toReturn.setterRoles = allRoles;
-      } else {
-        toReturn.getterRoleNames = extractRoleNames(getter);
-        toReturn.setterRoleNames = extractRoleNames(setter);
-        if (toReturn.setterRoleNames == noRoleNames) {
-          toReturn.setterRoleNames = toReturn.getterRoleNames;
-        }
-        toReturn.getterRoles = extractRoles(toReturn.roleMapper, toReturn.getterRoleNames);
-        toReturn.setterRoles = extractRoles(toReturn.roleMapper, toReturn.setterRoleNames);
-      }
 
       if (getter != null) {
         java.lang.reflect.Type returnType = getter.getGenericReturnType();
@@ -100,21 +77,6 @@ public class Property extends BaseHasUuid {
       toReturn.type = toReturn.codex.describe();
 
       return toReturn;
-    }
-
-    /**
-     * Copy initializer.
-     */
-    public Builder from(Property p) {
-      prop.deepTraversalOnly = p.deepTraversalOnly;
-      prop.getter = p.getter;
-      prop.getterRoles = p.getterRoles;
-      prop.implied = p.implied;
-      prop.name = p.name;
-      prop.setter = p.setter;
-      prop.setterRoles = p.setterRoles;
-      prop.setUuid(p.getUuid());
-      return this;
     }
 
     /**
@@ -170,13 +132,6 @@ public class Property extends BaseHasUuid {
   }
 
   /**
-   * Used internally to implement the {@link Builder#withAllowAllRoles(boolean)} method.
-   */
-  private interface AllRolesView {}
-
-  private interface NoRolesView {}
-
-  /**
    * Sorts Property objects by {@link #getName()}.
    */
   public static final Comparator<Property> PROPERTY_NAME_COMPARATOR = new Comparator<Property>() {
@@ -185,103 +140,6 @@ public class Property extends BaseHasUuid {
       return o1.getName().compareTo(o2.getName());
     }
   };
-
-  static final Set<Class<?>> allRoles =
-      Collections.<Class<?>> singleton(AllRolesView.class);
-  static final Set<Class<?>> noRoles =
-      Collections.<Class<?>> singleton(NoRolesView.class);
-  static final Set<String> allRoleNames = Collections.singleton("*");
-  static final Set<String> noRoleNames = Collections.singleton("");
-
-  static boolean checkRoles(RoleMapper roleMapper, Collection<Class<?>> required,
-      Collection<String> credentials) {
-    // Object comparison intentional
-    if (roleMapper == null || required == allRoles) {
-      return true;
-    }
-    if (required == null || required.isEmpty()) {
-      return false;
-    }
-    for (String cred : credentials) {
-      Class<?> credView = roleMapper.mapRole(cred);
-      if (credView == null) {
-        continue;
-      }
-      if (required.contains(credView)) {
-        return true;
-      }
-      for (Class<?> req : required) {
-        if (req.isAssignableFrom(credView)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Returns the role names associated with a method or class. This method never returns
-   * {@code null}, however there are several special return values:
-   * <ul>
-   * <li>{@link #noRoleNames} indicates that no access information was set
-   * <li>{@link #allRoleNames} indicates that access should be allowed for all roles
-   * <li>An empty set indicates access should be denied for all roles
-   * </ul>
-   */
-  static Set<String> extractRoleNames(AnnotatedElement obj) {
-    // Map no method to none-allowed
-    if (obj == null) {
-      return noRoleNames;
-    }
-    if (obj.isAnnotationPresent(DenyAll.class)) {
-      return Collections.emptySet();
-    }
-    if (obj.isAnnotationPresent(PermitAll.class)) {
-      return allRoleNames;
-    }
-    RolesAllowed view = obj.getAnnotation(RolesAllowed.class);
-    if (view == null) {
-      return noRoleNames;
-    }
-    Set<String> toReturn = FlatPackCollections.setForIteration();
-    toReturn.addAll(Arrays.asList(view.value()));
-    if (toReturn.isEmpty()) {
-      return Collections.emptySet();
-    }
-    return Collections.unmodifiableSet(toReturn);
-  }
-
-  /**
-   * Extract role information from a method or its declaring class.
-   */
-  static Set<String> extractRoleNames(Method method) {
-    if (method == null) {
-      return noRoleNames;
-    }
-    Set<String> toReturn = extractRoleNames((AnnotatedElement) method);
-    if (noRoleNames == toReturn) {
-      toReturn = extractRoleNames(method.getDeclaringClass());
-    }
-    return toReturn;
-  }
-
-  static Set<Class<?>> extractRoles(RoleMapper mapper, Set<String> roleNames) {
-    // Object comparison intentional
-    if (mapper == null || roleNames == null || noRoleNames == roleNames) {
-      return noRoles;
-    }
-    if (allRoleNames == roleNames) {
-      return allRoles;
-    }
-    Set<Class<?>> toReturn = FlatPackCollections.setForIteration();
-    for (String name : roleNames) {
-      Class<?> roleClass = mapper.mapRole(name);
-      if (roleClass != null) {
-        toReturn.add(roleClass);
-      }
-    }
-    return Collections.unmodifiableSet(toReturn);
-  }
 
   private Codex<?> codex;
   private boolean deepTraversalOnly;
@@ -293,15 +151,13 @@ public class Property extends BaseHasUuid {
   private String enclosingTypeName;
   private boolean embedded;
   private Method getter;
-  private Set<Class<?>> getterRoles;
   private Set<String> getterRoleNames;
   private Property implied;
   private boolean inheritPrincipal;
   private String name;
   @Inject
-  private RoleMapper roleMapper;
+  private PropertySecurity security;
   private Method setter;
-  private Set<Class<?>> setterRoles;
   private Set<String> setterRoleNames;
   private boolean suppressDefaultValue;
   private Type type;
@@ -422,30 +278,6 @@ public class Property extends BaseHasUuid {
   @PermitAll
   public boolean isSuppressDefaultValue() {
     return suppressDefaultValue;
-  }
-
-  /**
-   * Returns {@code true} if a user with the given roles may retrieve the property. The roles
-   * provided must intersect or be assignable to the roles defined on the getter via
-   * {@link RolesAllowed}.
-   */
-  public boolean mayGet(Collection<String> roles) {
-    if (getter == null) {
-      return false;
-    }
-    return checkRoles(roleMapper, getterRoles, roles);
-  }
-
-  /**
-   * Returns {@code true} if a user with the given roles may set the property. The roles provided
-   * must intersect or be assignable to the roles defined on the setter via {@link RolesAllowed}. If
-   * no roles were specified on the setter method, the roles defined on the getter will be used.
-   */
-  public boolean maySet(Collection<String> roles) {
-    if (setter == null) {
-      return false;
-    }
-    return checkRoles(roleMapper, setterRoles, roles);
   }
 
   public void setDocString(String docString) {

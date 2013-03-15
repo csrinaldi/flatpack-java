@@ -23,29 +23,34 @@ import java.security.Principal;
 import java.util.Collection;
 
 import org.joda.time.DateTime;
+import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
-import com.getperka.flatpack.Packer;
 import com.getperka.flatpack.PersistenceMapper;
 import com.getperka.flatpack.RoleMapper;
 import com.getperka.flatpack.TraversalMode;
-import com.getperka.flatpack.Unpacker;
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
+import com.getperka.flatpack.ext.EntitySecurity;
 import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.PropertySecurity;
+import com.getperka.flatpack.security.AllowAllEntitySecurity;
+import com.getperka.flatpack.security.AllowAllPropertySecurity;
+import com.getperka.flatpack.security.RoleEntitySecurity;
+import com.getperka.flatpack.security.RolePropertySecurity;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
-import com.google.inject.PrivateModule;
-import com.google.inject.Scopes;
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Providers;
 
-public class FlatPackModule extends PrivateModule {
+public class FlatPackModule extends AbstractModule {
   private final Configuration configuration;
 
   public FlatPackModule(Configuration configuration) {
@@ -54,13 +59,6 @@ public class FlatPackModule extends PrivateModule {
 
   @Override
   protected void configure() {
-    bindExposedTypes();
-
-    // Set up a module-wide Logger
-    bind(Logger.class)
-        .annotatedWith(FlatPackLogger.class)
-        .toInstance(LoggerFactory.getLogger(FlatPack.class));
-
     // Allow spying on IO
     bind(IoObserver.class)
         .to(configuration.isVerbose() ? IoObserver.Verbose.class : IoObserver.Null.class);
@@ -89,19 +87,18 @@ public class FlatPackModule extends PrivateModule {
     bindUserTypes();
   }
 
-  /**
-   * Set up explicit bindings for exposed types.
-   */
-  private void bindExposedTypes() {
-    bind(FlatPack.class);
-    expose(FlatPack.class);
-    bind(Packer.class);
-    expose(Packer.class);
-    // Bind TypeContext in singleton, because we want referential integrity
-    bind(TypeContext.class).in(Scopes.SINGLETON);
-    expose(TypeContext.class);
-    bind(Unpacker.class);
-    expose(Unpacker.class);
+  @Provides
+  @FlatPackLogger
+  @Singleton
+  protected Logger logger(@FlatPackLogger ILoggerFactory factory) {
+    return factory.getLogger(FlatPack.class.getName());
+  }
+
+  @Provides
+  @FlatPackLogger
+  @Singleton
+  protected ILoggerFactory loggerFactory() {
+    return LoggerFactory.getILoggerFactory();
   }
 
   /**
@@ -176,21 +173,19 @@ public class FlatPackModule extends PrivateModule {
     // PrincipalMapper
     if (configuration.getPrincipalMapper() == null) {
       bind(PrincipalMapper.class).to(PermissivePrincipalMapper.class);
+      bind(EntitySecurity.class).to(AllowAllEntitySecurity.class);
     } else {
       bind(PrincipalMapper.class).toInstance(configuration.getPrincipalMapper());
+      bind(EntitySecurity.class).to(RoleEntitySecurity.class);
     }
 
-    // RoleMapper
+    // RoleMapper and PropertySecurity
     if (configuration.getRoleMapper() == null) {
       bind(RoleMapper.class).to(NullRoleMapper.class);
-      bindConstant()
-          .annotatedWith(DisableRoleChecks.class)
-          .to(true);
+      bind(PropertySecurity.class).to(AllowAllPropertySecurity.class);
     } else {
       bind(RoleMapper.class).toInstance(configuration.getRoleMapper());
-      bindConstant()
-          .annotatedWith(DisableRoleChecks.class)
-          .to(false);
+      bind(PropertySecurity.class).to(RolePropertySecurity.class);
     }
   }
 }

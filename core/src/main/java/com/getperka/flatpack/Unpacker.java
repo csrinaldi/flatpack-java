@@ -41,9 +41,11 @@ import com.getperka.flatpack.inject.IgnoreUnresolvableTypes;
 import com.getperka.flatpack.inject.PackScope;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.IoObserver;
+import com.getperka.flatpack.visitors.PackReader;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.internal.bind.JsonTreeReader;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
@@ -53,7 +55,6 @@ import com.google.gson.stream.JsonToken;
  * @see FlatPack#getUnpacker()
  */
 public class Unpacker {
-
   @Inject
   private Provider<DeserializationContext> contexts;
   @Inject
@@ -69,9 +70,32 @@ public class Unpacker {
   @Inject
   private PackScope packScope;
   @Inject
+  private Provider<PackReader> packReaders;
+  @Inject
   private TypeContext typeContext;
+  @Inject
+  private Visitors visitors;
 
   protected Unpacker() {}
+
+  /**
+   * Reify a {@link FlatPackEntity} from an in-memory json representation.
+   * 
+   * @param <T> the type of data to return
+   * @param returnType a reference to {@code T}
+   * @param in the source of the serialized data
+   * @param principal the identity for which the unpacking is occurring
+   * @return the reified {@link FlatPackEntity}.
+   */
+  public <T> FlatPackEntity<T> unpack(Type returnType, JsonElement in, Principal principal)
+      throws IOException {
+    packScope.enter().withPrincipal(principal);
+    try {
+      return doUnpack(returnType, new JsonTreeReader(in), principal);
+    } finally {
+      packScope.exit();
+    }
+  }
 
   /**
    * Reify a {@link FlatPackEntity} from its serialized form.
@@ -87,7 +111,7 @@ public class Unpacker {
     in = ioObserver.observe(in);
     packScope.enter().withPrincipal(principal);
     try {
-      return unpack(returnType, new JsonReader(in), principal);
+      return doUnpack(returnType, new JsonReader(in), principal);
     } finally {
       packScope.exit();
     }
@@ -111,7 +135,10 @@ public class Unpacker {
     return unpack(returnType.getType(), in, principal);
   }
 
-  private <T> FlatPackEntity<T> unpack(Type returnType, JsonReader reader, Principal principal)
+  /**
+   * The guts of Unpacker.
+   */
+  protected <T> FlatPackEntity<T> doUnpack(Type returnType, JsonReader reader, Principal principal)
       throws IOException {
     // Hold temporary state for deserialization
     DeserializationContext context = contexts.get();
@@ -197,10 +224,14 @@ public class Unpacker {
       } else if ("metadata".equals(name)) {
         reader.beginArray();
 
+        Codex<EntityMetadata> metaCodex = typeContext.getCodex(EntityMetadata.class);
         while (!JsonToken.END_ARRAY.equals(reader.peek())) {
-          EntityMetadata meta = new EntityMetadata();
           JsonObject metaElement = jsonParser.parse(reader).getAsJsonObject();
-          metaCodex.get().readProperties(meta, metaElement, context);
+          PackReader packReader = packReaders.get();
+          packReader.setPayload(metaElement);
+          EntityMetadata meta = new EntityMetadata();
+          meta.setUuid(UUID.fromString(metaElement.get("uuid").getAsString()));
+          meta = visitors.getWalkers().walkSingleton(metaCodex).accept(packReader, meta);
           toReturn.addMetadata(meta);
         }
 
@@ -208,6 +239,18 @@ public class Unpacker {
       } else if ("value".equals(name)) {
         // Just stash the value element in case it occurs first
         value = jsonParser.parse(reader);
+      } else if ("warnings".equals(name)) {
+        // "warnings" : { "path" : "problem", "path2" : "problem2" }
+        reader.beginObject();
+        while (JsonToken.NAME.equals(reader.peek())) {
+          String path = reader.nextName();
+          if (JsonToken.STRING.equals(reader.peek()) || JsonToken.NUMBER.equals(reader.peek())) {
+            toReturn.addWarning(path, reader.nextString());
+          } else {
+            reader.skipValue();
+          }
+        }
+        reader.endObject();
       } else if (JsonToken.STRING.equals(reader.peek()) || JsonToken.NUMBER.equals(reader.peek())) {
         // Save off any other simple properties
         toReturn.putExtraData(name, reader.nextString());
@@ -220,11 +263,13 @@ public class Unpacker {
     reader.endObject();
     reader.close();
 
+    PackReader packReader = packReaders.get();
     for (Map.Entry<HasUuid, JsonObject> entry : entityData.entrySet()) {
       HasUuid entity = entry.getKey();
       EntityCodex<HasUuid> codex = (EntityCodex<HasUuid>) typeContext
           .getCodex(entity.getClass());
-      codex.readProperties(entity, entry.getValue(), context);
+      packReader.setPayload(entry.getValue());
+      visitors.getWalkers().walkImmutable(codex).accept(packReader, entity);
     }
 
     @SuppressWarnings("unchecked")
