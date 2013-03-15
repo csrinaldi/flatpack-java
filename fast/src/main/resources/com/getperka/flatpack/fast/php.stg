@@ -68,8 +68,8 @@ entityAccessors(property) ::= <<
 <if(property.type.listElement)>
 
 // <property.safeName> one-to-many accessors to maintain bi-directional relationships
-public function <property.name>() {
-  return $this->_<property.name>;
+public function <property.safeName>() {
+  return $this->_<property.safeName>;
 }
 public function set<property.upcaseName>($<property.safeName>) {
   $this->_<property.safeName> = (array)$<property.safeName>;
@@ -88,13 +88,13 @@ public function addItemTo<property.upcaseName>($item) {
 <elseif(property.type.name && property.impliedProperty)>
 
 // <property.safeName> many-to-one accessors to maintain bi-directional relationships
-public function <property.name>() {
-  return $this->_<property.name>;
+public function <property.safeName>() {
+  return $this->_<property.safeName>;
 }
-public function set<property.upcaseName>($<property.name>) {
-  $this->_<property.name> = $<property.name>;
-  if(!in_array($this, $this->_<property.name>-><property.impliedProperty.name>())) { 
-    $this->_<property.name>->addItemTo<property.impliedProperty.upcaseName>($this);
+public function set<property.upcaseName>($<property.safeName>) {
+  $this->_<property.safeName> = $<property.safeName>;
+  if(!in_array($this, $this->_<property.safeName>-><property.impliedProperty.name>())) { 
+    $this->_<property.safeName>->addItemTo<property.impliedProperty.upcaseName>($this);
   }
 }
 <else>
@@ -119,14 +119,14 @@ array_push(self::$_allProperties,
   FPProperty::setPropertyForUuid("<property.uuid>",
     <if(property.impliedProperty)>
     array(
-      "name" => "<property.name>",
-      <if(property.embedded)>"embedded" => true,<endif>
-      "kind" => "<property.objcType>",
+      "name" => "<property.safeName>",
+      "embedded" => <if(property.embedded)>true<else>false<endif>,
+      "kind" => "<property.phpType>",
       "impliedProperty" => FPProperty::propertyForUuid("<property.impliedProperty.uuid>"))));<else>
     array(
-      "name" => "<property.name>",
-      <if(property.embedded)>"embedded" => true,<endif>
-      "kind" => "<property.objcType>")));<endif>
+      "name" => "<property.safeName>",
+      "embedded" => <if(property.embedded)>true<else>false<endif>,
+      "kind" => "<property.phpType>")));<endif>
 >>
 
 /**

@@ -72,7 +72,8 @@ public class PhpDialect implements Dialect {
       "byref",
       "oneway",
       "self",
-      "super");
+      "super",
+      "parent");
 
   private static final Logger logger = LoggerFactory.getLogger(PhpDialect.class);
 
@@ -158,9 +159,9 @@ public class PhpDialect implements Dialect {
       Matcher matcher = regex.matcher(docString);
       while (matcher.find()) {
         Type type = new Type.Builder().withName(matcher.group(1).trim()).build();
-        String objcType = phpTypeForType(type);
+        String phpType = phpTypeForType(type);
 
-        String link = "\\\\link " + objcType + " " +
+        String link = "\\\\link " + phpType + " " +
           matcher.group(2).trim() + " \\\\endlink";
         newDocString = newDocString.replaceAll(matcher.group(0), link);
       }
@@ -361,8 +362,8 @@ public class PhpDialect implements Dialect {
               /*
                * if (end.getEntity() != null) { if (end.getPathParameters() != null &&
                * end.getPathParameters().size() > 0) { sb.append(" entity"); } String type =
-               * objcTypeForType(end.getEntity()); sb.append(":(" + type + " *)"); String paramName
-               * = type; if (type.startsWith(classPrefix)) { paramName =
+               * phpTypeForType(end.getEntity()); sb.append(":(" + type + " *)"); String paramName =
+               * type; if (type.startsWith(classPrefix)) { paramName =
                * downcase(type.substring(classPrefix.length())); } sb.append(paramName); }
                */
 
@@ -551,7 +552,7 @@ public class PhpDialect implements Dialect {
         else if ("requireName".equals(propertyName)) {
           return requireNameForType(p.getType().getName());
         }
-        else if ("objcType".equals(propertyName)) {
+        else if ("phpType".equals(propertyName)) {
           return phpTypeForProperty(p);
         }
         else if ("modifiers".equals(propertyName)) {
@@ -573,7 +574,7 @@ public class PhpDialect implements Dialect {
         else if ("upcaseName".equals(propertyName)) {
           return upcase(getSafeName(p.getName()));
         }
-        else if ("listElementObjcType".equals(propertyName)) {
+        else if ("listElementphpType".equals(propertyName)) {
           return phpTypeForType(p.getType().getListElement());
         }
         else if ("singularUpcaseName".equals(propertyName)) {
