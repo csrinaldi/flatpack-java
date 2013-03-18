@@ -78,6 +78,30 @@ public class Unpacker {
 
   protected Unpacker() {}
 
+  public <T extends HasUuid> T read(Class<T> entityType, Reader in, Principal principal) {
+    packScope.enter().withPrincipal(principal);
+    try {
+      JsonParser parser = new JsonParser();
+      JsonReader reader = new JsonReader(in);
+      reader.setLenient(true);
+
+      JsonObject chunk = parser.parse(reader).getAsJsonObject();
+
+      EntityCodex<T> codex = (EntityCodex<T>) typeContext.getCodex(entityType);
+
+      DeserializationContext context = contexts.get();
+      T toReturn = codex.allocate(chunk, context);
+
+      PackReader packReader = packReaders.get();
+      packReader.setPayload(chunk);
+      visitors.visit(packReader, toReturn);
+
+      return toReturn;
+    } finally {
+      packScope.exit();
+    }
+  }
+
   /**
    * Reify a {@link FlatPackEntity} from an in-memory json representation.
    * 

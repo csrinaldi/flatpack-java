@@ -23,6 +23,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 
 import org.junit.Test;
 
@@ -64,6 +66,19 @@ public class PackTest extends FlatPackTest {
         fail("Unmatched employee");
       }
     }
+  }
+
+  @Test
+  public void testSingleEntity() throws IOException {
+    Employee employee = makeEmployee();
+
+    StringWriter out = new StringWriter();
+    flatpack.getPacker().append(employee, null, out);
+
+    StringReader in = new StringReader(out.toString());
+    Employee employee2 = flatpack.getUnpacker().read(Employee.class, in, null);
+
+    check(employee, employee2);
   }
 
   @Override

@@ -21,6 +21,7 @@ package com.getperka.flatpack;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.security.Principal;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -69,6 +70,32 @@ public class Packer {
   protected Packer() {}
 
   /**
+   * Write the properties for a single entity into a {@link Writer}.
+   * 
+   * @param entity the entity to write
+   * @param principal an optional Principal for access control
+   * @param out the destination output which will not be closed by this method
+   */
+  public void append(HasUuid entity, Principal principal, Writer out) throws IOException {
+    JsonWriter json = jsonWriter(out);
+
+    packScope.enter()
+        .withJsonWriter(json)
+        .withPrincipal(principal)
+        .withTraversalMode(TraversalMode.SPARSE);
+
+    SerializationContext context = contexts.get();
+    try {
+      context.add(entity);
+      visitorSupport.visit(writers.get(), entity);
+    } catch (Exception e) {
+      context.fail(e);
+    } finally {
+      packScope.exit();
+    }
+  }
+
+  /**
    * Pack the given entity into a json structure. If the entity is to be immediately written to a
    * stream, consider using {@link #pack(FlatPackEntity, Writer)} instead.
    * 
@@ -99,12 +126,7 @@ public class Packer {
    * @param out the destination output which will be closed by this method
    */
   public void pack(FlatPackEntity<?> entity, Writer out) throws IOException {
-    out = ioObserver.observe(out);
-    JsonWriter json = new JsonWriter(out);
-    json.setSerializeNulls(false);
-    if (prettyPrint) {
-      json.setIndent("  ");
-    }
+    JsonWriter json = jsonWriter(out);
 
     packScope.enter().withEntity(entity).withJsonWriter(json);
     try {
@@ -124,5 +146,15 @@ public class Packer {
     } catch (Exception e) {
       context.fail(e);
     }
+  }
+
+  private JsonWriter jsonWriter(Writer out) {
+    out = ioObserver.observe(out);
+    JsonWriter json = new JsonWriter(out);
+    json.setSerializeNulls(false);
+    if (prettyPrint) {
+      json.setIndent("  ");
+    }
+    return json;
   }
 }
