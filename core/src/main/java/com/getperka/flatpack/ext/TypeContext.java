@@ -117,7 +117,7 @@ public class TypeContext {
       if (hasAnnotationWithSimpleName(m, "Transient")) {
         return false;
       }
-      if (Modifier.isPublic(m.getModifiers())) {
+      if (!Modifier.isPrivate(m.getModifiers())) {
         return true;
       }
     }

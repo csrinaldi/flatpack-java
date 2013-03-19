@@ -22,6 +22,7 @@ package com.getperka.flatpack.security;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,6 +46,17 @@ import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
  * Enforces {@link RolesAllowed} restrictions on entity properties.
+ * <p>
+ * The guide to access control:
+ * <ul>
+ * <li>Decorated getters are definitive.
+ * <li>Undecorated public getters will inherit access controls from their declaring class.
+ * <li>Undecorated non-public getters will be inaccessible.
+ * <li>Decorated setters are definitive.
+ * <li>Undecorated setters of any visibility will inherit from the associated getter.
+ * <li>Undecorated setters of any visibility will inherit from the declaring class if there is no
+ * getter for the property.
+ * </ul>
  */
 @Singleton
 public class RolePropertySecurity implements PropertySecurity {
@@ -58,7 +70,13 @@ public class RolePropertySecurity implements PropertySecurity {
     final Set<String> setterRoleNames;
 
     PropertyRoles(RolePropertySecurity security, Property property) {
-      getterRoleNames = security.extractRoleNames(property.getGetter(), true);
+      // Extract the roles, delegating to the enclosing type only if the property is public
+      if (property.getGetter() == null) {
+        getterRoleNames = noRoleNames;
+      } else {
+        getterRoleNames = security.extractRoleNames(property.getGetter(),
+            Modifier.isPublic(property.getGetter().getModifiers()));
+      }
       getterRoles = security.extractRoles(getterRoleNames);
 
       // The setter should inherit role names from the class only if there is no getter
