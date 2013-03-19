@@ -58,10 +58,12 @@ public class RolePropertySecurity implements PropertySecurity {
     final Set<String> setterRoleNames;
 
     PropertyRoles(RolePropertySecurity security, Property property) {
-      getterRoleNames = security.extractRoleNames(property.getGetter());
+      getterRoleNames = security.extractRoleNames(property.getGetter(), true);
       getterRoles = security.extractRoles(getterRoleNames);
 
-      Set<String> temp = security.extractRoleNames(property.getSetter());
+      // The setter should inherit role names from the class only if there is no getter
+      Set<String> temp = security.extractRoleNames(property.getSetter(),
+          property.getGetter() == null);
       if (noRoleNames.equals(temp)) {
         setterRoles = getterRoles;
         setterRoleNames = getterRoleNames;
@@ -160,14 +162,14 @@ public class RolePropertySecurity implements PropertySecurity {
   }
 
   /**
-   * Extract role information from a method or its declaring class.
+   * Extract role information from a method or, optionally, its declaring class.
    */
-  protected Set<String> extractRoleNames(Method method) {
+  protected Set<String> extractRoleNames(Method method, boolean useDeclaring) {
     if (method == null) {
       return noRoleNames;
     }
-    Set<String> toReturn = extractRoleNames((AnnotatedElement) method);
-    if (noRoleNames == toReturn) {
+    Set<String> toReturn = extractRoleNames(method);
+    if (noRoleNames.equals(toReturn) && useDeclaring) {
       toReturn = extractRoleNames(method.getDeclaringClass());
     }
     return toReturn;
