@@ -1,4 +1,5 @@
 package com.getperka.flatpack.fast;
+
 /*
  * #%L
  * FlatPack Automatic Source Tool
@@ -432,7 +433,7 @@ public class ObjcDialect implements Dialect {
                 if (p.getType().getListElement() != null) {
                   name = objcTypeForType(p.getType().getListElement());
                 }
-                else if (p.getType().getEnumValues() == null) {
+                else {
                   name = objcTypeForProperty(p);
                 }
                 if (name != null && isRequiredImport(name)) {
@@ -463,9 +464,7 @@ public class ObjcDialect implements Dialect {
 
               Map<String, Property> propertyMap = new HashMap<String, Property>();
               for (Property p : entity.getProperties()) {
-                if (p.getType().getEnumValues() == null) {
-                  propertyMap.put(p.getName(), p);
-                }
+                propertyMap.put(p.getName(), p);
               }
 
               List<Property> sortedProperties = new ArrayList<Property>();
@@ -486,7 +485,7 @@ public class ObjcDialect implements Dialect {
               for (Property p : entity.getProperties()) {
 
                 // TODO if we decide to encode enum types, we'll want to remove the second condition
-                if (p.getType().getName() != null && p.getType().getEnumValues() == null) {
+                if (p.getType().getName() != null) {
                   propertyMap.put(p.getName(), p);
                 }
               }
@@ -546,7 +545,18 @@ public class ObjcDialect implements Dialect {
           throws STNoSuchPropertyException {
         Property p = (Property) o;
         if ("docString".equals(propertyName)) {
-          return doxygenDocString(p.getDocString());
+          String docString = p.getDocString();
+          docString = docString == null ? "" : docString;
+
+          List<String> enumValues = p.getType().getEnumValues();
+          if (enumValues != null) {
+            docString += "\n\nPossible values: ";
+            for (int i = 0; i < enumValues.size(); i++) {
+              docString += enumValues.get(i);
+              if (i < enumValues.size() - 1) docString += ", ";
+            }
+          }
+          return doxygenDocString(docString);
         }
         else if ("requireName".equals(propertyName)) {
           return requireNameForType(p.getType().getName());
@@ -556,8 +566,14 @@ public class ObjcDialect implements Dialect {
         }
         else if ("modifiers".equals(propertyName)) {
           List<String> modifiers = new ArrayList<String>();
-          modifiers.add("strong");
           String safeName = getSafeName(p.getName());
+          if (p.getImpliedProperty() != null
+            && p.getImpliedProperty().getType().getJsonKind().equals(JsonKind.LIST)) {
+            modifiers.add("weak");
+          }
+          else {
+            modifiers.add("strong");
+          }
           if (p.getType().getJsonKind().equals(JsonKind.BOOLEAN)) {
             modifiers.add("getter=is" + upcase(safeName));
           }
@@ -701,6 +717,11 @@ public class ObjcDialect implements Dialect {
   private String objcTypeForType(Type type) {
 
     if (type.getName() != null) {
+      // if the type is an enum, the type will be a string
+      if (type.getEnumValues() != null) {
+        return "NSString";
+      }
+
       String name = type.getName();
       String prefix = classPrefix;
       if (name.equalsIgnoreCase("baseHasUuid")) {
