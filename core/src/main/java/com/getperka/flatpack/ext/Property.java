@@ -24,6 +24,7 @@ import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleNa
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.UUID;
@@ -48,7 +49,8 @@ public class Property extends BaseHasUuid {
   static class Builder {
     @Inject
     private Property prop;
-
+    @Inject
+    private PropertySecurity security;
     @Inject
     private TypeContext typeContext;
 
@@ -60,6 +62,9 @@ public class Property extends BaseHasUuid {
 
       Method getter = toReturn.getGetter();
       Method setter = toReturn.getSetter();
+
+      toReturn.setGetterRoleNames(preferEmpty(security.getGetterRoleNames(toReturn)));
+      toReturn.setSetterRoleNames(preferEmpty(security.getSetterRoleNames(toReturn)));
 
       if (getter != null) {
         java.lang.reflect.Type returnType = getter.getGenericReturnType();
@@ -127,6 +132,13 @@ public class Property extends BaseHasUuid {
       toReturn.inheritPrincipal = method.isAnnotationPresent(InheritPrincipal.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
     }
+
+    /**
+     * Convert {@link PropertySecurity#noRoleNames} into the empty set.
+     */
+    private Set<String> preferEmpty(Set<String> set) {
+      return PropertySecurity.noRoleNames.equals(set) ? Collections.<String> emptySet() : set;
+    }
   }
 
   /**
@@ -153,8 +165,6 @@ public class Property extends BaseHasUuid {
   private Property implied;
   private boolean inheritPrincipal;
   private String name;
-  @Inject
-  private PropertySecurity security;
   private Method setter;
   private Set<String> setterRoleNames;
   private boolean suppressDefaultValue;
