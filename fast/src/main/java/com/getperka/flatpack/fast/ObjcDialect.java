@@ -546,10 +546,10 @@ public class ObjcDialect implements Dialect {
         Property p = (Property) o;
         if ("docString".equals(propertyName)) {
           String docString = p.getDocString();
-          docString = docString == null ? "" : docString;
 
           List<String> enumValues = p.getType().getEnumValues();
           if (enumValues != null) {
+            docString = docString == null ? "" : docString;
             docString += "\n\nPossible values: ";
             for (int i = 0; i < enumValues.size(); i++) {
               docString += enumValues.get(i);
