@@ -25,6 +25,7 @@ import java.lang.reflect.Modifier;
 import java.security.Principal;
 import java.util.Set;
 
+import javax.annotation.security.DenyAll;
 import javax.inject.Singleton;
 
 import com.getperka.flatpack.HasUuid;
@@ -32,7 +33,8 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertySecurity;
 
 /**
- * A no-op implementation of PropertySecurity that allows access to all public properties.
+ * A no-op implementation of PropertySecurity that allows access to all public properties not
+ * explicitly annotated with {@link DenyAll}.
  */
 @Singleton
 public class AllowAllPropertySecurity implements PropertySecurity {
@@ -67,6 +69,7 @@ public class AllowAllPropertySecurity implements PropertySecurity {
   }
 
   private Set<String> getRoleNames(Method method) {
-    return method != null && Modifier.isPublic(method.getModifiers()) ? allRoleNames : noRoleNames;
+    return method != null && Modifier.isPublic(method.getModifiers())
+      && !method.isAnnotationPresent(DenyAll.class) ? allRoleNames : noRoleNames;
   }
 }
