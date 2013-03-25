@@ -78,14 +78,23 @@ public class Unpacker {
 
   protected Unpacker() {}
 
-  public <T extends HasUuid> T read(Class<T> entityType, Reader in, Principal principal) {
+/**
+   * Read the properties of a single entity.
+   * 
+   * @param <T> the type of data to return
+   * @param entityType the type of data to return
+   * @param in a json object containing the output of a prior call to
+   *          {@link Packer#append(HasUuid, Principal)
+   * @param principal the identity for which the unpacking is occurring
+   * @return the reified {@code entityType}
+   */
+  public <T extends HasUuid> T read(Class<T> entityType, JsonElement in, Principal principal) {
+    if (!in.isJsonObject()) {
+      throw new IllegalArgumentException("Expecting a JSON object");
+    }
     packScope.enter().withPrincipal(principal);
     try {
-      JsonParser parser = new JsonParser();
-      JsonReader reader = new JsonReader(in);
-      reader.setLenient(true);
-
-      JsonObject chunk = parser.parse(reader).getAsJsonObject();
+      JsonObject chunk = in.getAsJsonObject();
 
       EntityCodex<T> codex = (EntityCodex<T>) typeContext.getCodex(entityType);
 
@@ -100,6 +109,25 @@ public class Unpacker {
     } finally {
       packScope.exit();
     }
+  }
+
+  /**
+   * Read the properties of a single entity.
+   * 
+   * @param <T> the type of data to return
+   * @param entityType the type of data to return
+   * @param in a Reader containing the output of a prior call to
+   *          {@link Packer#append(HasUuid, Principal, java.io.Writer)}
+   * @param principal the identity for which the unpacking is occurring
+   * @return the reified {@code entityType}
+   */
+  public <T extends HasUuid> T read(Class<T> entityType, Reader in, Principal principal) {
+    JsonParser parser = new JsonParser();
+    JsonReader reader = new JsonReader(in);
+    reader.setLenient(true);
+
+    JsonObject chunk = parser.parse(reader).getAsJsonObject();
+    return read(entityType, chunk, principal);
   }
 
   /**

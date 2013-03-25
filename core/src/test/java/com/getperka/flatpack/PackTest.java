@@ -31,6 +31,7 @@ import org.junit.Test;
 import com.getperka.flatpack.domain.Employee;
 import com.getperka.flatpack.domain.Manager;
 import com.getperka.flatpack.domain.TestTypeSource;
+import com.google.gson.JsonElement;
 
 /**
  * Test full encoding of {@link Packer} and {@link Unpacker}.
@@ -69,7 +70,18 @@ public class PackTest extends FlatPackTest {
   }
 
   @Test
-  public void testSingleEntity() throws IOException {
+  public void testSingleEntityElement() throws IOException {
+    Employee employee = makeEmployee();
+
+    JsonElement elt = flatpack.getPacker().append(employee, null);
+
+    Employee employee2 = flatpack.getUnpacker().read(Employee.class, elt, null);
+
+    check(employee, employee2);
+  }
+
+  @Test
+  public void testSingleEntityWriter() throws IOException {
     Employee employee = makeEmployee();
 
     StringWriter out = new StringWriter();

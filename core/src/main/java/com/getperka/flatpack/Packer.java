@@ -70,6 +70,33 @@ public class Packer {
   protected Packer() {}
 
   /**
+   * Write the properties for a single entity into a json structure.
+   * 
+   * @param entity the entity to write
+   * @param principal an optional Principal for access control
+   * @return a json representation of the entity
+   */
+  public JsonElement append(HasUuid entity, Principal principal) throws IOException {
+    JsonTreeWriter json = new JsonTreeWriter();
+    packScope.enter()
+        .withJsonWriter(json)
+        .withPrincipal(principal)
+        .withTraversalMode(TraversalMode.SPARSE);
+
+    SerializationContext context = contexts.get();
+    try {
+      context.add(entity);
+      visitorSupport.visit(writers.get(), entity);
+      return json.get();
+    } catch (Exception e) {
+      context.fail(e);
+      return null;
+    } finally {
+      packScope.exit();
+    }
+  }
+
+  /**
    * Write the properties for a single entity into a {@link Writer}.
    * 
    * @param entity the entity to write
