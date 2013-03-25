@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -46,6 +47,7 @@ import javax.ws.rs.ext.Providers;
 
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.FlatPackEntity;
+import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
@@ -70,6 +72,7 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
   @Context
   Providers providers;
   private FlatPack flatpack;
+  private IoObserver observer = new IoObserver.Null();
 
   /**
    * Capture the Principal associated with the current thread for use by the post-request filter
@@ -131,7 +134,7 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
       // Create the payload
       StringWriter out = new StringWriter();
       try {
-        getFlatPack().getPacker().pack(toSend, out);
+        getFlatPack().getPacker().pack(toSend, observer.observe(out));
       } catch (IOException e) {
         throw new WebApplicationException(e);
       }
@@ -176,7 +179,7 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
       return entityStream;
     }
 
-    Reader in = new InputStreamReader(entityStream, UTF8);
+    Reader in = observer.observe(new InputStreamReader(entityStream, UTF8));
     if (Reader.class.equals(type)) {
       return in;
     }
@@ -204,6 +207,10 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
     return toReturn;
   }
 
+  public void setObserver(IoObserver observer) {
+    this.observer = observer;
+  }
+
   /**
    * This method generally shouldn't be called on the server, since the
    * {@link #filter(ContainerRequest, ContainerResponse)} method above should have already
@@ -214,7 +221,7 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
       Annotation[] annotations,
       MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
       throws IOException, WebApplicationException {
-    OutputStreamWriter writer = new OutputStreamWriter(entityStream, UTF8);
+    Writer writer = observer.observe(new OutputStreamWriter(entityStream, UTF8));
     try {
       if (t instanceof JsonElement) {
         new Gson().toJson((JsonElement) t, writer);
