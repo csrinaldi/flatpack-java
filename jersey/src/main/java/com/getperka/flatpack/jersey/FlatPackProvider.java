@@ -185,7 +185,11 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
     }
 
     if (JsonElement.class.isAssignableFrom(type)) {
-      return new JsonParser().parse(in);
+      try {
+        return new JsonParser().parse(in);
+      } finally {
+        in.close();
+      }
     }
 
     FlatPackEntity<?> entity;
@@ -203,6 +207,7 @@ public class FlatPackProvider implements MessageBodyReader<Object>, MessageBodyW
       entity = getFlatPack().getUnpacker().unpack(genericType, in, requestPrincipal.get());
       toReturn = entity.getValue();
     }
+    in.close();
     flatpackWarnings.set(entity.getExtraWarnings());
     return toReturn;
   }
