@@ -28,8 +28,8 @@ class <entity.requireName><if(entity.supertype.requireName)> extends <entity.sup
   <entity.properties:property(); separator="\n">
   <endif>
   
-  private static $_entityDescription;
-  private static $_allProperties;
+  protected static $_entityDescription;
+  protected static $_allProperties;
 
   <if(entity.collectionProperties || entity.supertype.requireName)>
   // initialize collection properties
@@ -110,7 +110,7 @@ public function set<property.upcaseName>($<property.name>) {
 >>
 
 property(property) ::= <%
-private $_<property.safeName>;
+protected $_<property.safeName>;
 %>
 
 propertyAdd(property) ::= <<
