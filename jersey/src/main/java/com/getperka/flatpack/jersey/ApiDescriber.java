@@ -86,6 +86,7 @@ public class ApiDescriber {
   private Set<Class<? extends HasUuid>> ignoreSubtypesOf = Collections.emptySet();
   private Set<String> limitRoles;
   private final Map<String, Class<? extends HasUuid>> payloadNamesToClasses = mapForLookup();
+  private final Map<Property, EntityDescription> propertiesToEntities = mapForLookup();
   private final PropertySecurity propertySecurity;
   private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
 
@@ -142,6 +143,20 @@ public class ApiDescriber {
       }
     } while (!entitiesToExtract.isEmpty());
 
+    // Re-link any otherwise-inaccessible implied properties
+    for (EntityDescription entity : entities) {
+      for (Property prop : entity.getProperties()) {
+        Property impliedProperty = prop.getImpliedProperty();
+        if (impliedProperty == null) {
+          continue;
+        }
+        EntityDescription impliedEntity = propertiesToEntities.get(impliedProperty);
+        if (!impliedEntity.getProperties().contains(impliedProperty)) {
+          impliedEntity.getProperties().add(impliedProperty);
+        }
+      }
+    }
+
     return description;
   }
 
@@ -193,7 +208,7 @@ public class ApiDescriber {
       boolean needsComma = false;
       for (java.lang.reflect.Type paramType : method.getGenericParameterTypes()) {
         if (needsComma) {
-          methodKeyBuilder.append(",");
+          methodKeyBuilder.append(", ");
         } else {
           needsComma = true;
         }
@@ -322,6 +337,7 @@ public class ApiDescriber {
     // Iterate over the properties
     for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
       Property prop = it.next();
+      propertiesToEntities.put(prop, entity);
 
       // Filter by roles
       if (limitRoles != null) {

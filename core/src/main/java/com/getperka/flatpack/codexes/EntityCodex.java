@@ -287,9 +287,9 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     // Otherwise try to construct a new instance
     if (toReturn == null && provider != null) {
       toReturn = provider.get();
+      toReturn.setUuid(uuid);
     }
 
-    toReturn.setUuid(uuid);
     context.putEntity(uuid, toReturn, resolved);
 
     return toReturn;

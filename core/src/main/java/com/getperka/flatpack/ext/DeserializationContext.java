@@ -99,15 +99,13 @@ public class DeserializationContext extends BaseContext {
   }
 
   /**
-   * Stores an entity to be identified by a UUID. This method will call
-   * {@link HasUuid#setUuid(UUID)} on the provided entity.
+   * Stores an entity to be identified by a UUID.
    * 
    * @param uuid the UUID to assign to the entity
    * @param entity the entity to store in the context
    * @param resolved {@code true} if the instance was retrieved from an {@link EntityResolver}
    */
   public void putEntity(UUID uuid, HasUuid entity, boolean resolved) {
-    entity.setUuid(uuid);
     entities.put(uuid, entity);
     if (resolved) {
       this.resolved.add(uuid);

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -19,10 +20,12 @@ package com.getperka.flatpack.security;
  * #L%
  */
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.security.Principal;
-import java.util.Collections;
 import java.util.Set;
 
+import javax.annotation.security.DenyAll;
 import javax.inject.Singleton;
 
 import com.getperka.flatpack.HasUuid;
@@ -30,30 +33,43 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertySecurity;
 
 /**
- * A no-op implementation of PropertySecurity that allows access to all properties.
+ * A no-op implementation of PropertySecurity that allows access to all public properties not
+ * explicitly annotated with {@link DenyAll}.
  */
 @Singleton
 public class AllowAllPropertySecurity implements PropertySecurity {
 
-  private final Set<String> allRoleNames = Collections.singleton("*");
-
   @Override
   public Set<String> getGetterRoleNames(Property property) {
-    return allRoleNames;
+    return getRoleNames(property.getGetter());
   }
 
+  /**
+   * Defer to the getter, if it exists, otherwise, use the access modified on the setter.
+   */
   @Override
   public Set<String> getSetterRoleNames(Property property) {
-    return allRoleNames;
+    if (property.getSetter() == null) {
+      return noRoleNames;
+    }
+    if (property.getGetter() == null) {
+      return getRoleNames(property.getSetter());
+    }
+    return getRoleNames(property.getGetter());
   }
 
   @Override
   public boolean mayGet(Property property, Principal principal, HasUuid target) {
-    return property.getGetter() != null;
+    return allRoleNames.equals(property.getGetterRoleNames());
   }
 
   @Override
   public boolean maySet(Property property, Principal principal, HasUuid target, Object newValue) {
-    return property.getSetter() != null;
+    return allRoleNames.equals(property.getSetterRoleNames());
+  }
+
+  private Set<String> getRoleNames(Method method) {
+    return method != null && Modifier.isPublic(method.getModifiers())
+      && !method.isAnnotationPresent(DenyAll.class) ? allRoleNames : noRoleNames;
   }
 }

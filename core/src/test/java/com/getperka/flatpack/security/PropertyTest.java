@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.getperka.flatpack.RoleMapper;
-import com.getperka.flatpack.security.RolePropertySecurity;
+import com.getperka.flatpack.ext.PropertySecurity;
 
 public class PropertyTest {
 
@@ -46,6 +46,16 @@ public class PropertyTest {
     public Class<?> mapRole(String roleName) {
       return PropertyTest.class;
     }
+  }
+
+  @RolesAllowed("foobar")
+  static class HasGetterOverride {
+    @RolesAllowed("override")
+    public String getString() {
+      return null;
+    }
+
+    public void setString(String value) {}
   }
 
   @RolesAllowed("foobar")
@@ -97,6 +107,16 @@ public class PropertyTest {
   }
 
   @Test
+  public void testGetterOverride() throws SecurityException, NoSuchMethodException {
+    assertEquals(Collections.singleton("override"),
+        security.extractRoleNames(HasGetterOverride.class.getDeclaredMethod("getString"), true));
+    assertEquals(
+        PropertySecurity.noRoleNames,
+        security.extractRoleNames(
+            HasGetterOverride.class.getDeclaredMethod("setString", String.class), false));
+  }
+
+  @Test
   public void testNoMapper() {
     security.inject(null, null);
     // Access allowed when no RoleMapper is installed
@@ -106,8 +126,8 @@ public class PropertyTest {
   @Test
   public void testRoleNameExtraction() {
     assertSame(Collections.emptySet(), names("denyAll"));
-    assertSame(security.noRoleNames, names("noAnnotation"));
-    assertSame(security.allRoleNames, names("permitAll"));
+    assertSame(PropertySecurity.noRoleNames, names("noAnnotation"));
+    assertSame(PropertySecurity.allRoleNames, names("permitAll"));
     assertEquals(Collections.singleton("foobar"), names("rolesAllowedOne"));
     assertSame(Collections.emptySet(), names("rolesAllowedZero"));
     assertEquals(Collections.singleton("foobar"), names(HasMethod.class, "noAnnotation"));
@@ -116,7 +136,7 @@ public class PropertyTest {
   private Set<String> names(Class<?> clazz, String methodName) {
     try {
       Method method = clazz.getDeclaredMethod(methodName);
-      return security.extractRoleNames(method);
+      return security.extractRoleNames(method, true);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }

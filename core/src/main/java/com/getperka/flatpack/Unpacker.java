@@ -78,6 +78,58 @@ public class Unpacker {
 
   protected Unpacker() {}
 
+/**
+   * Read the properties of a single entity.
+   * 
+   * @param <T> the type of data to return
+   * @param entityType the type of data to return
+   * @param in a json object containing the output of a prior call to
+   *          {@link Packer#append(HasUuid, Principal)
+   * @param principal the identity for which the unpacking is occurring
+   * @return the reified {@code entityType}
+   */
+  public <T extends HasUuid> T read(Class<T> entityType, JsonElement in, Principal principal) {
+    if (!in.isJsonObject()) {
+      throw new IllegalArgumentException("Expecting a JSON object");
+    }
+    packScope.enter().withPrincipal(principal);
+    try {
+      JsonObject chunk = in.getAsJsonObject();
+
+      EntityCodex<T> codex = (EntityCodex<T>) typeContext.getCodex(entityType);
+
+      DeserializationContext context = contexts.get();
+      T toReturn = codex.allocate(chunk, context);
+
+      PackReader packReader = packReaders.get();
+      packReader.setPayload(chunk);
+      visitors.visit(packReader, toReturn);
+
+      return toReturn;
+    } finally {
+      packScope.exit();
+    }
+  }
+
+  /**
+   * Read the properties of a single entity.
+   * 
+   * @param <T> the type of data to return
+   * @param entityType the type of data to return
+   * @param in a Reader containing the output of a prior call to
+   *          {@link Packer#append(HasUuid, Principal, java.io.Writer)}
+   * @param principal the identity for which the unpacking is occurring
+   * @return the reified {@code entityType}
+   */
+  public <T extends HasUuid> T read(Class<T> entityType, Reader in, Principal principal) {
+    JsonParser parser = new JsonParser();
+    JsonReader reader = new JsonReader(in);
+    reader.setLenient(true);
+
+    JsonObject chunk = parser.parse(reader).getAsJsonObject();
+    return read(entityType, chunk, principal);
+  }
+
   /**
    * Reify a {@link FlatPackEntity} from an in-memory json representation.
    * 
@@ -226,10 +278,11 @@ public class Unpacker {
 
         Codex<EntityMetadata> metaCodex = typeContext.getCodex(EntityMetadata.class);
         while (!JsonToken.END_ARRAY.equals(reader.peek())) {
-          EntityMetadata meta = new EntityMetadata();
           JsonObject metaElement = jsonParser.parse(reader).getAsJsonObject();
           PackReader packReader = packReaders.get();
           packReader.setPayload(metaElement);
+          EntityMetadata meta = new EntityMetadata();
+          meta.setUuid(UUID.fromString(metaElement.get("uuid").getAsString()));
           meta = visitors.getWalkers().walkSingleton(metaCodex).accept(packReader, meta);
           toReturn.addMetadata(meta);
         }

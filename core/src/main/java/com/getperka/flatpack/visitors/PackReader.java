@@ -76,6 +76,17 @@ public class PackReader extends FlatPackVisitor {
         return;
       }
       String simplePropertyName = prop.getName();
+
+      /*
+       * The UUID property is either set by EntityCodex.allocate() for newly-created objects or
+       * would have already been set for persistent entities. In the case of persistent entities,
+       * the EntityResolver may have chosen to return an entity with a UUID other than the one
+       * requested.
+       */
+      if (simplePropertyName.equals("uuid")) {
+        return;
+      }
+
       context.pushPath("." + simplePropertyName);
       try {
         Object value;
