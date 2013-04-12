@@ -93,10 +93,14 @@ public abstract class BaseContext implements Closeable {
    * throw to continue to propagate the (checked) exception up the stack.
    */
   public void fail(Throwable e) {
+    StackTraceElement newElement = new StackTraceElement("FlatPack", toString(), null, 0);
+
     StackTraceElement[] stack = e.getStackTrace();
-    if (!"FlatPack".equals(stack[0].getClassName())) {
+    if (stack == null || stack.length == 0) {
+      e.setStackTrace(new StackTraceElement[] { newElement });
+    } else if (!"FlatPack".equals(stack[0].getClassName())) {
       StackTraceElement[] newStack = new StackTraceElement[stack.length + 1];
-      newStack[0] = new StackTraceElement("FlatPack", toString(), null, 0);
+      newStack[0] = newElement;
       System.arraycopy(stack, 0, newStack, 1, stack.length);
       e.setStackTrace(newStack);
     }
