@@ -50,9 +50,11 @@ import com.getperka.flatpack.util.FlatPackCollections;
  * The guide to access control:
  * <ul>
  * <li>Decorated getters are definitive.
+ * <li>The value of a {@link RoleDefaults} annotation will be used next.
  * <li>Undecorated public getters will inherit access controls from their declaring class.
  * <li>Undecorated non-public getters will be inaccessible.
  * <li>Decorated setters are definitive.
+ * <li>Undecorated setters of any visibility will use the {@link RoleDefaults}.
  * <li>Undecorated setters of any visibility will inherit from the associated getter.
  * <li>Undecorated setters of any visibility will inherit from the declaring class if there is no
  * getter for the property.
@@ -74,13 +76,13 @@ public class RolePropertySecurity implements PropertySecurity {
       if (property.getGetter() == null) {
         getterRoleNames = noRoleNames;
       } else {
-        getterRoleNames = security.extractRoleNames(property.getGetter(),
+        getterRoleNames = security.extractRoleNames(property.getGetter(), false,
             Modifier.isPublic(property.getGetter().getModifiers()));
       }
       getterRoles = security.extractRoles(getterRoleNames);
 
       // The setter should inherit role names from the class only if there is no getter
-      Set<String> temp = security.extractRoleNames(property.getSetter(),
+      Set<String> temp = security.extractRoleNames(property.getSetter(), true,
           property.getGetter() == null);
       if (noRoleNames.equals(temp)) {
         setterRoles = getterRoles;
@@ -171,25 +173,30 @@ public class RolePropertySecurity implements PropertySecurity {
     if (view == null) {
       return noRoleNames;
     }
-    Set<String> toReturn = FlatPackCollections.setForIteration();
-    toReturn.addAll(Arrays.asList(view.value()));
-    if (toReturn.isEmpty()) {
-      return Collections.emptySet();
-    }
-    return Collections.unmodifiableSet(toReturn);
+    return extractRoles(view);
   }
 
   /**
-   * Extract role information from a method or, optionally, its declaring class.
+   * Extract role information from a method or, optionally, its declaring class. This method will
+   * also check for {@link RoleDefaults} if no role information exists on the method.
    */
-  protected Set<String> extractRoleNames(Method method, boolean useDeclaring) {
+  protected Set<String> extractRoleNames(Method method, boolean isSetter, boolean useDeclaring) {
     if (method == null) {
       return noRoleNames;
     }
     Set<String> toReturn = extractRoleNames(method);
-    if (noRoleNames.equals(toReturn) && useDeclaring) {
-      toReturn = extractRoleNames(method.getDeclaringClass());
+
+    if (noRoleNames.equals(toReturn)) {
+      RoleDefaults defaults = method.getDeclaringClass().getAnnotation(RoleDefaults.class);
+      if (defaults != null) {
+        return extractRoles(isSetter ? defaults.setters() : defaults.getters());
+      }
+
+      if (useDeclaring) {
+        return extractRoleNames(method.getDeclaringClass());
+      }
     }
+
     return toReturn;
   }
 
@@ -227,6 +234,15 @@ public class RolePropertySecurity implements PropertySecurity {
     this.roleMapper = roleMapper;
   }
 
+  private Set<String> extractRoles(RolesAllowed view) {
+    Set<String> toReturn = FlatPackCollections.setForIteration();
+    toReturn.addAll(Arrays.asList(view.value()));
+    if (toReturn.isEmpty()) {
+      return Collections.emptySet();
+    }
+    return Collections.unmodifiableSet(toReturn);
+  }
+
   private Set<Class<?>> extractRoles(Set<String> roleNames) {
     // Object comparison intentional
     if (roleMapper == null || roleNames == null || noRoleNames == roleNames) {
@@ -248,8 +264,10 @@ public class RolePropertySecurity implements PropertySecurity {
   private PropertyRoles getPropertyRoles(Property property) {
     PropertyRoles toReturn = propertyRoles.get(property);
     if (toReturn == null) {
-      toReturn = new PropertyRoles(this, property);
-      propertyRoles.put(property, toReturn);
+      synchronized (this) {
+        toReturn = new PropertyRoles(this, property);
+        propertyRoles.put(property, toReturn);
+      }
     }
     return toReturn;
   }
