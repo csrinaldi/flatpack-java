@@ -49,15 +49,11 @@ import com.getperka.flatpack.util.FlatPackCollections;
  * <p>
  * The guide to access control:
  * <ul>
- * <li>Decorated getters are definitive.
- * <li>The value of a {@link RoleDefaults} annotation will be used next.
- * <li>Undecorated public getters will inherit access controls from their declaring class.
- * <li>Undecorated non-public getters will be inaccessible.
- * <li>Decorated setters are definitive.
- * <li>Undecorated setters of any visibility will use the {@link RoleDefaults}.
- * <li>Undecorated setters of any visibility will inherit from the associated getter.
- * <li>Undecorated setters of any visibility will inherit from the declaring class if there is no
- * getter for the property.
+ * <li>A {@link RolesAllowed}, {@link DenyAll} or {@link PermitAll} decoration on a getter or setter
+ * is definitive
+ * <li>A {@link RoleDefaults} annotation is preferred over a {@link RolesAllowed} on a type
+ * <li>If no class-level annotations are present, public getters are presumed to be allowed
+ * <li>If no class-level role annotations are present, a public setter will inherit from its getter
  * </ul>
  */
 @Singleton
@@ -72,25 +68,18 @@ public class RolePropertySecurity implements PropertySecurity {
     final Set<String> setterRoleNames;
 
     PropertyRoles(RolePropertySecurity security, Property property) {
-      // Extract the roles, delegating to the enclosing type only if the property is public
-      if (property.getGetter() == null) {
-        getterRoleNames = noRoleNames;
-      } else {
-        getterRoleNames = security.extractRoleNames(property.getGetter(), false,
-            Modifier.isPublic(property.getGetter().getModifiers()));
-      }
+      Set<String> getterFallback = property.getGetter() != null
+        && Modifier.isPublic(property.getGetter().getModifiers()) ?
+          allRoleNames : Collections.<String> emptySet();
+
+      getterRoleNames = security.extractRoleNames(property.getGetter(), false, getterFallback);
       getterRoles = security.extractRoles(getterRoleNames);
 
-      // The setter should inherit role names from the class only if there is no getter
-      Set<String> temp = security.extractRoleNames(property.getSetter(), true,
-          property.getGetter() == null);
-      if (noRoleNames.equals(temp)) {
-        setterRoles = getterRoles;
-        setterRoleNames = getterRoleNames;
-      } else {
-        setterRoleNames = temp;
-        setterRoles = security.extractRoles(setterRoleNames);
-      }
+      Set<String> setterFallback = property.getSetter() != null
+        && Modifier.isPublic(property.getSetter().getModifiers()) ?
+          getterRoleNames : Collections.<String> emptySet();
+      setterRoleNames = security.extractRoleNames(property.getSetter(), true, setterFallback);
+      setterRoles = security.extractRoles(setterRoleNames);
     }
   }
 
@@ -158,7 +147,7 @@ public class RolePropertySecurity implements PropertySecurity {
    * <li>An empty set indicates access should be denied for all roles
    * </ul>
    */
-  protected Set<String> extractRoleNames(AnnotatedElement obj) {
+  protected Set<String> extractRoleNames(AnnotatedElement obj, boolean isSetter) {
     // Map no method to none-allowed
     if (obj == null) {
       return noRoleNames;
@@ -169,35 +158,39 @@ public class RolePropertySecurity implements PropertySecurity {
     if (obj.isAnnotationPresent(PermitAll.class)) {
       return allRoleNames;
     }
-    RolesAllowed view = obj.getAnnotation(RolesAllowed.class);
-    if (view == null) {
-      return noRoleNames;
+    RoleDefaults defaults = obj.getAnnotation(RoleDefaults.class);
+    if (defaults != null) {
+      return extractRoles(isSetter ? defaults.setters() : defaults.getters());
     }
-    return extractRoles(view);
+    RolesAllowed view = obj.getAnnotation(RolesAllowed.class);
+    if (view != null) {
+      return extractRoles(view);
+    }
+    return noRoleNames;
   }
 
   /**
    * Extract role information from a method or, optionally, its declaring class. This method will
    * also check for {@link RoleDefaults} if no role information exists on the method.
    */
-  protected Set<String> extractRoleNames(Method method, boolean isSetter, boolean useDeclaring) {
+  protected Set<String> extractRoleNames(Method method, boolean isSetter, Set<String> fallback) {
     if (method == null) {
       return noRoleNames;
     }
-    Set<String> toReturn = extractRoleNames(method);
 
-    if (noRoleNames.equals(toReturn)) {
-      RoleDefaults defaults = method.getDeclaringClass().getAnnotation(RoleDefaults.class);
-      if (defaults != null) {
-        return extractRoles(isSetter ? defaults.setters() : defaults.getters());
-      }
-
-      if (useDeclaring) {
-        return extractRoleNames(method.getDeclaringClass());
-      }
+    // Look at method
+    Set<String> toReturn = extractRoleNames(method, isSetter);
+    if (!noRoleNames.equals(toReturn)) {
+      return toReturn;
     }
 
-    return toReturn;
+    // Look at declaring class
+    toReturn = extractRoleNames(method.getDeclaringClass(), isSetter);
+    if (!noRoleNames.equals(toReturn)) {
+      return toReturn;
+    }
+
+    return fallback;
   }
 
   /**
@@ -244,11 +237,10 @@ public class RolePropertySecurity implements PropertySecurity {
   }
 
   private Set<Class<?>> extractRoles(Set<String> roleNames) {
-    // Object comparison intentional
-    if (roleMapper == null || roleNames == null || noRoleNames == roleNames) {
+    if (roleMapper == null || roleNames == null || noRoleNames.equals(roleNames)) {
       return noRoles;
     }
-    if (allRoleNames == roleNames) {
+    if (allRoleNames.equals(roleNames)) {
       return allRoles;
     }
     Set<Class<?>> toReturn = FlatPackCollections.setForIteration();

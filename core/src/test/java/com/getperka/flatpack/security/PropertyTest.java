@@ -119,11 +119,12 @@ public class PropertyTest {
   public void testGetterOverride() throws SecurityException, NoSuchMethodException {
     assertEquals(Collections.singleton("override"),
         security.extractRoleNames(HasGetterOverride.class.getDeclaredMethod("getString"), false,
-            true));
+            Collections.<String> emptySet()));
     assertEquals(
-        PropertySecurity.noRoleNames,
+        Collections.singleton("foobar"),
         security.extractRoleNames(
-            HasGetterOverride.class.getDeclaredMethod("setString", String.class), true, false));
+            HasGetterOverride.class.getDeclaredMethod("setString", String.class), true,
+            Collections.<String> emptySet()));
   }
 
   @Test
@@ -138,11 +139,12 @@ public class PropertyTest {
     assertEquals(
         Collections.singleton("getters"),
         security.extractRoleNames(HasRoleDefaults.class.getDeclaredMethod("getString"), false,
-            true));
+            Collections.<String> emptySet()));
     assertEquals(
         Collections.singleton("setters"),
         security.extractRoleNames(
-            HasRoleDefaults.class.getDeclaredMethod("setString", String.class), true, false));
+            HasRoleDefaults.class.getDeclaredMethod("setString", String.class), true,
+            Collections.<String> emptySet()));
   }
 
   @Test
@@ -158,7 +160,7 @@ public class PropertyTest {
   private Set<String> names(Class<?> clazz, String methodName) {
     try {
       Method method = clazz.getDeclaredMethod(methodName);
-      return security.extractRoleNames(method, true, true);
+      return security.extractRoleNames(method, true, PropertySecurity.noRoleNames);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
