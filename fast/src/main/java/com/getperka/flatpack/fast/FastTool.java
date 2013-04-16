@@ -60,7 +60,7 @@ public class FastTool extends ShellBase {
       @Flag(tag = "out", help = "The directory to generate source into",
           // defaultValue = "/Users/jack/github/perka-client-php/perka-client-php/generated/.") File
           // out)
-          defaultValue = "~/github/flatpack-php/flatpack-php/classes/entities/.") File out)
+          defaultValue = "~/github/generated/.") File out)
       throws IOException {
 
     Unpacker unpacker = FlatPack.create(new Configuration()
