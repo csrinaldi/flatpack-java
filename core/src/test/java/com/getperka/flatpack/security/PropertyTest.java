@@ -63,6 +63,15 @@ public class PropertyTest {
     static void noAnnotation() {}
   }
 
+  @RoleDefaults(getters = @RolesAllowed("getters"), setters = @RolesAllowed("setters"))
+  static class HasRoleDefaults {
+    public String getString() {
+      return null;
+    }
+
+    public void setString(String string) {}
+  }
+
   @DenyAll
   static void denyAll() {}
 
@@ -109,11 +118,13 @@ public class PropertyTest {
   @Test
   public void testGetterOverride() throws SecurityException, NoSuchMethodException {
     assertEquals(Collections.singleton("override"),
-        security.extractRoleNames(HasGetterOverride.class.getDeclaredMethod("getString"), true));
+        security.extractRoleNames(HasGetterOverride.class.getDeclaredMethod("getString"), false,
+            Collections.<String> emptySet()));
     assertEquals(
-        PropertySecurity.noRoleNames,
+        Collections.singleton("foobar"),
         security.extractRoleNames(
-            HasGetterOverride.class.getDeclaredMethod("setString", String.class), false));
+            HasGetterOverride.class.getDeclaredMethod("setString", String.class), true,
+            Collections.<String> emptySet()));
   }
 
   @Test
@@ -121,6 +132,19 @@ public class PropertyTest {
     security.inject(null, null);
     // Access allowed when no RoleMapper is installed
     assertTrue(security.checkRoles(Collections.<Class<?>> emptySet(), null));
+  }
+
+  @Test
+  public void testRoleDefaults() throws SecurityException, NoSuchMethodException {
+    assertEquals(
+        Collections.singleton("getters"),
+        security.extractRoleNames(HasRoleDefaults.class.getDeclaredMethod("getString"), false,
+            Collections.<String> emptySet()));
+    assertEquals(
+        Collections.singleton("setters"),
+        security.extractRoleNames(
+            HasRoleDefaults.class.getDeclaredMethod("setString", String.class), true,
+            Collections.<String> emptySet()));
   }
 
   @Test
@@ -136,7 +160,7 @@ public class PropertyTest {
   private Set<String> names(Class<?> clazz, String methodName) {
     try {
       Method method = clazz.getDeclaredMethod(methodName);
-      return security.extractRoleNames(method, true);
+      return security.extractRoleNames(method, true, PropertySecurity.noRoleNames);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
