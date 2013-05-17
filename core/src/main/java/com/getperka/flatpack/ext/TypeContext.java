@@ -238,14 +238,6 @@ public class TypeContext {
         String impliedPropertyName = getImpliedPropertyName(m);
         if (impliedPropertyName != null) {
           impliedPropertiesToLink.put(builder, impliedPropertyName);
-        } else if (HasUuid.class.isAssignableFrom(m.getReturnType())) {
-          /*
-           * If the current property is a target of a OneToMany annotation on the other side of the
-           * relationship, we want to fix up the current property's implied property before
-           * returning it. In the case of a circular reference, the eager storage of the
-           * unmodifiable list above will short-circuit this call.
-           */
-          extractProperties(m.getReturnType());
         }
       } else if (isSetter(m)) {
         Property.Builder builder = getBuilderForProperty(builders, beanPropertyName(m));
