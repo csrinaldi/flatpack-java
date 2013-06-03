@@ -107,8 +107,8 @@ public class DefaultCodexMapper implements CodexMapper {
       Type[] params = getParameterization(Map.class, type);
       if (HasUuid.class.isAssignableFrom(erase(params[0]))) {
         return getInstance(EntityMapCodex.class, params[0], params[1]);
-      } else if (String.class.equals(params[0])) {
-        return getInstance(StringMapCodex.class, params[1]);
+      } else if (context.getCodex(params[0]) instanceof ValueCodex) {
+        return getInstance(StringMapCodex.class, params[0], params[1]);
       }
     }
 

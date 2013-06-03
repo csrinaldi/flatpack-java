@@ -27,8 +27,8 @@ import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.FlatPackVisitor;
+import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
@@ -49,7 +49,7 @@ public class DynamicCodex extends Codex<Object> {
 
   // Use Provider to prevent cyclic reference
   private Provider<ListCodex<Object>> listCodex;
-  private Provider<StringMapCodex<Object>> mapCodex;
+  private Provider<StringMapCodex<String, Object>> mapCodex;
   private TypeContext typeContext;
 
   protected DynamicCodex() {}
@@ -119,7 +119,7 @@ public class DynamicCodex extends Codex<Object> {
 
   @Inject
   void inject(TypeContext typeContext, Provider<ListCodex<Object>> listCodex,
-      Provider<StringMapCodex<Object>> mapCodex) {
+      Provider<StringMapCodex<String, Object>> mapCodex) {
     this.listCodex = listCodex;
     this.mapCodex = mapCodex;
     this.typeContext = typeContext;
