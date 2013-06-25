@@ -1,0 +1,89 @@
+/*
+ * #%L
+ * FlatPack Automatic Source Tool
+ * %%
+ * Copyright (C) 2012 Perka Inc.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+entity(entity) ::= <<
+// Generated File - DO NOT EDIT
+
+goog.provide('<entity.canonicalName>');
+
+goog.require('com.getperka.flatpack.core.EntityDescription');
+goog.require('com.getperka.flatpack.core.Property');
+goog.require('<entity.supertype.canonicalName>');
+
+(function() {
+  var entityName = '<entity.typeName>';
+  
+  <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
+  <docString(entity.docString)>
+  {
+    <if(entity.properties)>
+    <entity.properties:property(); separator=",\n\n">
+    <endif>
+  
+    /**
+    * @constructor
+    * @extends <entity.supertype.canonicalName>
+    */
+    initialize : function() {
+      <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
+      this.set({entityName : entityName});
+    }
+  });
+  
+  var Property = com.getperka.flatpack.core.Property;
+  var allProperties = [
+    <if(entity.properties)>
+    <entity.properties:propertyAdd(); separator=",\n\n">
+    <endif>
+  ];
+  
+  /** @ignore **/
+  var entityDescription = new com.getperka.flatpack.core.EntityDescription({
+    superType : <entity.supertype.canonicalName>.entityDescription(),
+    typeName : entityName,
+    kind : <entity.canonicalName>,
+    properties : allProperties
+  });
+  
+  com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
+    entityName, entityDescription);
+}());
+>>
+
+property(property) ::= <%
+<if(property.docString)><docString(property.docString)><\n><endif>
+<property.name> : <property.defaultValue>
+%>
+
+propertyAdd(property) ::= <<
+Property.setPropertyValuesForUuid(
+  '<property.uuid>', {
+    name : '<property.name>',
+    kind : <property.jsType>.prototype
+  })
+>>
+
+/**
+ * Emit a doc string, reflowed to fit the current context.
+ */
+docString(docString) ::= <<
+<if(docString)>/** 
+* <docString.chunks; wrap="\n* ", separator=" ">
+*/<endif>
+>>

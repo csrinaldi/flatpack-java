@@ -29,6 +29,7 @@ import com.getperka.flatpack.client.dto.ApiDescription;
  * {@code META-INF/services/com.getperka.flatpack.fast.Dialect} resource.
  */
 public interface Dialect {
+
   /**
    * Generate accessors for {@code api} into {@code outputDir}.
    */
