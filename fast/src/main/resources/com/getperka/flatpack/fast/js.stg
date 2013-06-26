@@ -79,6 +79,29 @@ Property.setPropertyValuesForUuid(
   })
 >>
 
+api(api) ::= <<
+// Generated File - DO NOT EDIT
+
+goog.provide('<names.packageName>.BaseApi');
+
+goog.require('com.getperka.flatpack.client.BaseApi.h');
+
+<api.endpoints:{end |
+  <end.requestBuilderClassName>
+}; separator="\n\n">
+
+var <names.packageName>.BaseApi = function() {
+}
+>>
+
+endpointRequestInterface(endpoint) ::= <<
+@interface <endpoint.requestBuilderClassName> : FPFlatpackRequest
+  <endpoint.queryParameters:{p | -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name>;}; separator="\n">
+  -(<endpoint.entityReturnType>)execute;
+  -(void)executeUsingBlock:(<endpoint.requestBuilderBlockName>)block;
+@end
+>>
+
 /**
  * Emit a doc string, reflowed to fit the current context.
  */

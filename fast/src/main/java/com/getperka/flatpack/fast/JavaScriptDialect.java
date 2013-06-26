@@ -1,10 +1,14 @@
 package com.getperka.flatpack.fast;
 
+import static org.jvnet.inflector.Noun.pluralOf;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +33,7 @@ import org.stringtemplate.v4.misc.STNoSuchPropertyException;
 import com.getperka.cli.flags.Flag;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
+import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
@@ -83,6 +89,10 @@ public class JavaScriptDialect implements Dialect {
       entityST = group.getInstanceOf("entity").add("entity", entity);
       render(entityST, outputDir, camelCaseToUnderscore(entity.getTypeName()) + ".js");
     }
+
+    // render api stubs
+    ST apiST = group.getInstanceOf("api").add("api", api);
+    render(apiST, outputDir, "base_api.js");
   }
 
   @Override
@@ -95,6 +105,41 @@ public class JavaScriptDialect implements Dialect {
         String.format("%s|%s|%s", "(?<=[A-Z])(?=[A-Z][a-z])",
             "(?<=[^A-Z])(?=[A-Z])", "(?<=[A-Za-z])(?=[^A-Za-z])"), "_")
         .toLowerCase();
+  }
+
+  private String getBuilderReturnType(EndpointDescription end) {
+    // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
+    String path = end.getPath();
+    String[] parts = path.split(Pattern.quote("/"));
+    StringBuilder sb = new StringBuilder();
+    sb.append(upcase(end.getMethod().toLowerCase()));
+    for (int i = 3, j = parts.length; i < j; i++) {
+      try {
+        String part = parts[i];
+        if (part.length() == 0) {
+          continue;
+        }
+        StringBuilder decodedPart = new StringBuilder(URLDecoder
+            .decode(part, "UTF8"));
+        // Trim characters that aren't legal
+        for (int k = decodedPart.length() - 1; k >= 0; k--) {
+          if (!Character.isJavaIdentifierPart(decodedPart.charAt(k))) {
+            decodedPart.deleteCharAt(k);
+          }
+        }
+        // Append the new name part, using camel-cased names
+        String newPart = decodedPart.toString();
+        if (sb.length() > 0) {
+          newPart = upcase(newPart);
+        }
+        sb.append(newPart);
+      } catch (UnsupportedEncodingException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    sb.append("Request");
+
+    return upcase(sb.toString());
   }
 
   private String jsTypeForType(Type type) {
@@ -314,6 +359,78 @@ public class JavaScriptDialect implements Dialect {
         return super.getProperty(interp, self, o, property, propertyName);
       }
     });
+
+    group.registerModelAdaptor(ApiDescription.class,
+        new ObjectModelAdaptor() {
+          @Override
+          public Object getProperty(Interpreter interp, ST self, Object o,
+              Object property, String propertyName)
+              throws STNoSuchPropertyException {
+            ApiDescription apiDescription = (ApiDescription) o;
+            if ("endpoints".equals(propertyName)) {
+              List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
+                  apiDescription.getEndpoints());
+              Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
+                @Override
+                public int compare(EndpointDescription e1, EndpointDescription e2) {
+                  return e1.getPath().compareTo(e2.getPath());
+                }
+              });
+              return sortedEndpoints;
+            }
+            return super.getProperty(interp, self, o, property, propertyName);
+          }
+        });
+
+    group.registerModelAdaptor(EndpointDescription.class,
+        new ObjectModelAdaptor() {
+          @Override
+          public Object getProperty(Interpreter interp, ST self, Object o,
+              Object property, String propertyName)
+              throws STNoSuchPropertyException {
+            EndpointDescription end = (EndpointDescription) o;
+            if ("methodName".equals(propertyName)) {
+              StringBuilder sb = new StringBuilder();
+
+              sb.append("- (" + getBuilderReturnType(end) + " *)");
+
+              if (end.getEntity() != null) {
+                if (end.getPathParameters() != null && end.getPathParameters().size() > 0) {
+                  sb.append(" entity");
+                }
+                String type = jsTypeForType(end.getEntity());
+                sb.append(":(" + type + " *)");
+                String paramName = type;
+                sb.append(paramName);
+              }
+
+              return sb.toString();
+            }
+
+            else if ("requestBuilderClassName".equals(propertyName)) {
+              return getBuilderReturnType(end);
+            }
+
+            else if ("requestBuilderBlockName".equals(propertyName)) {
+              return getBuilderReturnType(end) + "Block";
+            }
+
+            else if ("pathDecoded".equals(propertyName)) {
+              // URL-decode the path in the endpoint description
+              try {
+                String decoded = URLDecoder.decode(end.getPath(), "UTF8");
+                return decoded;
+              } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+              }
+            }
+            return super.getProperty(interp, self, o, property, propertyName);
+          }
+        });
+
+    Map<String, Object> namesMap = new HashMap<String, Object>();
+    namesMap.put("packageName", packageName);
+    group.defineDictionary("names", namesMap);
 
     return group;
   }

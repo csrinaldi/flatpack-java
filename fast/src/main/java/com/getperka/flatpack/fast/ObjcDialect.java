@@ -199,10 +199,6 @@ public class ObjcDialect implements Dialect {
   }
 
   private String getBuilderReturnType(EndpointDescription end) {
-    // if the endpoint has no query parameters, we can simply use the FPFlatpackRequest
-    // if (end.getQueryParameters() == null || end.getQueryParameters().size() == 0) {
-    // return "FPFlatpackRequest";
-    // }
 
     // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
     String path = end.getPath();
