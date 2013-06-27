@@ -158,42 +158,23 @@ public class JavaScriptDialect implements Dialect {
     return upcase(sb.toString());
   }
 
-  private String getMethodizedPath(EndpointDescription end) {
-    String path = end.getPath();
-    String[] parts = path.split(Pattern.quote("/"));
-    StringBuilder sb = new StringBuilder();
-    sb.append("this.");
-    sb.append(end.getMethod().toLowerCase());
-    for (int i = 3, j = parts.length; i < j; i++) {
-      String part = parts[i];
-      if (part.length() == 0) continue;
-      if (!part.startsWith("{") && !part.endsWith("}")) {
-        sb.append(upcase(part));
-      }
-    }
-
-    sb.append(" = function(");
-    for (int i = 3, j = parts.length; i < j; i++) {
-      String part = parts[i];
-      if (part.length() == 0) continue;
-
-      if (part.startsWith("{") && part.endsWith("}")) {
-        String name = part.substring(1, part.length() - 1);
-        sb.append(name);
-        if (i < parts.length - 1) {
-          sb.append(", ");
-        }
-      }
-    }
-    sb.append(")");
-
-    return sb.toString();
+  private boolean isRequiredImport(String type) {
+    return type != null
+      && !type.equalsIgnoreCase("object")
+      && !type.equalsIgnoreCase("number")
+      && !type.equalsIgnoreCase("string")
+      && !type.equalsIgnoreCase("boolean")
+      && !type.equalsIgnoreCase("null")
+      && !type.equalsIgnoreCase("undefined")
+      && !type.startsWith("Backbone");
   }
 
-  private boolean isRequiredImport(String type) {
-    return type != null && !type.equalsIgnoreCase("null")
-      && !type.equalsIgnoreCase("Object")
-      && !type.startsWith("Backbone");
+  private String jsTypeForProperty(Property p) {
+    if (p.isEmbedded()) {
+      return upcase(p.getType().getName());
+    }
+
+    return jsTypeForType(p.getType());
   }
 
   private String jsTypeForType(Type type) {
@@ -272,6 +253,25 @@ public class JavaScriptDialect implements Dialect {
                 prefix = packageMap.get(typeName);
               }
               return prefix + "." + upcase(typeName);
+            }
+
+            else if ("requireNames".equals(propertyName)) {
+              Set<String> imports = new HashSet<String>();
+              for (Property p : entity.getProperties()) {
+                String name = null;
+                if (p.getType().getListElement() != null) {
+                  name = jsTypeForType(p.getType().getListElement());
+                }
+                else {
+                  name = jsTypeForProperty(p);
+                }
+                if (name != null && isRequiredImport(name)) {
+                  imports.add(name);
+                }
+              }
+              List<String> sortedImports = new ArrayList<String>(imports);
+              Collections.sort(sortedImports);
+              return sortedImports;
             }
 
             else if ("supertype".equals(propertyName)) {
