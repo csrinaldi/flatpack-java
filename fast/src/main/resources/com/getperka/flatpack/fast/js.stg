@@ -89,8 +89,9 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 
 (function() {
 
-  <names.packageName>.BaseApi.prototype = 
-    new com.getperka.flatpack.client.BaseApi();
+  var fpClient = com.getpreka.flatpack.client;
+
+  <names.packageName>.BaseApi.prototype = fpClient.BaseApi();
   
   <names.packageName>.BaseApi.constructor = 
     <names.packageName>.BaseApi;
@@ -99,20 +100,42 @@ goog.require('com.getperka.flatpack.client.BaseApi');
   
     com.getperka.BaseApi.prototype.apply(this, options);
     
-    <api.endpoints:{end |
-      //<end.requestBuilderClassName>
-    }; separator="\n\n">
-  
+    <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
+    
+    <api.endpoints:endpointMethod(); separator="\n\n">
   };
 }());
 >>
 
-endpointRequestInterface(endpoint) ::= <<
-@interface <endpoint.requestBuilderClassName> : FPFlatpackRequest
-  <endpoint.queryParameters:{p | -(<endpoint.requestBuilderClassName> *)with<p.requireName>:(NSString *)<p.name>;}; separator="\n">
-  -(<endpoint.entityReturnType>)execute;
-  -(void)executeUsingBlock:(<endpoint.requestBuilderBlockName>)block;
-@end
+endpointRequestClass(end) ::= <<
+var <end.requestBuilderClassName> = function() {
+  <end.queryParameters:endpointRequestParameter(); separator="\n\n">
+};
+<end.requestBuilderClassName>.prototype = new fpClient.FlatpackRequest();
+<end.requestBuilderClassName>.constructor = <end.requestBuilderClassName>;
+>>
+
+endpointRequestParameter(p) ::= <<
+<docString(p.docString)>
+this.with<p.requireName> = function(<p.name>) {
+  this.queryParams.<p.name> = <p.name>;
+};
+>>
+
+endpointMethod(e) ::=<<
+<docString(e.docString)>
+this.<e.methodName> = function(<e.methodParameterList>) {
+  var request = new <e.requestBuilderClassName>({
+    api : this,
+    method : "<e.method>",
+    path : "<e.pathDecoded>"
+  });
+  <if(e.pathParameters && first(e.pathParameters))>
+  request.pathArgs = [<e.pathParameters:{x|<x.name>}; separator=", ">];
+  <endif>
+  <if(e.entity)>request.entity = <e.entity.name>;<endif>
+  return request; 
+};
 >>
 
 /**

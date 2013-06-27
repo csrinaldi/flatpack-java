@@ -33,6 +33,7 @@ import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.EntityDescription;
+import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
@@ -153,6 +154,38 @@ public class JavaScriptDialect implements Dialect {
     sb.append("Request");
 
     return upcase(sb.toString());
+  }
+
+  private String getMethodizedPath(EndpointDescription end) {
+    String path = end.getPath();
+    String[] parts = path.split(Pattern.quote("/"));
+    StringBuilder sb = new StringBuilder();
+    sb.append("this.");
+    sb.append(end.getMethod().toLowerCase());
+    for (int i = 3, j = parts.length; i < j; i++) {
+      String part = parts[i];
+      if (part.length() == 0) continue;
+      if (!part.startsWith("{") && !part.endsWith("}")) {
+        sb.append(upcase(part));
+      }
+    }
+
+    sb.append(" = function(");
+    for (int i = 3, j = parts.length; i < j; i++) {
+      String part = parts[i];
+      if (part.length() == 0) continue;
+
+      if (part.startsWith("{") && part.endsWith("}")) {
+        String name = part.substring(1, part.length() - 1);
+        sb.append(name);
+        if (i < parts.length - 1) {
+          sb.append(", ");
+        }
+      }
+    }
+    sb.append(")");
+
+    return sb.toString();
   }
 
   private String jsTypeForType(Type type) {
@@ -396,6 +429,24 @@ public class JavaScriptDialect implements Dialect {
               });
               return sortedEndpoints;
             }
+            else if ("endpointsWithQueryParams".equals(propertyName)) {
+              List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
+                  apiDescription.getEndpoints());
+              Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
+                @Override
+                public int compare(EndpointDescription e1, EndpointDescription e2) {
+                  return e1.getPath().compareTo(e2.getPath());
+                }
+              });
+              Iterator<EndpointDescription> iter = sortedEndpoints.iterator();
+              while (iter.hasNext()) {
+                EndpointDescription desc = iter.next();
+                if (desc.getQueryParameters() == null || desc.getQueryParameters().isEmpty()) {
+                  iter.remove();
+                }
+              }
+              return sortedEndpoints;
+            }
             return super.getProperty(interp, self, o, property, propertyName);
           }
         });
@@ -408,25 +459,54 @@ public class JavaScriptDialect implements Dialect {
               throws STNoSuchPropertyException {
             EndpointDescription end = (EndpointDescription) o;
             if ("methodName".equals(propertyName)) {
+
+              String path = end.getPath();
+              String[] parts = path.split(Pattern.quote("/"));
               StringBuilder sb = new StringBuilder();
-
-              sb.append("- (" + getBuilderReturnType(end) + " *)");
-
-              if (end.getEntity() != null) {
-                if (end.getPathParameters() != null && end.getPathParameters().size() > 0) {
-                  sb.append(" entity");
+              sb.append(end.getMethod().toLowerCase());
+              for (int i = 3, j = parts.length; i < j; i++) {
+                String part = parts[i];
+                if (part.length() == 0) continue;
+                if (!part.startsWith("{") && !part.endsWith("}")) {
+                  sb.append(upcase(part));
                 }
-                String type = jsTypeForType(end.getEntity());
-                sb.append(":(" + type + " *)");
-                String paramName = type;
-                sb.append(paramName);
               }
+              return sb.toString();
+            }
 
+            else if ("methodParameterList".equals(propertyName)) {
+              String path = end.getPath();
+              String[] parts = path.split(Pattern.quote("/"));
+              StringBuilder sb = new StringBuilder();
+              int paramCount = 0;
+              for (int i = 3, j = parts.length; i < j; i++) {
+                String part = parts[i];
+                if (part.length() == 0) continue;
+
+                if (part.startsWith("{") && part.endsWith("}")) {
+                  String name = part.substring(1, part.length() - 1);
+                  sb.append(name);
+                  paramCount++;
+                  if (i < parts.length - 1) {
+                    sb.append(", ");
+                  }
+                }
+              }
+              if (end.getEntity() != null) {
+                if (paramCount > 0) {
+                  sb.append(", ");
+                }
+                sb.append(end.getEntity().getName());
+              }
               return sb.toString();
             }
 
             else if ("requestBuilderClassName".equals(propertyName)) {
-              return getBuilderReturnType(end);
+              if (end.getQueryParameters() != null && !end.getQueryParameters().isEmpty()) {
+                return getBuilderReturnType(end);
+              } else {
+                return "com.getperka.flatpack.client.FlatpackRequest";
+              }
             }
 
             else if ("requestBuilderBlockName".equals(propertyName)) {
@@ -441,6 +521,20 @@ public class JavaScriptDialect implements Dialect {
               } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e);
               }
+            }
+            return super.getProperty(interp, self, o, property, propertyName);
+          }
+        });
+
+    group.registerModelAdaptor(ParameterDescription.class,
+        new ObjectModelAdaptor() {
+          @Override
+          public Object getProperty(Interpreter interp, ST self, Object o,
+              Object property, String propertyName)
+              throws STNoSuchPropertyException {
+            ParameterDescription param = (ParameterDescription) o;
+            if ("requireName".equals(propertyName)) {
+              return upcase(param.getName());
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }

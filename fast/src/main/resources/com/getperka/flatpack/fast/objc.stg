@@ -236,7 +236,7 @@ api(api) ::= <<
     <if(end.pathParameters)>
       pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
     <endif>
-    <if(end.entity)>[request setEntity:<end.entity.name>];<endif>
+    <if(end.entity)>request.setEntity(<end.entity.name>);<endif>
     return request; 
   \}}; separator="\n\n">
 @end
