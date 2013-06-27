@@ -29,12 +29,13 @@ goog.require('<entity.supertype.canonicalName>');
 (function() {
   var entityName = '<entity.typeName>';
   
-  <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
-  <docString(entity.docString)>
-  {
+  <entity.canonicalName> = <entity.supertype.canonicalName>.extend({
+    <docString(entity.docString)>
     <if(entity.properties)>
-    <entity.properties:property(); separator=",\n\n">
-    <endif>
+    options : {
+      <entity.properties:property(); separator=",\n\n">
+    },
+    <endif>  
   
     /**
     * @constructor
@@ -83,15 +84,27 @@ api(api) ::= <<
 // Generated File - DO NOT EDIT
 
 goog.provide('<names.packageName>.BaseApi');
+goog.require('com.getperka.client');
+goog.require('com.getperka.flatpack.client.BaseApi');
 
-goog.require('com.getperka.flatpack.client.BaseApi.h');
+(function() {
 
-<api.endpoints:{end |
-  <end.requestBuilderClassName>
-}; separator="\n\n">
-
-var <names.packageName>.BaseApi = function() {
-}
+  <names.packageName>.BaseApi.prototype = 
+    new com.getperka.flatpack.client.BaseApi();
+  
+  <names.packageName>.BaseApi.constructor = 
+    <names.packageName>.BaseApi;
+    
+  <names.packageName>.BaseApi = function(options) {
+  
+    com.getperka.BaseApi.prototype.apply(this, options);
+    
+    <api.endpoints:{end |
+      //<end.requestBuilderClassName>
+    }; separator="\n\n">
+  
+  };
+}());
 >>
 
 endpointRequestInterface(endpoint) ::= <<

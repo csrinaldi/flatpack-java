@@ -1,7 +1,5 @@
 package com.getperka.flatpack.fast;
 
-import static org.jvnet.inflector.Noun.pluralOf;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -44,8 +42,23 @@ public class JavaScriptDialect implements Dialect {
 
   @Flag(tag = "packageName",
       help = "The name of the package that generated sources should belong to",
-      defaultValue = "com.getperka.fast")
+      defaultValue = "com.getperka.client")
   static String packageName;
+
+  static Map<String, String> packageMap = new HashMap<String, String>() {
+    {
+      // put("baseApi", "com.getperka.flatpack.client");
+      // put("baseRequest", "com.getperka.flatpack.client");
+      // put("flatpackRequest", "com.getperka.flatpack.client");
+      // put("jsonRequest", "com.getperka.flatpack.client");
+      put("baseHasUuid", "com.getperka.flatpack.core");
+      // put("entityDescription", "com.getperka.flatpack.core");
+      // put("flatpack", "com.getperka.flatpack.core");
+      // put("packer", "com.getperka.flatpack.core");
+      // put("property", "com.getperka.flatpack.core");
+      // put("unpacker", "com.getperka.flatpack.core");
+    }
+  };
 
   private static final Logger logger = LoggerFactory.getLogger(JavaScriptDialect.class);
 
@@ -212,7 +225,12 @@ public class JavaScriptDialect implements Dialect {
             EntityDescription entity = (EntityDescription) o;
 
             if ("canonicalName".equals(propertyName)) {
-              return packageName + "." + upcase(entity.getTypeName());
+              String prefix = packageName;
+              String typeName = entity.getTypeName();
+              if (packageMap.containsKey(typeName)) {
+                prefix = packageMap.get(typeName);
+              }
+              return prefix + "." + upcase(typeName);
             }
 
             else if ("supertype".equals(propertyName)) {
