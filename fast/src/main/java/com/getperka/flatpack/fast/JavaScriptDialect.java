@@ -245,6 +245,7 @@ public class JavaScriptDialect implements Dialect {
               Set<String> imports = new HashSet<String>();
               for (Property p : entity.getProperties()) {
                 String name = null;
+
                 if (p.getType().getListElement() != null) {
                   name = jsTypeForType(p.getType().getListElement());
                 }
@@ -252,7 +253,9 @@ public class JavaScriptDialect implements Dialect {
                   name = jsTypeForProperty(p);
                 }
                 if (name != null && isRequiredImport(name) &&
-                  !name.equals(jsTypeForType(p.getType()))) {
+                  !name.equalsIgnoreCase(packageName + "." + entity.getTypeName())) {
+                  System.out.println(entity.getTypeName());
+
                   imports.add(name);
                 }
               }
