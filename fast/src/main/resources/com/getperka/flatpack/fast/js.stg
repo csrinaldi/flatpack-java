@@ -83,6 +83,8 @@ Property.setPropertyValuesForUuid(
 api(api) ::= <<
 // Generated File - DO NOT EDIT
 
+goog.provide('<names.packageName>.BaseApi');
+
 goog.require('com.getperka.flatpack.client.BaseApi');
 <api.requireNames:{n | goog.require('<n>');}; separator="\n">
 
