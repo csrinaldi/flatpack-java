@@ -48,21 +48,6 @@ public class JavaScriptDialect implements Dialect {
       defaultValue = "com.getperka.client")
   static String packageName;
 
-  static Map<String, String> packageMap = new HashMap<String, String>() {
-    {
-      // put("baseApi", "com.getperka.flatpack.client");
-      // put("baseRequest", "com.getperka.flatpack.client");
-      // put("flatpackRequest", "com.getperka.flatpack.client");
-      // put("jsonRequest", "com.getperka.flatpack.client");
-      put("baseHasUuid", "com.getperka.flatpack.core");
-      // put("entityDescription", "com.getperka.flatpack.core");
-      // put("flatpack", "com.getperka.flatpack.core");
-      // put("packer", "com.getperka.flatpack.core");
-      // put("property", "com.getperka.flatpack.core");
-      // put("unpacker", "com.getperka.flatpack.core");
-    }
-  };
-
   private static final Logger logger = LoggerFactory.getLogger(JavaScriptDialect.class);
 
   private static String upcase(String s) {
@@ -171,7 +156,7 @@ public class JavaScriptDialect implements Dialect {
 
   private String jsTypeForProperty(Property p) {
     if (p.isEmbedded()) {
-      return upcase(p.getType().getName());
+      return packageName + "." + upcase(p.getType().getName());
     }
 
     return jsTypeForType(p.getType());
@@ -249,9 +234,10 @@ public class JavaScriptDialect implements Dialect {
             if ("canonicalName".equals(propertyName)) {
               String prefix = packageName;
               String typeName = entity.getTypeName();
-              if (packageMap.containsKey(typeName)) {
-                prefix = packageMap.get(typeName);
+              if (entity.getTypeName().equalsIgnoreCase("baseHasUuid")) {
+                prefix = "com.getperka.flatpack.core";
               }
+
               return prefix + "." + upcase(typeName);
             }
 
