@@ -251,7 +251,8 @@ public class JavaScriptDialect implements Dialect {
                 else {
                   name = jsTypeForProperty(p);
                 }
-                if (name != null && isRequiredImport(name)) {
+                if (name != null && isRequiredImport(name) &&
+                  !name.equals(jsTypeForType(p.getType()))) {
                   imports.add(name);
                 }
               }
