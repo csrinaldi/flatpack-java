@@ -11,10 +11,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -186,6 +188,12 @@ public class JavaScriptDialect implements Dialect {
     sb.append(")");
 
     return sb.toString();
+  }
+
+  private boolean isRequiredImport(String type) {
+    return type != null && !type.equalsIgnoreCase("null")
+      && !type.equalsIgnoreCase("Object")
+      && !type.startsWith("Backbone");
   }
 
   private String jsTypeForType(Type type) {
@@ -446,6 +454,24 @@ public class JavaScriptDialect implements Dialect {
                 }
               }
               return sortedEndpoints;
+            }
+            else if ("requireNames".equals(propertyName)) {
+              Set<String> imports = new HashSet<String>();
+              for (EndpointDescription e : apiDescription.getEndpoints()) {
+                if (e.getEntity() != null) {
+                  String type = jsTypeForType(e.getEntity());
+                  if (isRequiredImport(type)) {
+                    imports.add(type);
+                  }
+                }
+                if (e.getReturnType() != null) {
+                  String type = jsTypeForType(e.getReturnType());
+                  if (isRequiredImport(type)) {
+                    imports.add(type);
+                  }
+                }
+              }
+              return imports;
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }
