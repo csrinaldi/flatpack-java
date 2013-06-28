@@ -76,7 +76,7 @@ propertyAdd(property) ::= <<
 Property.setPropertyValuesForUuid(
   '<property.uuid>', {
     name : '<property.name>',
-    kind : <property.jsType>.prototype
+    kind : <property.jsType>
   })
 >>
 
@@ -89,8 +89,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 <api.requireNames:{n | goog.require('<n>');}; separator="\n">
 
 (function() {
-
-  var fpClient = com.getpreka.flatpack.client;
+  var fpClient = com.getperka.flatpack.client;
 
   <names.packageName>.BaseApi.prototype = fpClient.BaseApi();
   
