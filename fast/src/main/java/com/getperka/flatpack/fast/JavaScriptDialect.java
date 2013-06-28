@@ -99,7 +99,7 @@ public class JavaScriptDialect implements Dialect {
 
     // render api stubs
     ST apiST = group.getInstanceOf("api").add("api", api);
-    render(apiST, outputDir, "base_api.js");
+    render(apiST, outputDir, "generated_base_api.js");
   }
 
   @Override
