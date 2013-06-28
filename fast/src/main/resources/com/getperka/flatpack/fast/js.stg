@@ -29,13 +29,12 @@ goog.require('<entity.supertype.canonicalName>');
 (function() {
   var entityName = '<entity.typeName>';
   
-  <entity.canonicalName> = <entity.supertype.canonicalName>.extend({
-    <docString(entity.docString)>
+  <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
+  <docString(entity.docString)>
+  {
     <if(entity.properties)>
-    options : {
-      <entity.properties:property(); separator=",\n\n">
-    },
-    <endif>  
+    <entity.properties:property(); separator=",\n\n">,
+    <endif>
   
     /**
     * @constructor
