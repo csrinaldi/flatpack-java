@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.inject.Inject;
 
@@ -37,15 +38,20 @@ import com.getperka.flatpack.codexes.EntityMapCodex;
 import com.getperka.flatpack.codexes.StringMapCodex;
 import com.getperka.flatpack.domain.Employee;
 import com.getperka.flatpack.domain.TestTypeSource;
+import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.inject.TypeLiteral;
 
 public class MapCodexTest extends FlatPackTest {
 
   @Inject
-  private TypeLiteral<StringMapCodex<String>> stringString;
+  private TypeLiteral<StringMapCodex<JsonKind, String>> enumString;
   @Inject
   private TypeLiteral<EntityMapCodex<Employee, String>> employeeString;
+  @Inject
+  private TypeLiteral<StringMapCodex<String, String>> stringString;
+  @Inject
+  private TypeLiteral<StringMapCodex<UUID, String>> uuidString;
 
   @Test
   public void testEntities() {
@@ -60,9 +66,23 @@ public class MapCodexTest extends FlatPackTest {
   }
 
   @Test
+  public void testEnums() {
+    Map<JsonKind, String> map = Collections.singletonMap(JsonKind.MAP, "World!");
+    Map<JsonKind, String> map2 = testCodex(enumString, map);
+    assertEquals(map, map2);
+  }
+
+  @Test
   public void testStrings() {
     Map<String, String> map = Collections.singletonMap("Hello", "World!");
     Map<String, String> map2 = testCodex(stringString, map);
+    assertEquals(map, map2);
+  }
+
+  @Test
+  public void testUUIDS() {
+    Map<UUID, String> map = Collections.singletonMap(UUID.randomUUID(), "World!");
+    Map<UUID, String> map2 = testCodex(uuidString, map);
     assertEquals(map, map2);
   }
 
