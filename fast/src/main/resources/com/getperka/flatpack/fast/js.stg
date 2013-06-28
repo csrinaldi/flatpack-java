@@ -41,7 +41,7 @@ goog.require('<entity.supertype.canonicalName>');
   <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
   
     /** 
-    * @lends <entity.supertype.canonicalName> 
+    * @lends <entity.canonicalName> 
     */
     {
     
@@ -79,10 +79,13 @@ goog.require('<entity.supertype.canonicalName>');
 }());
 >>
 
-property(property) ::= <%
-<if(property.docString)><docString(property.docString)><\n><endif>
+property(property) ::= <<
+/**
+* @property {<property.jsType>}
+<inlineDocString(property.docString)>
+*/
 <property.name> : <property.defaultValue>
-%>
+>>
 
 propertyAdd(property) ::= <<
 Property.setPropertyValuesForUuid(
@@ -97,6 +100,8 @@ api(api) ::= <<
 
 goog.provide('<names.packageName>.BaseApi');
 
+goog.require('com.getperka.flatpack.core.Flatpack');
+goog.require('com.getperka.flatpack.client.FlatpackRequest');
 goog.require('com.getperka.flatpack.client.BaseApi');
 <api.requireNames:{n | goog.require('<n>');}; separator="\n">
 

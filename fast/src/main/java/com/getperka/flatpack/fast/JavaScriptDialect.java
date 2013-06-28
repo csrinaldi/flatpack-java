@@ -80,13 +80,8 @@ public class JavaScriptDialect implements Dialect {
         else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
           it.remove();
         }
-        else {
-          String type = jsTypeForProperty(prop);
-          if (isRequiredImport(type)) {
-            requires.add(type);
-          }
-        }
       }
+      requires.add(packageName + "." + upcase(entity.getTypeName()));
     }
     // Ensure that the "real" implementations are used
     allEntities.remove("baseHasUuid");
