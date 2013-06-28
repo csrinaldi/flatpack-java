@@ -26,6 +26,7 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
+import com.getperka.flatpack.ext.DelegatingSerializationContext;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
@@ -34,22 +35,47 @@ import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.internal.bind.JsonTreeWriter;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.TypeLiteral;
 
 /**
- * A map of String to a arbitrary value.
+ * A map of string-like values to a arbitrary value.
  * 
  * @param <V> the map value type
  */
-public class StringMapCodex<V> extends Codex<Map<String, V>> {
+public class StringMapCodex<K, V> extends Codex<Map<K, V>> {
+  private static class StealingSerializationContext extends DelegatingSerializationContext {
+    private JsonTreeWriter writer;
+
+    public StealingSerializationContext(SerializationContext delegate) {
+      super(delegate);
+    }
+
+    @Override
+    public JsonWriter getWriter() {
+      writer = new JsonTreeWriter();
+      return writer;
+    }
+
+    public JsonElement getWritten() {
+      return writer.get();
+    }
+  }
+
+  /**
+   * The key's codex is a ValueCodex because we don't want to try to serialize arbitrarily
+   * complicated values into the key.
+   */
+  private ValueCodex<K> keyCodex;
   private Codex<V> valueCodex;
 
   protected StringMapCodex() {}
 
   @Override
-  public void acceptNotNull(FlatPackVisitor visitor, Map<String, V> value,
-      VisitorContext<Map<String, V>> context) {
+  public void acceptNotNull(FlatPackVisitor visitor, Map<K, V> value,
+      VisitorContext<Map<K, V>> context) {
     if (visitor.visitValue(value, this, context)) {
       context.walkIterable(valueCodex).accept(visitor, value.values());
     }
@@ -60,9 +86,7 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
   public Type describe() {
     return new Type.Builder()
         .withJsonKind(JsonKind.MAP)
-        .withMapKey(new Type.Builder()
-            .withJsonKind(JsonKind.STRING)
-            .build())
+        .withMapKey(keyCodex.describe())
         .withMapValue(valueCodex.describe())
         .build();
   }
@@ -73,14 +97,15 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
   }
 
   @Override
-  public Map<String, V> readNotNull(JsonElement element, DeserializationContext context)
+  public Map<K, V> readNotNull(JsonElement element, DeserializationContext context)
       throws IOException {
-    Map<String, V> toReturn = FlatPackCollections.mapForIteration();
+    Map<K, V> toReturn = FlatPackCollections.mapForIteration();
     for (Map.Entry<String, JsonElement> elt : element.getAsJsonObject().entrySet()) {
       context.pushPath("[" + elt.getKey() + "]");
       try {
+        K key = keyCodex.read(new JsonPrimitive(elt.getKey()), context);
         V value = valueCodex.read(elt.getValue(), context);
-        toReturn.put(elt.getKey().toString(), value);
+        toReturn.put(key, value);
       } catch (Exception e) {
         context.fail(e);
       } finally {
@@ -91,15 +116,17 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
   }
 
   @Override
-  public void writeNotNull(Map<String, V> object, SerializationContext context)
-      throws IOException {
+  public void writeNotNull(Map<K, V> object, SerializationContext context) throws IOException {
     JsonWriter writer = context.getWriter();
     writer.beginObject();
-    for (Map.Entry<String, V> entry : object.entrySet()) {
-      String key = entry.getKey().toString();
-      context.pushPath("[" + key + "]");
+    for (Map.Entry<K, V> entry : object.entrySet()) {
+      context.pushPath("[" + entry.getKey() + "]");
       try {
-        writer.name(key);
+        StealingSerializationContext stealing = new StealingSerializationContext(context);
+        keyCodex.write(entry.getKey(), stealing);
+        JsonElement keyJson = stealing.getWritten();
+
+        writer.name(keyJson.getAsString());
         valueCodex.write(entry.getValue(), context);
       } finally {
         context.popPath();
@@ -110,7 +137,8 @@ public class StringMapCodex<V> extends Codex<Map<String, V>> {
 
   @Inject
   @SuppressWarnings("unchecked")
-  void inject(TypeLiteral<V> valueType, TypeContext typeContext) {
+  void inject(TypeLiteral<K> keyType, TypeLiteral<V> valueType, TypeContext typeContext) {
+    this.keyCodex = (ValueCodex<K>) typeContext.getCodex(keyType.getType());
     this.valueCodex = (Codex<V>) typeContext.getCodex(valueType.getType());
   }
 }
