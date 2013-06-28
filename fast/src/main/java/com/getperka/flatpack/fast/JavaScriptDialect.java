@@ -54,6 +54,8 @@ public class JavaScriptDialect implements Dialect {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
 
+  private List<String> entityRequires;
+
   @Override
   public void generate(ApiDescription api, File outputDir) throws IOException {
 
@@ -63,6 +65,7 @@ public class JavaScriptDialect implements Dialect {
     }
 
     // first collect just our model entities
+    Set<String> requires = new HashSet<String>();
     Map<String, EntityDescription> allEntities = FlatPackCollections
         .mapForIteration();
     for (EntityDescription entity : api.getEntities()) {
@@ -77,11 +80,19 @@ public class JavaScriptDialect implements Dialect {
         else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
           it.remove();
         }
+        else {
+          String type = jsTypeForProperty(prop);
+          if (isRequiredImport(type)) {
+            requires.add(type);
+          }
+        }
       }
     }
     // Ensure that the "real" implementations are used
     allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
+    entityRequires = new ArrayList<String>(requires);
+    Collections.sort(entityRequires);
 
     // Render entities
     STGroup group = loadGroup();
@@ -239,29 +250,6 @@ public class JavaScriptDialect implements Dialect {
               }
 
               return prefix + "." + upcase(typeName);
-            }
-
-            else if ("requireNames".equals(propertyName)) {
-              Set<String> imports = new HashSet<String>();
-              for (Property p : entity.getProperties()) {
-                String name = null;
-
-                if (p.getType().getListElement() != null) {
-                  name = jsTypeForType(p.getType().getListElement());
-                }
-                else {
-                  name = jsTypeForProperty(p);
-                }
-                if (name != null && isRequiredImport(name) &&
-                  !name.equalsIgnoreCase(packageName + "." + entity.getTypeName())) {
-                  System.out.println(entity.getTypeName());
-
-                  imports.add(name);
-                }
-              }
-              List<String> sortedImports = new ArrayList<String>(imports);
-              Collections.sort(sortedImports);
-              return sortedImports;
             }
 
             else if ("supertype".equals(propertyName)) {
@@ -446,22 +434,7 @@ public class JavaScriptDialect implements Dialect {
               return sortedEndpoints;
             }
             else if ("requireNames".equals(propertyName)) {
-              Set<String> imports = new HashSet<String>();
-              for (EndpointDescription e : apiDescription.getEndpoints()) {
-                if (e.getEntity() != null) {
-                  String type = jsTypeForType(e.getEntity());
-                  if (isRequiredImport(type)) {
-                    imports.add(type);
-                  }
-                }
-                if (e.getReturnType() != null) {
-                  String type = jsTypeForType(e.getReturnType());
-                  if (isRequiredImport(type)) {
-                    imports.add(type);
-                  }
-                }
-              }
-              return imports;
+              return entityRequires;
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }

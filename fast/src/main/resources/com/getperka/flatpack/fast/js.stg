@@ -25,7 +25,6 @@ goog.provide('<entity.canonicalName>');
 goog.require('com.getperka.flatpack.core.EntityDescription');
 goog.require('com.getperka.flatpack.core.Property');
 goog.require('<entity.supertype.canonicalName>');
-<entity.requireNames:{n | goog.require('<n>');}; separator="\n">
 
 (function() {
   var entityName = '<entity.typeName>';
