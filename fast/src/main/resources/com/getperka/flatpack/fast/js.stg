@@ -27,24 +27,37 @@ goog.require('com.getperka.flatpack.core.Property');
 goog.require('<entity.supertype.canonicalName>');
 
 (function() {
-  var entityName = '<entity.typeName>';
+
+  /** @const */
+  var ENTITY_NAME = '<entity.typeName>';
   
+  /**
+  * @class <entity.canonicalName>
+  * @memberof <names.packageName>
+  * @extends <entity.supertype.canonicalName>
+  *
+  <inlineDocString(entity.docString)>
+  */
   <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
-  <docString(entity.docString)>
-  {
-    <if(entity.properties)>
-    <entity.properties:property(); separator=",\n\n">,
-    <endif>
   
-    /**
-    * @constructor
-    * @extends <entity.supertype.canonicalName>
+    /** 
+    * @lends <entity.supertype.canonicalName> 
     */
-    initialize : function() {
-      <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
-      this.set({entityName : entityName});
+    {
+    
+      <if(entity.properties)>
+      <entity.properties:property(); separator=",\n\n">,
+      <endif>
+    
+      /**
+      * @constructs
+      */
+      initialize : function() {
+        <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
+        this.set({entityName : ENTITY_NAME});
+      }
     }
-  });
+  );
   
   var Property = com.getperka.flatpack.core.Property;
   var allProperties = [
@@ -56,13 +69,13 @@ goog.require('<entity.supertype.canonicalName>');
   /** @ignore **/
   var entityDescription = new com.getperka.flatpack.core.EntityDescription({
     superType : <entity.supertype.canonicalName>.entityDescription(),
-    typeName : entityName,
+    typeName : ENTITY_NAME,
     kind : <entity.canonicalName>,
     properties : allProperties
   });
   
   com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
-    entityName, entityDescription);
+    ENTITY_NAME, entityDescription);
 }());
 >>
 
@@ -89,20 +102,20 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 
 (function() {
   var fpClient = com.getperka.flatpack.client;
-
-  <names.packageName>.BaseApi.prototype = fpClient.BaseApi();
-  
-  <names.packageName>.BaseApi.constructor = 
-    <names.packageName>.BaseApi;
     
   <names.packageName>.BaseApi = function(options) {
   
-    com.getperka.BaseApi.prototype.apply(this, options);
+    _(this).extend(options);
     
     <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
     
     <api.endpoints:endpointMethod(); separator="\n\n">
   };
+
+  <names.packageName>.BaseApi.prototype = new fpClient.BaseApi();
+  
+  <names.packageName>.BaseApi.constructor = 
+    <names.packageName>.BaseApi;
 }());
 >>
 
@@ -145,3 +158,9 @@ docString(docString) ::= <<
 * <docString.chunks; wrap="\n* ", separator=" ">
 */<endif>
 >>
+
+inlineDocString(docString) ::= <%
+<if(docString)>
+* <docString.chunks; wrap="\n* ", separator=" ">
+<endif>
+%>
