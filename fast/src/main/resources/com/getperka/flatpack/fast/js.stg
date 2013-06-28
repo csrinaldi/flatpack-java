@@ -95,7 +95,7 @@ Property.setPropertyValuesForUuid(
 api(api) ::= <<
 // Generated File - DO NOT EDIT
 
-goog.provide('<names.packageName>.BaseApi');
+goog.provide('<names.packageName>.GeneratedBaseApi');
 
 goog.require('com.getperka.flatpack.client.BaseApi');
 <api.requireNames:{n | goog.require('<n>');}; separator="\n">
@@ -103,7 +103,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 (function() {
   var fpClient = com.getperka.flatpack.client;
     
-  <names.packageName>.BaseApi = function(options) {
+  <names.packageName>.GeneratedBaseApi = function(options) {
   
     _(this).extend(options);
     
@@ -112,10 +112,10 @@ goog.require('com.getperka.flatpack.client.BaseApi');
     <api.endpoints:endpointMethod(); separator="\n\n">
   };
 
-  <names.packageName>.BaseApi.prototype = new fpClient.BaseApi();
+  <names.packageName>.GeneratedBaseApi.prototype = new fpClient.BaseApi();
   
-  <names.packageName>.BaseApi.constructor = 
-    <names.packageName>.BaseApi;
+  <names.packageName>.GeneratedBaseApi.constructor = 
+    <names.packageName>.GeneratedBaseApi;
 }());
 >>
 
