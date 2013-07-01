@@ -39,15 +39,7 @@ goog.require('<entity.supertype.canonicalName>');
   ];
   
   /** @ignore **/
-  var entityDescription = new com.getperka.flatpack.core.EntityDescription({
-    superType : <entity.supertype.canonicalName>.entityDescription(),
-    typeName : ENTITY_NAME,
-    kind : <entity.canonicalName>,
-    properties : allProperties
-  });
-  
-  com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
-    ENTITY_NAME, entityDescription);
+  var entityDescription = null;
   
   /**
   * @class <entity.canonicalName>
@@ -82,6 +74,17 @@ goog.require('<entity.supertype.canonicalName>');
       }
     }
   );
+  
+  /** @ignore **/
+  entityDescription = new com.getperka.flatpack.core.EntityDescription({
+    superType : <entity.supertype.canonicalName>.entityDescription(),
+    typeName : ENTITY_NAME,
+    kind : <entity.canonicalName>,
+    properties : allProperties
+  });
+  
+  com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
+    ENTITY_NAME, entityDescription);
   
 }());
 >>
