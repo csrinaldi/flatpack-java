@@ -64,7 +64,9 @@ goog.require('<entity.supertype.canonicalName>');
     {
     
       <if(entity.properties)>
-      <entity.properties:property(); separator=",\n\n">,
+      defaults : {
+        <entity.properties:property(); separator=",\n\n">,
+      },
       <endif>
     
       /**
@@ -109,8 +111,10 @@ propertyAdd(property) ::= <<
 Property.setPropertyValuesForUuid(
   '<property.uuid>', {
     name : '<property.name>',
-    kind : '<property.jsType>'
-  })
+    kind : '<property.jsType>'<if(property.impliedProperty)>,
+    impliedPropertyUuid : '<property.impliedProperty.uuid>'
+    <endif>
+  })  
 >>
 
 api(api) ::= <<
