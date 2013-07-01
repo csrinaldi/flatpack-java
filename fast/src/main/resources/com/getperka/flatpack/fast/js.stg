@@ -87,7 +87,7 @@ goog.require('<entity.supertype.canonicalName>');
   entityDescription = new com.getperka.flatpack.core.EntityDescription({
     superType : <entity.supertype.canonicalName>.entityDescription(),
     typeName : ENTITY_NAME,
-    kind : <entity.canonicalName>,
+    kind : '<entity.canonicalName>',
     properties : allProperties
   });
   
