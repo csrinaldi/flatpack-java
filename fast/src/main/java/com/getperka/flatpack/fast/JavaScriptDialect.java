@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -160,12 +161,45 @@ public class JavaScriptDialect implements Dialect {
       && !type.startsWith("Backbone");
   }
 
-  private String jsTypeForProperty(Property p) {
-    if (p.isEmbedded()) {
-      return packageName + "." + upcase(p.getType().getName());
+  /**
+   * Converts the given docString to be jsDoc compatible
+   * 
+   * @param docString
+   * @return
+   */
+  private String jsDocString(String docString) {
+    if (docString == null) return docString;
+
+    String newDocString = docString;
+    try {
+      // replace <entityReference> tags with /link /endlink pairs
+      Pattern regex = Pattern.compile(
+          "<entityReference payloadName='([^']*)'>([^<]*)</entityReference>",
+          Pattern.CASE_INSENSITIVE);
+      Matcher matcher = regex.matcher(docString);
+      while (matcher.find()) {
+        Type type = new Type.Builder().withName(matcher.group(1).trim()).build();
+        String jsType = jsTypeForType(type);
+
+        String link = "{@link " + jsType + "}";
+        newDocString = newDocString.replaceAll(matcher.group(0), link);
+      }
+
+      // replace #getFoo() method calls to #foo() method calls
+      regex = Pattern.compile(
+          "#get([^(]*)" + Pattern.quote("()"),
+          Pattern.CASE_INSENSITIVE);
+      matcher = regex.matcher(docString);
+      while (matcher.find()) {
+        String newMethod = "#" + matcher.group(1);
+        newDocString = newDocString.replaceAll(matcher.group(0), newMethod);
+      }
     }
 
-    return jsTypeForType(p.getType());
+    catch (Exception e) {
+      logger.error("Couldn't doxygenize doc string: " + docString, e);
+    }
+    return newDocString;
   }
 
   private String jsTypeForType(Type type) {
@@ -236,8 +270,11 @@ public class JavaScriptDialect implements Dialect {
               throws STNoSuchPropertyException {
 
             EntityDescription entity = (EntityDescription) o;
+            if ("docString".equals(propertyName)) {
+              return jsDocString(entity.getDocString());
+            }
 
-            if ("canonicalName".equals(propertyName)) {
+            else if ("canonicalName".equals(propertyName)) {
               String prefix = packageName;
               String typeName = entity.getTypeName();
               if (entity.getTypeName().equalsIgnoreCase("baseHasUuid")) {
@@ -301,7 +338,7 @@ public class JavaScriptDialect implements Dialect {
           throws STNoSuchPropertyException {
         Property p = (Property) o;
         if ("docString".equals(propertyName)) {
-          String docString = p.getDocString();
+          String docString = jsDocString(p.getDocString());
 
           List<String> enumValues = p.getType().getEnumValues();
           if (enumValues != null) {
@@ -314,11 +351,11 @@ public class JavaScriptDialect implements Dialect {
           }
         }
 
-        if ("jsType".equals(propertyName)) {
+        else if ("jsType".equals(propertyName)) {
           return jsTypeForType(p.getType());
         }
 
-        if ("defaultValue".equals(propertyName)) {
+        else if ("defaultValue".equals(propertyName)) {
           return p.getType().getJsonKind().equals(JsonKind.LIST) ?
               "new Backbone.Collection()" : "undefined";
         }
@@ -442,6 +479,9 @@ public class JavaScriptDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             EndpointDescription end = (EndpointDescription) o;
+            if ("docString".equals(propertyName)) {
+              return jsDocString(end.getDocString());
+            }
             if ("methodName".equals(propertyName)) {
 
               String path = end.getPath();

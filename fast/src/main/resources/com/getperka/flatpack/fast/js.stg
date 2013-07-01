@@ -31,34 +31,6 @@ goog.require('<entity.supertype.canonicalName>');
   /** @const */
   var ENTITY_NAME = '<entity.typeName>';
   
-  /**
-  * @class <entity.canonicalName>
-  * @memberof <names.packageName>
-  * @extends <entity.supertype.canonicalName>
-  *
-  <inlineDocString(entity.docString)>
-  */
-  <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
-  
-    /** 
-    * @lends <entity.canonicalName> 
-    */
-    {
-    
-      <if(entity.properties)>
-      <entity.properties:property(); separator=",\n\n">,
-      <endif>
-    
-      /**
-      * @constructs
-      */
-      initialize : function() {
-        <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
-        this.set({entityName : ENTITY_NAME});
-      }
-    }
-  );
-  
   var Property = com.getperka.flatpack.core.Property;
   var allProperties = [
     <if(entity.properties)>
@@ -76,12 +48,47 @@ goog.require('<entity.supertype.canonicalName>');
   
   com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
     ENTITY_NAME, entityDescription);
+  
+  /**
+  * @class <entity.canonicalName>
+  * @memberof <names.packageName>
+  * @extends <entity.supertype.canonicalName>
+  *
+  <inlineDocString(entity.docString)>
+  */
+  <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
+  
+    /** 
+    * @lends <entity.canonicalName>.prototype
+    */
+    {
+    
+      <if(entity.properties)>
+      <entity.properties:property(); separator=",\n\n">,
+      <endif>
+    
+      /**
+      * @constructs
+      */
+      initialize : function() {
+        <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
+        this.set({entityName : ENTITY_NAME});
+      }
+    },
+    
+    {
+      entityDescription : function() {
+        return entityDescription;      
+      }
+    }
+  );
+  
 }());
 >>
 
 property(property) ::= <<
 /**
-* @property {<property.jsType>}
+* @type {<property.jsType>}
 <inlineDocString(property.docString)>
 */
 <property.name> : <property.defaultValue>
@@ -166,6 +173,6 @@ docString(docString) ::= <<
 
 inlineDocString(docString) ::= <%
 <if(docString)>
-* <docString.chunks; wrap="\n* ", separator=" ">
+* @description <docString.chunks; wrap="\n* ", separator=" ">
 <endif>
 %>
