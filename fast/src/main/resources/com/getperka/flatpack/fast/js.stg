@@ -42,7 +42,7 @@ goog.require('<entity.supertype.canonicalName>');
   var entityDescription = new com.getperka.flatpack.core.EntityDescription({
     superType : <entity.supertype.canonicalName>.entityDescription(),
     typeName : ENTITY_NAME,
-    kind : <entity.canonicalName>,
+    kind : '<entity.canonicalName>',
     properties : allProperties
   });
   
@@ -98,7 +98,7 @@ propertyAdd(property) ::= <<
 Property.setPropertyValuesForUuid(
   '<property.uuid>', {
     name : '<property.name>',
-    kind : <property.jsType>
+    kind : '<property.jsType>'
   })
 >>
 

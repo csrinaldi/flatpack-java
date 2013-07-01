@@ -312,7 +312,6 @@ public class JavaScriptDialect implements Dialect {
               List<Property> properties = new ArrayList<Property>();
               for (Property p : entity.getProperties()) {
                 if (p.getType().getJsonKind().equals(JsonKind.LIST)) {
-
                   properties.add(p);
                 }
               }
