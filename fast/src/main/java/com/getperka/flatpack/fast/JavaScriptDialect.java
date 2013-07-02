@@ -308,24 +308,6 @@ public class JavaScriptDialect implements Dialect {
               return sortedProperties;
             }
 
-            else if ("collectionProperties".equals(propertyName)) {
-              List<Property> properties = new ArrayList<Property>();
-              for (Property p : entity.getProperties()) {
-                if (p.getType().getJsonKind().equals(JsonKind.LIST)) {
-                  properties.add(p);
-                }
-              }
-              List<Property> sortedProperties = new ArrayList<Property>();
-              sortedProperties.addAll(properties);
-              Collections.sort(sortedProperties, new Comparator<Property>() {
-                @Override
-                public int compare(Property p1, Property p2) {
-                  return p1.getName().compareTo(p2.getName());
-                }
-              });
-              return sortedProperties;
-            }
-
             return super.getProperty(interp, self, o, property, propertyName);
           }
         });
@@ -352,6 +334,12 @@ public class JavaScriptDialect implements Dialect {
 
         else if ("jsType".equals(propertyName)) {
           return jsTypeForType(p.getType());
+        }
+
+        else if ("listElementKind".equals(propertyName)) {
+          if (p.getType().getListElement() != null) {
+            return jsTypeForType(p.getType().getListElement());
+          }
         }
 
         else if ("defaultValue".equals(propertyName)) {
