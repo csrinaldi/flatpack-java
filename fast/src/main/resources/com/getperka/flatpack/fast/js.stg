@@ -147,8 +147,9 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 >>
 
 endpointRequestClass(end) ::= <<
-var <end.requestBuilderClassName> = function() {
+var <end.requestBuilderClassName> = function(options) {
   <end.queryParameters:endpointRequestParameter(); separator="\n\n">
+  _(this).extend(options);
 };
 <end.requestBuilderClassName>.prototype = new fpClient.FlatpackRequest();
 <end.requestBuilderClassName>.constructor = <end.requestBuilderClassName>;
