@@ -64,8 +64,10 @@ goog.require('<entity.supertype.canonicalName>');
     {
     
       <if(entity.properties)>
-      defaults : {
-        <entity.properties:property(); separator=",\n\n">
+      defaults : function() {
+        return {
+          <entity.properties:property(); separator=",\n\n">
+        };
       },
       <endif>
     
