@@ -117,7 +117,8 @@ Property.setPropertyValuesForUuid(
     name : '<property.name>',
     kind : '<property.jsType>'<if(property.impliedProperty)>,
     impliedPropertyUuid : '<property.impliedProperty.uuid>'<endif><if(property.listElementKind)>,
-    listElementKind : '<property.listElementKind>'<endif>
+    listElementKind : '<property.listElementKind>'<endif><if(property.embedded)>,
+    embedded : true<endif>
     
   })
 >>
