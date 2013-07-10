@@ -44,7 +44,8 @@ import com.getperka.flatpack.search.SearchTypeSource;
  * Main tool entry point for the FlatPack Automatic Source Toolkit.
  */
 public class FastTool extends ShellBase {
-  private static final String DEFAULT_URI = "https://getperka.com/api/2/describe";
+  // private static final String DEFAULT_URI = "https://getperka.com/api/2/describe";
+  private static final String DEFAULT_URI = "file:///Users/jack/perka/perka-client-js-internal/api.js";
   private static final Logger logger = LoggerFactory.getLogger(FastTool.class);
 
   public static void main(String[] args) {

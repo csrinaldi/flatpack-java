@@ -142,7 +142,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
     
     <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
     
-    <api.flatpackEndpoints:endpointMethod(); separator="\n\n">
+    <api.endpoints:endpointMethod(); separator="\n\n">
   };
 
   <names.packageName>.GeneratedBaseApi.prototype = new fpClient.BaseApi();
@@ -179,7 +179,7 @@ this.<e.methodName> = function(<e.methodParameterList>) {
   <if(e.pathParameters && first(e.pathParameters))>
   request.pathArgs = [<e.pathParameters:{x|<x.name>}; separator=", ">];
   <endif>
-  <if(e.entity)>request.entity = <e.entity.name>;<endif>
+  <if(e.entity && e.entity.name)>request.entity = <e.entity.name>;<endif>
   return request; 
 };
 >>

@@ -423,7 +423,7 @@ public class JavaScriptDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             ApiDescription apiDescription = (ApiDescription) o;
-            if ("flatpackEndpoints".equals(propertyName)) {
+            if ("endpoints".equals(propertyName)) {
               List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
                   apiDescription.getEndpoints());
               Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
@@ -435,7 +435,7 @@ public class JavaScriptDialect implements Dialect {
               Iterator<EndpointDescription> iter = sortedEndpoints.iterator();
               while (iter.hasNext()) {
                 EndpointDescription ed = iter.next();
-                if (ed.getReturnType() == null) {
+                if (ed.getPath() != null && ed.getPath().contains("{path:.*}")) {
                   iter.remove();
                 }
               }
@@ -516,14 +516,21 @@ public class JavaScriptDialect implements Dialect {
                 }
                 sb.append(end.getEntity().getName());
               }
+              if (sb.toString() == null) {
+                int test = 0;
+              }
               return sb.toString();
             }
 
             else if ("requestBuilderClassName".equals(propertyName)) {
               if (end.getQueryParameters() != null && !end.getQueryParameters().isEmpty()) {
                 return getBuilderReturnType(end);
-              } else {
+              }
+              else if (end.getReturnType() != null && end.getReturnType().getUuid() != null) {
                 return "com.getperka.flatpack.client.FlatpackRequest";
+              }
+              else {
+                return "com.getperka.flatpack.client.JsonRequest";
               }
             }
 
