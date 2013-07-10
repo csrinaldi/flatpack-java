@@ -150,6 +150,13 @@ public class JavaScriptDialect implements Dialect {
     return upcase(sb.toString());
   }
 
+  private String getNameForType(Type type) {
+    String name = type.getName();
+    name = name == null || name.trim().length() == 0 ? type.getJsonKind().name()
+        .toLowerCase() : name;
+    return name;
+  }
+
   private boolean isRequiredImport(String type) {
     return type != null
       && !type.equalsIgnoreCase("object")
@@ -486,7 +493,15 @@ public class JavaScriptDialect implements Dialect {
                 String part = parts[i];
                 if (part.length() == 0) continue;
                 if (!part.startsWith("{") && !part.endsWith("}")) {
-                  sb.append(upcase(part));
+                  if (part.contains(".")) {
+                    String[] dotPart = part.split(Pattern.quote("."));
+                    for (String dot : dotPart) {
+                      sb.append(upcase(dot));
+                    }
+                  }
+                  else {
+                    sb.append(upcase(part));
+                  }
                 }
               }
               return sb.toString();
@@ -505,7 +520,8 @@ public class JavaScriptDialect implements Dialect {
                   String name = part.substring(1, part.length() - 1);
                   sb.append(name);
                   paramCount++;
-                  if (i < parts.length - 1) {
+                  if (end.getPathParameters() != null
+                    && paramCount < end.getPathParameters().size()) {
                     sb.append(", ");
                   }
                 }
@@ -514,14 +530,14 @@ public class JavaScriptDialect implements Dialect {
                 if (paramCount > 0) {
                   sb.append(", ");
                 }
-                sb.append(end.getEntity().getName());
+                sb.append(getNameForType(end.getEntity()));
               }
-              if (sb.toString() == null) {
-                int test = 0;
-              }
+
               return sb.toString();
             }
-
+            else if ("entityName".equals(propertyName)) {
+              return getNameForType(end.getEntity());
+            }
             else if ("requestBuilderClassName".equals(propertyName)) {
               if (end.getQueryParameters() != null && !end.getQueryParameters().isEmpty()) {
                 return getBuilderReturnType(end);
@@ -549,6 +565,7 @@ public class JavaScriptDialect implements Dialect {
             }
             return super.getProperty(interp, self, o, property, propertyName);
           }
+
         });
 
     group.registerModelAdaptor(ParameterDescription.class,
