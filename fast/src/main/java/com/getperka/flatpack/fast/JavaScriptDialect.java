@@ -423,7 +423,7 @@ public class JavaScriptDialect implements Dialect {
               Object property, String propertyName)
               throws STNoSuchPropertyException {
             ApiDescription apiDescription = (ApiDescription) o;
-            if ("endpoints".equals(propertyName)) {
+            if ("flatpackEndpoints".equals(propertyName)) {
               List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
                   apiDescription.getEndpoints());
               Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
@@ -432,6 +432,13 @@ public class JavaScriptDialect implements Dialect {
                   return e1.getPath().compareTo(e2.getPath());
                 }
               });
+              Iterator<EndpointDescription> iter = sortedEndpoints.iterator();
+              while (iter.hasNext()) {
+                EndpointDescription ed = iter.next();
+                if (ed.getReturnType() == null) {
+                  iter.remove();
+                }
+              }
               return sortedEndpoints;
             }
             else if ("endpointsWithQueryParams".equals(propertyName)) {
