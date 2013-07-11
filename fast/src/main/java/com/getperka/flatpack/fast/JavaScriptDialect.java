@@ -351,7 +351,9 @@ public class JavaScriptDialect implements Dialect {
 
         else if ("defaultValue".equals(propertyName)) {
           return p.getType().getJsonKind().equals(JsonKind.LIST) ?
-              "new Backbone.Collection()" : "undefined";
+              "new Backbone.Collection.extend({\n  model : "
+                + jsTypeForType(p.getType().getListElement())
+                + "\n})" : "undefined";
         }
 
         return super.getProperty(interp, self, o, property, propertyName);
