@@ -56,7 +56,7 @@ public class FastTool extends ShellBase {
   boolean generate(
       @Flag(tag = "in", help = "The URI to load the ApiDescription from",
           defaultValue = DEFAULT_URI) URI source,
-      @Flag(tag = "dialect", help = "The source dialect to use", defaultValue = "java") String dialect,
+      @Flag(tag = "dialect", help = "The source dialect to use", defaultValue = "js") String dialect,
       @Flag(tag = "out", help = "The directory to generate source into", defaultValue = ".") File out)
       throws IOException {
 

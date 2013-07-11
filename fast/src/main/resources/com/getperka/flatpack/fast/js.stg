@@ -1,0 +1,201 @@
+/*
+ * #%L
+ * FlatPack Automatic Source Tool
+ * %%
+ * Copyright (C) 2012 Perka Inc.
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+entity(entity) ::= <<
+// Generated File - DO NOT EDIT
+
+goog.provide('<entity.canonicalName>');
+
+goog.require('com.getperka.flatpack.core.EntityDescription');
+goog.require('com.getperka.flatpack.core.Property');
+goog.require('<entity.supertype.canonicalName>');
+
+(function() {
+
+  /** @const */
+  var ENTITY_NAME = '<entity.typeName>';
+  
+  var Property = com.getperka.flatpack.core.Property;
+  var allProperties = [
+    <if(entity.properties)>
+    <entity.properties:propertyAdd(); separator=",\n\n">
+    <endif>
+  ];
+  
+  /** @ignore **/
+  var entityDescription = new com.getperka.flatpack.core.EntityDescription({
+    superType : <entity.supertype.canonicalName>.entityDescription(),
+    typeName : ENTITY_NAME,
+    kind : '<entity.canonicalName>',
+    properties : allProperties
+  });
+  
+  com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
+    ENTITY_NAME, entityDescription);
+  
+  /**
+  * @class <entity.canonicalName>
+  * @memberof <names.packageName>
+  * @extends <entity.supertype.canonicalName>
+  *
+  <inlineDocString(entity.docString)>
+  */
+  <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
+  
+    /** 
+    * @lends <entity.canonicalName>.prototype
+    */
+    {
+    
+      <if(entity.properties)>
+      defaults : function() {
+        return {
+          <entity.properties:property(); separator=",\n\n">
+        };
+      },
+      <endif>
+    
+      /**
+      * @constructs
+      */
+      initialize : function() {
+        <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
+        this.set({entityName : ENTITY_NAME});
+      },
+      
+      entityDescription : entityDescription
+    },
+    
+    {
+      entityDescription : function() {
+        return entityDescription;      
+      }
+    }
+  );
+  
+  /** @ignore **/
+  entityDescription = new com.getperka.flatpack.core.EntityDescription({
+    superType : <entity.supertype.canonicalName>.entityDescription(),
+    typeName : ENTITY_NAME,
+    kind : '<entity.canonicalName>',
+    properties : allProperties
+  });
+  
+  com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
+    ENTITY_NAME, entityDescription);
+  
+}());
+>>
+
+property(property) ::= <<
+/**
+* @type {<property.jsType><if(property.listElementKind)>.\<<property.listElementKind>\><endif>}
+<inlineDocString(property.docString)>
+*/
+<property.name> : <property.defaultValue>
+>>
+
+propertyAdd(property) ::= <<
+Property.setPropertyValuesForUuid(
+  '<property.uuid>', {
+    name : '<property.name>',
+    kind : '<property.jsType>'<if(property.impliedProperty)>,
+    impliedPropertyUuid : '<property.impliedProperty.uuid>'<endif><if(property.listElementKind)>,
+    listElementKind : '<property.listElementKind>'<endif><if(property.embedded)>,
+    embedded : true<endif>
+    
+  })
+>>
+
+api(api) ::= <<
+// Generated File - DO NOT EDIT
+
+goog.provide('<names.packageName>.GeneratedBaseApi');
+
+goog.require('com.getperka.flatpack.core.Flatpack');
+goog.require('com.getperka.flatpack.client.FlatpackRequest');
+goog.require('com.getperka.flatpack.client.BaseApi');
+<api.requireNames:{n | goog.require('<n>');}; separator="\n">
+
+(function() {
+  var fpClient = com.getperka.flatpack.client;
+    
+  <names.packageName>.GeneratedBaseApi = function(options) {
+  
+    _(this).extend(options);
+    
+    <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
+    
+    <api.endpoints:endpointMethod(); separator="\n\n">
+  };
+
+  <names.packageName>.GeneratedBaseApi.prototype = new fpClient.BaseApi();
+  
+  <names.packageName>.GeneratedBaseApi.constructor = 
+    <names.packageName>.GeneratedBaseApi;
+}());
+>>
+
+endpointRequestClass(end) ::= <<
+var <end.requestBuilderClassName> = function(options) {
+  <end.queryParameters:endpointRequestParameter(); separator="\n\n">
+  _(this).extend(options);
+};
+<end.requestBuilderClassName>.prototype = new fpClient.FlatpackRequest();
+<end.requestBuilderClassName>.constructor = <end.requestBuilderClassName>;
+>>
+
+endpointRequestParameter(p) ::= <<
+<docString(p.docString)>
+this.with<p.requireName> = function(<p.name>) {
+  this.queryParams.<p.name> = <p.name>;
+};
+>>
+
+endpointMethod(e) ::=<<
+<docString(e.docString)>
+this.<e.methodName> = function(<e.methodParameterList>) {
+  var request = new <e.requestBuilderClassName>({
+    api : this,
+    method : "<e.method>",
+    path : "<e.pathDecoded>"
+  });
+  <if(e.pathParameters && first(e.pathParameters))>
+  request.pathArgs = [<e.pathParameters:{x|<x.name>}; separator=", ">];
+  <endif>
+  <if(e.entity)>request.entity = <e.entityName>;<endif>
+  
+  return request; 
+};
+>>
+
+/**
+ * Emit a doc string, reflowed to fit the current context.
+ */
+docString(docString) ::= <<
+<if(docString)>/** 
+* <docString.chunks; wrap="\n* ", separator=" ">
+*/<endif>
+>>
+
+inlineDocString(docString) ::= <%
+<if(docString)>
+* @description <docString.chunks; wrap="\n* ", separator=" ">
+<endif>
+%>
