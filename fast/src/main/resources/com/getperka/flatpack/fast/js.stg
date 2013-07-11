@@ -53,16 +53,13 @@ goog.require('<entity.supertype.canonicalName>');
   * @class <entity.canonicalName>
   * @memberof <names.packageName>
   * @extends <entity.supertype.canonicalName>
-  *
+  * 
   <inlineDocString(entity.docString)>
+  *
+  <if(entity.properties)><entity.properties:propertyJsdocString(); separator="\n*\n"><endif>
   */
   <entity.canonicalName> = <entity.supertype.canonicalName>.extend(
-  
-    /** 
-    * @lends <entity.canonicalName>.prototype
-    */
     {
-    
       <if(entity.properties)>
       defaults : function() {
         return {
@@ -71,9 +68,6 @@ goog.require('<entity.supertype.canonicalName>');
       },
       <endif>
     
-      /**
-      * @constructs
-      */
       initialize : function() {
         <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
         this.set({entityName : ENTITY_NAME});
@@ -104,10 +98,6 @@ goog.require('<entity.supertype.canonicalName>');
 >>
 
 property(property) ::= <<
-/**
-* @type {<property.jsType><if(property.listElementKind)>.\<<property.listElementKind>\><endif>}
-<inlineDocString(property.docString)>
-*/
 <property.name> : <property.defaultValue>
 >>
 
@@ -193,6 +183,10 @@ docString(docString) ::= <<
 * <docString.chunks; wrap="\n* ", separator=" ">
 */<endif>
 >>
+
+propertyJsdocString(property) ::= <%
+* @property {<property.jsType><if(property.listElementKind)>.\<<property.listElementKind>><endif>} <property.name> <property.docString.chunks; wrap="\n* ", separator=" ">
+%>
 
 inlineDocString(docString) ::= <%
 <if(docString)>
