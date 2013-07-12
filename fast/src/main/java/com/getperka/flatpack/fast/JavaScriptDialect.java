@@ -505,7 +505,11 @@ public class JavaScriptDialect implements Dialect {
                     sb.append(upcase(part));
                   }
                 }
+                else {
+                  sb.append(upcase(part.substring(1, part.length() - 1)));
+                }
               }
+
               return sb.toString();
             }
 
