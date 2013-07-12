@@ -38,7 +38,6 @@ goog.require('<entity.supertype.canonicalName>');
     <endif>
   ];
   
-  /** @ignore **/
   var entityDescription = new com.getperka.flatpack.core.EntityDescription({
     superType : <entity.supertype.canonicalName>.entityDescription(),
     typeName : ENTITY_NAME,
@@ -53,7 +52,6 @@ goog.require('<entity.supertype.canonicalName>');
   * @class <entity.canonicalName>
   * @memberof <names.packageName>
   * @extends <entity.supertype.canonicalName>
-  * 
   <inlineDocString(entity.docString)>
   *
   <if(entity.properties)><entity.properties:propertyJsdocString(); separator="\n*\n"><endif>
@@ -82,18 +80,6 @@ goog.require('<entity.supertype.canonicalName>');
       }
     }
   );
-  
-  /** @ignore **/
-  entityDescription = new com.getperka.flatpack.core.EntityDescription({
-    superType : <entity.supertype.canonicalName>.entityDescription(),
-    typeName : ENTITY_NAME,
-    kind : '<entity.canonicalName>',
-    properties : allProperties
-  });
-  
-  com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
-    ENTITY_NAME, entityDescription);
-  
 }());
 >>
 
