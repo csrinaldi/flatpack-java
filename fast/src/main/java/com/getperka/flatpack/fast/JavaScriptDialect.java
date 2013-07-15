@@ -218,6 +218,11 @@ public class JavaScriptDialect implements Dialect {
       return packageName + "." + upcase(type.getName());
     }
 
+    if (type.getTypeHint() != null
+      && type.getTypeHint().getValue().equals("org.joda.time.DateTime")) {
+      return "Date";
+    }
+
     String jsType = "nil";
     switch (type.getJsonKind()) {
       case BOOLEAN:
