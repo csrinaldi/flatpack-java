@@ -60,6 +60,9 @@ goog.require('<entity.supertype.canonicalName>');
     {
       <if(entity.properties)>
       defaults : function() {
+      
+      <if(entity.collectionProperties)><entity.collectionProperties:collectionDeclaration(); separator="\n\n"><endif>
+      
         return {
           <entity.properties:property(); separator=",\n\n">
         };
@@ -81,6 +84,12 @@ goog.require('<entity.supertype.canonicalName>');
     }
   );
 }());
+>>
+
+collectionDeclaration(property) ::= <<
+  var <property.collectionName> = Backbone.Collection.extend({
+    model : <property.canonicalListElementKind>
+  });
 >>
 
 property(property) ::= <<

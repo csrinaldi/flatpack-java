@@ -115,6 +115,10 @@ public class JavaScriptDialect implements Dialect {
         .toLowerCase();
   }
 
+  private String collectionNameForProperty(Property p) {
+    return upcase(p.getType().getListElement().getName()) + "Collection";
+  }
+
   private String getBuilderReturnType(EndpointDescription end) {
     // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
     String path = end.getPath();
@@ -320,6 +324,25 @@ public class JavaScriptDialect implements Dialect {
               return sortedProperties;
             }
 
+            else if ("collectionProperties".equals(propertyName)) {
+              List<Property> properties = new ArrayList<Property>();
+              for (Property p : entity.getProperties()) {
+                if (p.getType().getListElement() != null &&
+                  !jsTypeForType(p.getType().getListElement()).equals("String")) {
+                  properties.add(p);
+                }
+              }
+              List<Property> sortedProperties = new ArrayList<Property>();
+              sortedProperties.addAll(properties);
+              Collections.sort(sortedProperties, new Comparator<Property>() {
+                @Override
+                public int compare(Property p1, Property p2) {
+                  return p1.getName().compareTo(p2.getName());
+                }
+              });
+              return sortedProperties;
+            }
+
             return super.getProperty(interp, self, o, property, propertyName);
           }
         });
@@ -350,15 +373,25 @@ public class JavaScriptDialect implements Dialect {
 
         else if ("listElementKind".equals(propertyName)) {
           if (p.getType().getListElement() != null) {
-            return jsTypeForType(p.getType().getListElement());
+            return (p.getType().getListElement());
+          }
+        }
+
+        else if ("collectionName".equals(propertyName)) {
+          return collectionNameForProperty(p);
+        }
+
+        else if ("canonicalListElementKind".equals(propertyName)) {
+          if (p.getType().getListElement() != null) {
+            return (jsTypeForType(p.getType().getListElement()));
           }
         }
 
         else if ("defaultValue".equals(propertyName)) {
-          return p.getType().getJsonKind().equals(JsonKind.LIST) ?
-              "new Backbone.Collection.extend({\n  model : "
-                + jsTypeForType(p.getType().getListElement())
-                + "\n})" : "undefined";
+          return p.getType().getJsonKind().equals(JsonKind.LIST) &&
+            !jsTypeForType(p.getType().getListElement()).equals("String") ?
+              "new " + collectionNameForProperty(p) + "()"
+              : "undefined";
         }
 
         return super.getProperty(interp, self, o, property, propertyName);
