@@ -61,7 +61,10 @@ goog.require('<entity.supertype.canonicalName>');
       <if(entity.properties)>
       defaults : function() {
       
-      <if(entity.collectionProperties)><entity.collectionProperties:collectionDeclaration(); separator="\n\n"><endif>
+      <if(entity.collectionProperties)>
+        var self = this;
+      
+      <entity.collectionProperties:collectionDeclaration(); separator="\n\n"><endif>
       
         return {
           <entity.properties:property(); separator=",\n\n">

@@ -383,7 +383,19 @@ public class JavaScriptDialect implements Dialect {
 
         else if ("canonicalListElementKind".equals(propertyName)) {
           if (p.getType().getListElement() != null) {
-            return (jsTypeForType(p.getType().getListElement()));
+
+            String collectionModelType = jsTypeForType(p.getType().getListElement());
+            Property implied = p.getImpliedProperty();
+            if (implied != null) {
+              return "function(attrs, options) {\n" +
+                "      return new " + collectionModelType + "(\n" +
+                "        _(attrs).extend({ " + implied.getName()
+                + " : self }), options);\n" +
+                "    }";
+            }
+            else {
+              return (collectionModelType);
+            }
           }
         }
 
