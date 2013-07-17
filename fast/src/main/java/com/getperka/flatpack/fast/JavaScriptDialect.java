@@ -373,7 +373,7 @@ public class JavaScriptDialect implements Dialect {
 
         else if ("listElementKind".equals(propertyName)) {
           if (p.getType().getListElement() != null) {
-            return (p.getType().getListElement());
+            return (packageName + "." + upcase(p.getType().getListElement().toString()));
           }
         }
 
