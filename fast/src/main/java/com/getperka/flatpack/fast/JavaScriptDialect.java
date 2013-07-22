@@ -428,6 +428,9 @@ public class JavaScriptDialect implements Dialect {
 
         else if ("defaultValue".equals(propertyName)) {
           String defaultVal = "undefined";
+          if (p.isEmbedded()) {
+            defaultVal = "new " + jsTypeForType(p.getType()) + "()";
+          }
           if (p.getType().getJsonKind().equals(JsonKind.LIST) &&
             jsTypeForType(p.getType().getListElement()).equals("String")) {
             defaultVal = "[]";
