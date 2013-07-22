@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,8 +125,7 @@ public class ApiDescriber {
     }
 
     // Extract API endpoints
-    List<EndpointDescription> endpoints = new ArrayList<EndpointDescription>();
-    description.setEndpoints(endpoints);
+    Set<EndpointDescription> endpoints = new LinkedHashSet<EndpointDescription>();
 
     for (Method method : apiMethods) {
       EndpointDescription desc = describeEndpoint(method);
@@ -133,6 +133,7 @@ public class ApiDescriber {
         endpoints.add(desc);
       }
     }
+    description.setEndpoints(new ArrayList<EndpointDescription>(endpoints));
 
     // Extract all entities
     do {
