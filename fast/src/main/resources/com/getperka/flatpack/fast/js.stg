@@ -183,7 +183,7 @@ docString(docString) ::= <<
 >>
 
 propertyJsdocString(property) ::= <%
-* @property {<property.jsType><if(property.listElementKind)>.\<<property.listElementKind>><endif>} <property.name> <property.docString.chunks; wrap="\n* ", separator=" ">
+* @property {<property.jsType><if(!property.listElementEnum && property.listElementKind)>.\<<property.listElementKind>><endif>} <property.name> <property.docString.chunks; wrap="\n* ", separator=" ">
 %>
 
 inlineDocString(docString) ::= <%

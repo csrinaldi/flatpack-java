@@ -242,7 +242,11 @@ public class JavaScriptDialect implements Dialect {
         jsType = "Number";
         break;
       case LIST:
-        jsType = "Backbone.Collection";
+        if (type.getListElement() != null && type.getListElement().getEnumValues() != null) {
+          jsType = "Array";
+        } else {
+          jsType = "Backbone.Collection";
+        }
         break;
       case MAP:
         jsType = "Object";
@@ -357,6 +361,10 @@ public class JavaScriptDialect implements Dialect {
           String docString = jsDocString(p.getDocString());
 
           List<String> enumValues = p.getType().getEnumValues();
+          if (enumValues == null && p.getType().getListElement() != null &&
+            p.getType().getListElement().getEnumValues() != null) {
+            enumValues = p.getType().getListElement().getEnumValues();
+          }
           if (enumValues != null) {
             docString = docString == null ? "" : docString;
             docString += "\n\nPossible values: ";
@@ -365,10 +373,29 @@ public class JavaScriptDialect implements Dialect {
               if (i < enumValues.size() - 1) docString += ", ";
             }
           }
+
+          return docString;
+
         }
 
         else if ("jsType".equals(propertyName)) {
           return jsTypeForType(p.getType());
+        }
+
+        else if ("listElementEnum".equals(propertyName)) {
+          if (p.getType() != null && p.getType().getListElement() != null &&
+            p.getType().getListElement().getEnumValues() != null) {
+            String enumVals = "";
+            int idx = 0;
+            for (String val : p.getType().getListElement().getEnumValues()) {
+              if (idx != 0) {
+                enumVals += ", ";
+              }
+              enumVals += val;
+              idx++;
+            }
+            return enumVals;
+          }
         }
 
         else if ("listElementKind".equals(propertyName)) {
@@ -400,10 +427,17 @@ public class JavaScriptDialect implements Dialect {
         }
 
         else if ("defaultValue".equals(propertyName)) {
-          return p.getType().getJsonKind().equals(JsonKind.LIST) &&
-            !jsTypeForType(p.getType().getListElement()).equals("String") ?
-              "new " + collectionNameForProperty(p) + "()"
-              : "undefined";
+          String defaultVal = "undefined";
+          if (p.getType().getJsonKind().equals(JsonKind.LIST) &&
+            jsTypeForType(p.getType().getListElement()).equals("String")) {
+            defaultVal = "[]";
+            jsTypeForType(p.getType());
+          }
+          else if (p.getType().getJsonKind().equals(JsonKind.LIST) &&
+            !jsTypeForType(p.getType().getListElement()).equals("String")) {
+            defaultVal = "new " + collectionNameForProperty(p) + "()";
+          }
+          return defaultVal;
         }
 
         return super.getProperty(interp, self, o, property, propertyName);
