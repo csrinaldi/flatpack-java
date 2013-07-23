@@ -153,6 +153,7 @@ endpointRequestParameter(p) ::= <<
 <docString(p.docString)>
 this.with<p.requireName> = function(<p.name>) {
   this.queryParams.<p.name> = <p.name>;
+  return this;
 };
 >>
 
