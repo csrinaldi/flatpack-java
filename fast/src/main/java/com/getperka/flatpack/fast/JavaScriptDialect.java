@@ -223,7 +223,8 @@ public class JavaScriptDialect implements Dialect {
     }
 
     if (type.getTypeHint() != null
-      && type.getTypeHint().getValue().equals("org.joda.time.DateTime")) {
+      && (type.getTypeHint().getValue().equals("org.joda.time.DateTime") ||
+      (type.getTypeHint().getValue().equals("org.joda.time.LocalDateTime")))) {
       return "Date";
     }
 
