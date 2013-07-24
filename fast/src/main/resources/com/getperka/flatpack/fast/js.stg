@@ -125,7 +125,9 @@ goog.require('com.getperka.flatpack.client.BaseApi');
   var fpClient = com.getperka.flatpack.client;
     
   <names.packageName>.GeneratedBaseApi = function(options) {
-  
+    
+    this.initialize();
+    
     _(this).extend(options);
     
     <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
