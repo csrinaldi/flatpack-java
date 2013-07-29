@@ -122,15 +122,15 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 <api.requireNames:{n | goog.require('<n>');}; separator="\n">
 
 (function() {
-  var fpClient = com.getperka.flatpack.client;
-  
+
   <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
   <names.packageName>.GeneratedBaseApi = function(options) {
     this.initialize();
     _(this).extend(options);
   };
   
-  <names.packageName>.GeneratedBaseApi.prototype = new fpClient.BaseApi();
+  <names.packageName>.GeneratedBaseApi.prototype = 
+    new com.getperka.flatpack.client.BaseApi();
   
   <names.packageName>.GeneratedBaseApi.constructor = 
     <names.packageName>.GeneratedBaseApi;
@@ -144,7 +144,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
   _(<names.packageName>.GeneratedBaseApi.prototype).extend(
     /** @lends <names.packageName>.GeneratedBaseApi.prototype */
     {
-      <api.endpoints:endpointMethod(); separator="\n\n">
+      <api.endpoints:endpointMethod(); separator=",\n\n">
     }
   );
 
@@ -160,20 +160,22 @@ var <end.requestBuilderClassName> = function(options) {
   this.initialize();
   _(this).extend(options);
 };
-<end.requestBuilderClassName>.prototype = new fpClient.FlatpackRequest();
+<end.requestBuilderClassName>.prototype = new 
+  com.getperka.flatpack.client.FlatpackRequest();
 <end.requestBuilderClassName>.constructor = <end.requestBuilderClassName>;
 
 _(<end.requestBuilderClassName>.prototype).extend(
 
-/** @lends <end.requestBuilderClassName>.prototype */
-{
-  <end.queryParameters:endpointRequestParameter(); separator="\n,">
-});
+  /** @lends <end.requestBuilderClassName>.prototype */
+  {
+    <end.queryParameters:endpointRequestParameter(); separator=",\n\n">
+  }
+);
 >>
 
 endpointRequestParameter(p) ::= <<
 /**
-* @param {String} <p.name> <p.docString>
+* @param {String} <p.name> <docString.chunks; wrap="\n* ", separator=" ">
 */
 with<p.requireName> : function(<p.name>) {
   this.queryParams.<p.name> = <p.name>;
@@ -199,7 +201,7 @@ endpointMethod(e) ::=<<
   <if(e.entity)>request.entity = <e.entityName>;<endif>
   
   return request; 
-},
+}
 >>
 
 pathParameterDocs(params) ::=<<
