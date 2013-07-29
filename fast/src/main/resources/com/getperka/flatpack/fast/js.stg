@@ -154,6 +154,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 endpointRequestClass(end) ::= <<
 /**
 * @class <end.requestBuilderClassName>
+* @extends com.getperka.flatpack.client.FlatpackRequest
 * @inner
 */
 var <end.requestBuilderClassName> = function(options) {
