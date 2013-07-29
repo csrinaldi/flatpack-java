@@ -158,21 +158,27 @@ endpointRequestClass(end) ::= <<
 */
 var <end.requestBuilderClassName> = function(options) {
   this.initialize();
-  <end.queryParameters:endpointRequestParameter(); separator="\n\n">
   _(this).extend(options);
 };
 <end.requestBuilderClassName>.prototype = new fpClient.FlatpackRequest();
 <end.requestBuilderClassName>.constructor = <end.requestBuilderClassName>;
+
+_(<end.requestBuilderClassName>.prototype).extend(
+
+/** @lends <end.requestBuilderClassName>.prototype */
+{
+  <end.queryParameters:endpointRequestParameter(); separator="\n,">
+});
 >>
 
 endpointRequestParameter(p) ::= <<
 /**
 * @param {String} <p.name> <p.docString>
 */
-this.with<p.requireName> = function(<p.name>) {
+with<p.requireName> : function(<p.name>) {
   this.queryParams.<p.name> = <p.name>;
   return this;
-};
+}
 >>
 
 endpointMethod(e) ::=<<
