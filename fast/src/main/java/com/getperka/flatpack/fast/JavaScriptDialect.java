@@ -675,6 +675,9 @@ public class JavaScriptDialect implements Dialect {
             if ("requireName".equals(propertyName)) {
               return upcase(param.getName());
             }
+            else if ("docString".equals(propertyName)) {
+              return jsDocString(param.getDocString());
+            }
             return super.getProperty(interp, self, o, property, propertyName);
           }
         });

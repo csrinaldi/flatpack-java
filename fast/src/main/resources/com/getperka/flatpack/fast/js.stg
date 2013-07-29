@@ -129,20 +129,33 @@ goog.require('com.getperka.flatpack.client.BaseApi');
     this.initialize();
     _(this).extend(options);
   };
-
+  
   <names.packageName>.GeneratedBaseApi.prototype = new fpClient.BaseApi();
   
   <names.packageName>.GeneratedBaseApi.constructor = 
     <names.packageName>.GeneratedBaseApi;
   
-  _(<names.packageName>.GeneratedBaseApi.prototype).extend({  
-    <api.endpoints:endpointMethod(); separator="\n\n">
-  });
+  /**
+  * @class <names.packageName>.GeneratedBaseApi
+  * @memberof <names.packageName>
+  * @extends com.getperka.flatpack.client.BaseApi
+  * @description Generated API endpoints
+  */
+  _(<names.packageName>.GeneratedBaseApi.prototype).extend(
+    /** @lends <names.packageName>.GeneratedBaseApi.prototype */
+    {
+      <api.endpoints:endpointMethod(); separator="\n\n">
+    }
+  );
 
 }());
 >>
 
 endpointRequestClass(end) ::= <<
+/**
+* @class <end.requestBuilderClassName>
+* @inner
+*/
 var <end.requestBuilderClassName> = function(options) {
   this.initialize();
   <end.queryParameters:endpointRequestParameter(); separator="\n\n">
@@ -153,7 +166,9 @@ var <end.requestBuilderClassName> = function(options) {
 >>
 
 endpointRequestParameter(p) ::= <<
-<docString(p.docString)>
+/**
+* @param {String} <p.name> <p.docString>
+*/
 this.with<p.requireName> = function(<p.name>) {
   this.queryParams.<p.name> = <p.name>;
   return this;
@@ -161,7 +176,11 @@ this.with<p.requireName> = function(<p.name>) {
 >>
 
 endpointMethod(e) ::=<<
-<docString(e.docString)>
+/**
+* @returns {<e.requestBuilderClassName>}
+<inlineDocString(e.docString)>
+<pathParameterDocs(e.pathParameters)>
+*/
 <e.methodName> : function(<e.methodParameterList>) {
   var request = new <e.requestBuilderClassName>({
     api : this,
@@ -175,6 +194,16 @@ endpointMethod(e) ::=<<
   
   return request; 
 },
+>>
+
+pathParameterDocs(params) ::=<<
+<if(e.pathParameters && first(e.pathParameters))>
+  <params:pathParameterDoc(); separator="\n">
+<endif>
+>>
+
+pathParameterDoc(param) ::=<<
+* @param {String} <param.name> <param.docString>
 >>
 
 /**
