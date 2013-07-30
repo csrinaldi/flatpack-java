@@ -123,7 +123,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 
 (function() {
 
-  <api.endpointsWithQueryParams:endpointRequestClass(); separator="\n\n">
+  <api.flatpackEndpoints:endpointRequestClass(); separator="\n\n">
   <names.packageName>.GeneratedBaseApi = function(options) {
     this.initialize();
     _(this).extend(options);
@@ -157,14 +157,15 @@ endpointRequestClass(end) ::= <<
 * @extends com.getperka.flatpack.client.FlatpackRequest
 * @inner
 */
-var <end.requestBuilderClassName> = function(options) {
+<end.requestBuilderClassName> = function(options) {
   this.initialize();
   _(this).extend(options);
 };
 <end.requestBuilderClassName>.prototype = new 
   com.getperka.flatpack.client.FlatpackRequest();
-<end.requestBuilderClassName>.constructor = <end.requestBuilderClassName>;
-
+<end.requestBuilderClassName>.constructor = 
+  <end.requestBuilderClassName>;
+<if(end.queryParameters && first(end.queryParameters))>
 _(<end.requestBuilderClassName>.prototype).extend(
 
   /** @lends <end.requestBuilderClassName>.prototype */
@@ -172,6 +173,7 @@ _(<end.requestBuilderClassName>.prototype).extend(
     <end.queryParameters:endpointRequestParameter(); separator=",\n\n">
   }
 );
+<endif>
 >>
 
 endpointRequestParameter(p) ::= <<

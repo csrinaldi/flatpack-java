@@ -151,7 +151,7 @@ public class JavaScriptDialect implements Dialect {
     }
     sb.append("Request");
 
-    return upcase(sb.toString());
+    return packageName + "." + upcase(sb.toString());
   }
 
   private String getNameForType(Type type) {
@@ -159,6 +159,11 @@ public class JavaScriptDialect implements Dialect {
     name = name == null || name.trim().length() == 0 ? type.getJsonKind().name()
         .toLowerCase() : name;
     return name;
+  }
+
+  private boolean hasCustomRequestBuilderClass(EndpointDescription end) {
+    return (end.getQueryParameters() != null && !end.getQueryParameters().isEmpty()) ||
+      (end.getReturnType() != null && end.getReturnType().getUuid() != null);
   }
 
   private boolean isRequiredImport(String type) {
@@ -524,8 +529,10 @@ public class JavaScriptDialect implements Dialect {
               throws STNoSuchPropertyException {
             ApiDescription apiDescription = (ApiDescription) o;
             if ("endpoints".equals(propertyName)) {
+              Set<EndpointDescription> uniqueEndpoints =
+                  new HashSet<EndpointDescription>(apiDescription.getEndpoints());
               List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
-                  apiDescription.getEndpoints());
+                  uniqueEndpoints);
               Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
                 @Override
                 public int compare(EndpointDescription e1, EndpointDescription e2) {
@@ -541,7 +548,7 @@ public class JavaScriptDialect implements Dialect {
               }
               return sortedEndpoints;
             }
-            else if ("endpointsWithQueryParams".equals(propertyName)) {
+            else if ("flatpackEndpoints".equals(propertyName)) {
               List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
                   apiDescription.getEndpoints());
               Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
@@ -552,8 +559,7 @@ public class JavaScriptDialect implements Dialect {
               });
               Iterator<EndpointDescription> iter = sortedEndpoints.iterator();
               while (iter.hasNext()) {
-                EndpointDescription desc = iter.next();
-                if (desc.getQueryParameters() == null || desc.getQueryParameters().isEmpty()) {
+                if (!hasCustomRequestBuilderClass(iter.next())) {
                   iter.remove();
                 }
               }
@@ -636,11 +642,9 @@ public class JavaScriptDialect implements Dialect {
               return getNameForType(end.getEntity());
             }
             else if ("requestBuilderClassName".equals(propertyName)) {
-              if (end.getQueryParameters() != null && !end.getQueryParameters().isEmpty()) {
+
+              if (hasCustomRequestBuilderClass(end)) {
                 return getBuilderReturnType(end);
-              }
-              else if (end.getReturnType() != null && end.getReturnType().getUuid() != null) {
-                return "com.getperka.flatpack.client.FlatpackRequest";
               }
               else {
                 return "com.getperka.flatpack.client.JsonRequest";
