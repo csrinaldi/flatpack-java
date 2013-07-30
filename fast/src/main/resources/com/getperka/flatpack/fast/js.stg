@@ -176,7 +176,7 @@ _(<end.requestBuilderClassName>.prototype).extend(
 
 endpointRequestParameter(p) ::= <<
 /**
-* @param {String} <p.name> <docString.chunks; wrap="\n* ", separator=" ">
+* @param {String} <p.name> <p.docString.chunks; wrap="\n* ", separator=" ">
 */
 with<p.requireName> : function(<p.name>) {
   this.queryParams.<p.name> = <p.name>;
