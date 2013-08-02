@@ -125,7 +125,7 @@ goog.require('com.getperka.flatpack.client.BaseApi');
 
   <api.flatpackEndpoints:endpointRequestClass(); separator="\n\n">
   <names.packageName>.GeneratedBaseApi = function(options) {
-    this.initialize();
+    this.initialize(options);
     _(this).extend(options);
   };
   
@@ -144,6 +144,10 @@ goog.require('com.getperka.flatpack.client.BaseApi');
   _(<names.packageName>.GeneratedBaseApi.prototype).extend(
     /** @lends <names.packageName>.GeneratedBaseApi.prototype */
     {
+      initialize : function(options) {
+        com.getperka.flatpack.client.BaseApi.prototype.initialize.call(this, options);
+      },
+      
       <api.endpoints:endpointMethod(); separator=",\n\n">
     }
   );
