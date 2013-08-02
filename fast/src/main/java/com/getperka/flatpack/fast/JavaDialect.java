@@ -33,6 +33,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -320,6 +321,30 @@ public class JavaDialect implements Dialect {
         throw new UnsupportedOperationException("Unknown JsonKind " + type.getJsonKind());
       }
     });
+    group.registerModelAdaptor(ApiDescription.class,
+        new ObjectModelAdaptor() {
+          @Override
+          public Object getProperty(Interpreter interp, ST self, Object o,
+              Object property, String propertyName)
+              throws STNoSuchPropertyException {
+            ApiDescription apiDescription = (ApiDescription) o;
+            if ("endpoints".equals(propertyName)) {
+              Set<EndpointDescription> uniqueEndpoints =
+                  new HashSet<EndpointDescription>(apiDescription.getEndpoints());
+              List<EndpointDescription> sortedEndpoints = new ArrayList<EndpointDescription>(
+                  uniqueEndpoints);
+              Collections.sort(sortedEndpoints, new Comparator<EndpointDescription>() {
+                @Override
+                public int compare(EndpointDescription e1, EndpointDescription e2) {
+                  return e1.getPath().compareTo(e2.getPath());
+                }
+              });
+              return sortedEndpoints;
+            }
+            return super.getProperty(interp, self, o, property, propertyName);
+          }
+        });
+
     group.registerModelAdaptor(EndpointDescription.class, new ObjectModelAdaptor() {
       @Override
       public Object getProperty(Interpreter interp, ST self, Object o, Object property,
