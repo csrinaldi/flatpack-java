@@ -149,6 +149,12 @@ public class ObjcDialect implements Dialect {
     render(apiHeaderST, outputDir, "BaseApi.h");
     ST apiST = group.getInstanceOf("api").add("api", api);
     render(apiST, outputDir, "BaseApi.m");
+
+    // render schema definition
+    ST schemaHeaderST = group.getInstanceOf("schemaHeader");
+    render(schemaHeaderST, outputDir, "Schema.h");
+    ST schemaST = group.getInstanceOf("schema").add("entities", allEntities.values());
+    render(schemaST, outputDir, "Schema.m");
   }
 
   @Override
@@ -443,6 +449,9 @@ public class ObjcDialect implements Dialect {
             if ("docString".equals(propertyName)) {
               return doxygenDocString(entity.getDocString());
             }
+            else if ("typeNameCapitalized".equals(propertyName)) {
+              return upcase(entity.getTypeName());
+            }
             else if ("payloadName".equals(propertyName)) {
               return entity.getTypeName();
             }
@@ -556,6 +565,9 @@ public class ObjcDialect implements Dialect {
         }
         else if ("requireName".equals(propertyName)) {
           return requireNameForType(p.getType().getName());
+        }
+        else if ("nameCapitalized".equals(propertyName)) {
+          return upcase(p.getName());
         }
         else if ("objcType".equals(propertyName)) {
           return objcTypeForProperty(p);

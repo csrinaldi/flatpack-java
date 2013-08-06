@@ -236,8 +236,57 @@ api(api) ::= <<
     <if(end.pathParameters)>
       pathArgs:@[<end.pathParameters:{x|<x.name>}; separator=", ">]];
     <endif>
-    <if(end.entity)>request.setEntity(<end.entity.name>);<endif>
+    <if(end.entity)>[request setEntity:<end.entity.name>];<endif>
     return request; 
   \}}; separator="\n\n">
 @end
+>>
+
+schemaHeader() ::= <<
+#import \<Foundation/Foundation.h\>
+#import \<CoreData/CoreData.h\>
+  
+@interface <names.classPrefix>Schema : NSObject
+  
++ (NSManagedObjectModel *) managedObjectModel;
+    
+@end
+>>
+
+schema(entities) ::= <<
+#import "<names.classPrefix>Schema.h"
+
+@implementation <names.classPrefix>Schema
+  
++ (NSManagedObjectModel *) managedObjectModel {
+  NSManagedObjectModel *mom = [[NSManagedObjectModel alloc] init];
+  NSMutableArray *entities = [NSMutableArray array];
+  
+  <entities:schemaForEntity(); separator="\n\n">
+  
+  [mom setEntities:entities];
+  return mom;
+}
+  
+@end
+>>
+
+schemaForEntity(entity) ::= <<
+// ***** Entity: <entity.typeName> *****
+
+NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init];
+[<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
+[<entity.typeName>Entity setManagedObjectClassName:@"<entity.typeNameCapitalized>"];
+[entities addObject:<entity.typeName>Entity];
+
+<if(entity.properties)>NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];<endif>
+
+<entity.properties:attributeDescription(entity.typeName); separator="\n\n">
+>>
+
+attributeDescription(property, propertiesPrefix) ::= <<
+NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute =
+  [[NSAttributeDescription alloc] init];
+[<propertiesPrefix><property.nameCapitalized>Attribute setName:@"<property.name>"];
+[<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];
 >>
