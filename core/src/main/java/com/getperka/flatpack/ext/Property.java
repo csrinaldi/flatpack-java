@@ -34,9 +34,9 @@ import javax.annotation.security.PermitAll;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.BaseHasUuid;
-import com.getperka.flatpack.InheritPrincipal;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.SuppressDefaultValue;
+import com.getperka.flatpack.security.InheritGroups;
 
 /**
  * An immutable view of a property that should be serialized.
@@ -129,7 +129,7 @@ public class Property extends BaseHasUuid {
 
     private void analyzeAnnotations(Property toReturn, AnnotatedElement method) {
       toReturn.embedded = hasAnnotationWithSimpleName(method, "Embedded");
-      toReturn.inheritPrincipal = method.isAnnotationPresent(InheritPrincipal.class);
+      toReturn.inheritGroups = method.isAnnotationPresent(InheritGroups.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
     }
 
@@ -163,7 +163,7 @@ public class Property extends BaseHasUuid {
   private Method getter;
   private Set<String> getterRoleNames;
   private Property implied;
-  private boolean inheritPrincipal;
+  private boolean inheritGroups;
   private String name;
   private Method setter;
   private Set<String> setterRoleNames;
@@ -271,12 +271,11 @@ public class Property extends BaseHasUuid {
   }
 
   /**
-   * Returns {@code true} if the referred entity's owner should also be considered an owner of the
-   * entity that defines the Property.
+   * Returns {@code true} if the entity inherits the ACL groups defined by the referenced entity.
    */
   @PermitAll
-  public boolean isInheritPrincipal() {
-    return inheritPrincipal;
+  public boolean isInheritGroups() {
+    return inheritGroups;
   }
 
   /**
@@ -336,8 +335,8 @@ public class Property extends BaseHasUuid {
     this.implied = implied;
   }
 
-  void setInheritPrincipal(boolean inheritPrincipal) {
-    this.inheritPrincipal = inheritPrincipal;
+  void setInheritGroups(boolean inheritGroups) {
+    this.inheritGroups = inheritGroups;
   }
 
   void setName(String name) {

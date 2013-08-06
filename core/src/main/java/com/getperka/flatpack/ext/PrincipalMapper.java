@@ -35,18 +35,7 @@ public interface PrincipalMapper {
   List<Principal> getPrincipals(HasUuid entity);
 
   /**
-   * Returns all roles that the principal is allowed to act as.
-   */
-  List<String> getRoles(Principal principal);
-
-  /**
    * Allows entity access restrictions to be bypassed for super-users or specific entities.
    */
   boolean isAccessEnforced(Principal principal, HasUuid entity);
-
-  /**
-   * Returns {@code true} if {@link #getPrincipals(HasUuid)} should be expected to return useful
-   * data for an instance of the given type.
-   */
-  boolean isMapped(List<Class<? extends HasUuid>> pathSoFar, Class<? extends HasUuid> entitiyType);
 }

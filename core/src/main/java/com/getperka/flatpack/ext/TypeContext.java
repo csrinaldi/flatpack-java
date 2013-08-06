@@ -35,9 +35,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -51,14 +48,11 @@ import org.slf4j.Logger;
 
 import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.InheritPrincipal;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.JsonTypeName;
 import com.getperka.flatpack.PersistenceMapper;
 import com.getperka.flatpack.SparseCollection;
 import com.getperka.flatpack.codexes.DynamicCodex;
-import com.getperka.flatpack.inject.AllTypes;
-import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 
@@ -165,9 +159,6 @@ public class TypeContext {
   @Inject
   private PersistenceMapper persistenceMapper;
   private final Map<Class<?>, List<Property>> properties = mapForLookup();
-  private final Map<Class<?>, List<PropertyPath>> principalPaths = mapForLookup();
-  @Inject
-  private PrincipalMapper principalMapper;
 
   @Inject
   protected TypeContext() {}
@@ -331,113 +322,6 @@ public class TypeContext {
       return override.value();
     }
     return FlatPackTypes.decapitalize(clazz.getSimpleName());
-  }
-
-  /**
-   * Returns zero or more property paths that can be evaluated to find an object that can be
-   * resolved to a user principal. The returned list will be ordered with the shortest paths first.
-   */
-  public synchronized List<PropertyPath> getPrincipalPaths(Class<? extends HasUuid> clazz) {
-    List<PropertyPath> toReturn = principalPaths.get(clazz);
-    if (toReturn != null) {
-      return toReturn;
-    }
-    toReturn = Collections.unmodifiableList(computePrincipalPaths(clazz));
-    principalPaths.put(clazz, toReturn);
-    return toReturn;
-  }
-
-  @Inject
-  void setAllTypes(@FlatPackLogger Logger logger, @AllTypes Collection<Class<?>> allTypes) {
-    this.logger = logger;
-
-    if (allTypes.isEmpty()) {
-      logger.warn("No unpackable classes. Will not be able to deserialize entity payloads");
-      return;
-    }
-
-    for (Class<?> clazz : allTypes) {
-      if (!HasUuid.class.isAssignableFrom(clazz)) {
-        logger.warn("Ignoring type {} because it is not assignable to {}", clazz.getName(),
-            HasUuid.class.getSimpleName());
-        continue;
-      }
-      String payloadName = getPayloadName(clazz);
-      if (classes.containsKey(payloadName)) {
-        logger.error("Duplicate payload name {} in class {}",
-            payloadName, clazz.getCanonicalName());
-      } else {
-        classes.put(payloadName, clazz.asSubclass(HasUuid.class));
-        logger.debug("Flatpack map: {} -> {}", clazz.getCanonicalName(), payloadName);
-      }
-    }
-  }
-
-  /**
-   * Initializes the recursive calls and sorts the result by path length.
-   */
-  private List<PropertyPath> computePrincipalPaths(Class<? extends HasUuid> clazz) {
-    List<PropertyPath> allPaths = listForAny();
-    computePrincipalPaths(new LinkedList<Property>(), clazz,
-        new LinkedList<Class<? extends HasUuid>>(), allPaths);
-    Collections.sort(allPaths, new Comparator<PropertyPath>() {
-      @Override
-      public int compare(PropertyPath o1, PropertyPath o2) {
-        return o1.getPath().size() - o2.getPath().size();
-      }
-    });
-    logger.debug("Principle paths for {} : {}", clazz.getName(), allPaths);
-    return allPaths;
-  }
-
-  /**
-   * Recursive implementation.
-   * 
-   * @param pathSoFar the current path for the type currently being examined
-   * @param lookingAt the type to examine
-   * @param seen the owner types of the properties in {@code pathSoFar}, to prevent cycles
-   * @param accumulator an accumulator for data to return
-   */
-  private void computePrincipalPaths(Deque<Property> pathSoFar, Class<? extends HasUuid> lookingAt,
-      LinkedList<Class<? extends HasUuid>> seen, List<PropertyPath> accumulator) {
-    // Cycle detection
-    if (seen.contains(lookingAt)) {
-      return;
-    }
-
-    // Add the current path if it provides useful information
-    if (principalMapper.isMapped(Collections.unmodifiableList(seen), lookingAt)) {
-      accumulator.add(new PropertyPath(pathSoFar));
-    }
-
-    // Iterate over each property of the type and recurse
-    seen.push(lookingAt);
-    for (Property property : extractProperties(lookingAt)) {
-      // Ignore properties that don't inherit
-      if (!property.isInheritPrincipal()) {
-        continue;
-      }
-      Type returnType = property.getGetter().getGenericReturnType();
-      Class<? extends HasUuid> nextType;
-      switch (property.getType().getJsonKind()) {
-        case STRING:
-          nextType = erase(returnType).asSubclass(HasUuid.class);
-          break;
-        case LIST:
-          // TODO: This doesn't support arbitrary composition
-          nextType = erase(getSingleParameterization(returnType, Collection.class))
-              .asSubclass(HasUuid.class);
-          break;
-        default:
-          throw new RuntimeException("Cannot use property " + property + " with "
-            + InheritPrincipal.class.getSimpleName());
-      }
-
-      pathSoFar.addLast(property);
-      computePrincipalPaths(pathSoFar, nextType, seen, accumulator);
-      pathSoFar.removeLast();
-    }
-    seen.pop();
   }
 
   /**
