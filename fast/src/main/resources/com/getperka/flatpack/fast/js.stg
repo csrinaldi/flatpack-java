@@ -87,6 +87,8 @@ goog.require('<entity.supertype.canonicalName>');
     }
   );
 }());
+
+
 >>
 
 collectionDeclaration(property) ::= <<
@@ -153,6 +155,8 @@ goog.require('com.getperka.flatpack.client.BaseApi');
   );
 
 }());
+
+
 >>
 
 endpointRequestClass(end) ::= <<
