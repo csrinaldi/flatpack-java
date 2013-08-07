@@ -28,6 +28,8 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -36,12 +38,12 @@ import com.getperka.flatpack.util.FlatPackCollections;
 @PackScoped
 public class DeserializationContext extends BaseContext {
   private final Map<UUID, HasUuid> entities = FlatPackCollections.mapForLookup();
-  @Inject
-  private EntitySecurity entitySecurity;
   private final Map<HasUuid, Set<Property>> modified = FlatPackCollections.mapForLookup();
   @Inject
   private PrincipalMapper principalMapper;
   private final Set<UUID> resolved = FlatPackCollections.setForLookup();
+  @Inject
+  private Security security;
   @Inject
   private TypeContext typeContext;
 
@@ -72,7 +74,7 @@ public class DeserializationContext extends BaseContext {
     if (!wasResolved(object)) {
       return true;
     }
-    if (entitySecurity.mayEdit(getPrincipal(), object)) {
+    if (security.may(getPrincipal(), object, CrudOperation.UPDATE)) {
       return true;
     }
     addWarning(object, "User %s does not have permission to edit this %s", getPrincipal(),

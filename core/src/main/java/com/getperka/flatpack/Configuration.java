@@ -39,7 +39,6 @@ public class Configuration {
   private List<PersistenceMapper> persistenceMappers;
   private PrincipalMapper principalMapper;
   private List<EntityResolver> resolvers = FlatPackCollections.listForAny();
-  private RoleMapper roleMapper;
   private boolean verbose;
   private int verboseLogChunkSize = Integer.MAX_VALUE;
 
@@ -110,13 +109,6 @@ public class Configuration {
   }
 
   /**
-   * Returns the {@link RoleMapper} that maps role names to interface types.
-   */
-  public RoleMapper getRoleMapper() {
-    return roleMapper;
-  }
-
-  /**
    * If verbose logging is enabled, this configuration parameter can be used to break logging of
    * large payloads across several log messages for logging systems that impose a maximum size on
    * log messages.
@@ -149,10 +141,6 @@ public class Configuration {
     return verbose;
   }
 
-  public void setRoleMapper(RoleMapper roleMapper) {
-    this.roleMapper = roleMapper;
-  }
-
   public void setVerbose(boolean verbose) {
     this.verbose = verbose;
   }
@@ -169,11 +157,6 @@ public class Configuration {
 
   public Configuration withPrincipalMapper(PrincipalMapper mapper) {
     this.principalMapper = mapper;
-    return this;
-  }
-
-  public Configuration withRoleMapper(RoleMapper roleMapper) {
-    setRoleMapper(roleMapper);
     return this;
   }
 

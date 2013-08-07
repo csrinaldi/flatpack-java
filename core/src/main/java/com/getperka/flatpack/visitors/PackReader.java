@@ -32,12 +32,12 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
-import com.getperka.flatpack.ext.EntitySecurity;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.Security;
 import com.google.gson.JsonObject;
 
 /**
@@ -52,12 +52,10 @@ public class PackReader extends FlatPackVisitor {
   @Inject
   private DeserializationContext context;
   @Inject
-  private EntitySecurity entitySecurity;
-  @Inject
   private Provider<ImpliedPropertySetter> impliedPropertySetters;
   private JsonObject payload;
   @Inject
-  private PropertySecurity security;
+  private Security security;
   private final Deque<PackReader.State> stack = new ArrayDeque<PackReader.State>();
   @Inject
   private TypeContext typeContext;
@@ -121,7 +119,7 @@ public class PackReader extends FlatPackVisitor {
         }
 
         // Verify the new value may be set
-        if (!security.maySet(prop, context.getPrincipal(), stack.peek().entity, value)) {
+        if (!security.may(context.getPrincipal(), stack.peek().entity, CrudOperation.UPDATE)) {
           return;
         }
 

@@ -24,9 +24,7 @@ import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleNa
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.security.DenyAll;
@@ -47,10 +45,9 @@ public class Property extends BaseHasUuid {
    * Constructs {@link Property} instances.
    */
   static class Builder {
+    private Class<?> declaring;
     @Inject
     private Property prop;
-    @Inject
-    private PropertySecurity security;
     @Inject
     private TypeContext typeContext;
 
@@ -62,9 +59,6 @@ public class Property extends BaseHasUuid {
 
       Method getter = toReturn.getGetter();
       Method setter = toReturn.getSetter();
-
-      toReturn.setGetterRoleNames(preferEmpty(security.getGetterRoleNames(toReturn)));
-      toReturn.setSetterRoleNames(preferEmpty(security.getSetterRoleNames(toReturn)));
 
       if (getter != null) {
         java.lang.reflect.Type returnType = getter.getGenericReturnType();
@@ -97,6 +91,7 @@ public class Property extends BaseHasUuid {
     public Builder withGetter(Method getter) {
       getter.setAccessible(true);
       prop.getter = getter;
+      declaring = getter.getDeclaringClass();
 
       if (prop.enclosingTypeName == null) {
         Class<?> enclosingType = getter.getDeclaringClass();
@@ -119,6 +114,7 @@ public class Property extends BaseHasUuid {
     public Builder withSetter(Method setter) {
       setter.setAccessible(true);
       prop.setter = setter;
+      declaring = setter.getDeclaringClass();
 
       if (prop.enclosingTypeName == null) {
         Class<?> enclosingType = setter.getDeclaringClass();
@@ -131,13 +127,15 @@ public class Property extends BaseHasUuid {
       toReturn.embedded = hasAnnotationWithSimpleName(method, "Embedded");
       toReturn.inheritGroups = method.isAnnotationPresent(InheritGroups.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
-    }
 
-    /**
-     * Convert {@link PropertySecurity#noRoleNames} into the empty set.
-     */
-    private Set<String> preferEmpty(Set<String> set) {
-      return PropertySecurity.noRoleNames.equals(set) ? Collections.<String> emptySet() : set;
+      SecurityGroups allGroups = typeContext.getSecurityGroups(declaring);
+      toReturn.groupPermissions = GroupPermissions.extract(method, allGroups);
+      if (toReturn.groupPermissions == null) {
+        toReturn.groupPermissions = GroupPermissions.extract(declaring, allGroups);
+      }
+      if (toReturn.groupPermissions == null) {
+        toReturn.groupPermissions = GroupPermissions.permitAll();
+      }
     }
   }
 
@@ -161,12 +159,11 @@ public class Property extends BaseHasUuid {
   private String enclosingTypeName;
   private boolean embedded;
   private Method getter;
-  private Set<String> getterRoleNames;
+  private GroupPermissions groupPermissions;
   private Property implied;
   private boolean inheritGroups;
   private String name;
   private Method setter;
-  private Set<String> setterRoleNames;
   private boolean suppressDefaultValue;
   private Type type;
 
@@ -201,12 +198,10 @@ public class Property extends BaseHasUuid {
   }
 
   /**
-   * Returns the role names that are allowed to get the property. A value containing a single
-   * asterisk means that all roles may access the property.
+   * Returns the security permissions that govern access to the property.
    */
-  @PermitAll
-  public Set<String> getGetterRoleNames() {
-    return getterRoleNames;
+  public GroupPermissions getGroupPermissions() {
+    return groupPermissions;
   }
 
   /**
@@ -234,15 +229,6 @@ public class Property extends BaseHasUuid {
   @DenyAll
   public Method getSetter() {
     return setter;
-  }
-
-  /**
-   * Return the role names that are allowed to set this property. A value containing a single
-   * asterisk means that all roles may set the property.
-   */
-  @PermitAll
-  public Set<String> getSetterRoleNames() {
-    return setterRoleNames;
   }
 
   /**
@@ -319,8 +305,8 @@ public class Property extends BaseHasUuid {
     this.enclosingTypeName = enclosingTypeName;
   }
 
-  void setGetterRoleNames(Set<String> names) {
-    this.getterRoleNames = names;
+  void setGroupPermissions(GroupPermissions groupPermissions) {
+    this.groupPermissions = groupPermissions;
   }
 
   void setImplied(Property implied) {
@@ -341,10 +327,6 @@ public class Property extends BaseHasUuid {
 
   void setName(String name) {
     this.name = name;
-  }
-
-  void setSetterRoleNames(Set<String> names) {
-    this.setterRoleNames = names;
   }
 
   void setSuppressDefaultValue(boolean suppressDefaultValue) {

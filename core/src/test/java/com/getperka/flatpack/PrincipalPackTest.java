@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 import org.junit.Test;
 
 import com.getperka.flatpack.domain.Employee;
@@ -83,29 +81,11 @@ public class PrincipalPackTest extends FlatPackTest {
     }
 
     /**
-     * It doesn't matter what role is returned here, as long as the list isn't zero-length since all
-     * of the test objects are annotated with {@link PermitAll}.
-     */
-    @Override
-    public List<String> getRoles(Principal principal) {
-      return Collections.singletonList("role");
-    }
-
-    /**
      * No super-users.
      */
     @Override
     public boolean isAccessEnforced(Principal principal, HasUuid entity) {
       return true;
-    }
-
-    /**
-     * Agree to map all Person subtypes to a Principal.
-     */
-    @Override
-    public boolean isMapped(List<Class<? extends HasUuid>> pathSoFar,
-        Class<? extends HasUuid> entitiyType) {
-      return Person.class.isAssignableFrom(entitiyType);
     }
   }
 

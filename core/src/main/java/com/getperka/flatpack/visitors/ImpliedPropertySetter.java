@@ -29,7 +29,8 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
+import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -38,8 +39,10 @@ import com.getperka.flatpack.util.FlatPackCollections;
  */
 @PostWorkOrder(100)
 class ImpliedPropertySetter implements Callable<Void> {
+  @Inject
   private DeserializationContext context;
-  private PropertySecurity propertySecurity;
+  @Inject
+  private Security security;
   private Property toSet;
   private Object target;
   private Object value;
@@ -84,7 +87,7 @@ class ImpliedPropertySetter implements Callable<Void> {
     } else if (target instanceof Collection) {
       for (Object element : (Collection<?>) target) {
         if (context.checkAccess((HasUuid) element) &&
-          propertySecurity.maySet(toSet, context.getPrincipal(), (HasUuid) element, value)) {
+          security.may(context.getPrincipal(), (HasUuid) element, CrudOperation.UPDATE)) {
           toSet.getSetter().invoke(element, value);
         }
       }
@@ -108,11 +111,5 @@ class ImpliedPropertySetter implements Callable<Void> {
     this.toSet = toSet;
     this.target = target;
     this.value = value;
-  }
-
-  @Inject
-  void inject(DeserializationContext context, PropertySecurity propertySecurity) {
-    this.context = context;
-    this.propertySecurity = propertySecurity;
   }
 }

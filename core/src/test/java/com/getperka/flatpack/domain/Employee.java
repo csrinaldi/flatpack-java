@@ -19,13 +19,21 @@
  */
 package com.getperka.flatpack.domain;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.PostUnpack;
 import com.getperka.flatpack.PreUnpack;
+import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.security.Acl;
+import com.getperka.flatpack.security.AclGroup;
+import com.getperka.flatpack.security.AclGroups;
+import com.getperka.flatpack.security.Acls;
+import com.getperka.flatpack.security.CrudOperation;
 import com.google.gson.JsonObject;
 
-@PermitAll
+@AclGroups(@AclGroup(name = "self", path = { "" }))
+@Acls({
+    @Acl(groups = "self"),
+    @Acl(groups = SecurityGroup.ALL, ops = CrudOperation.READ)
+})
 public class Employee extends Person {
   private int employeeNumber;
   public boolean employeePreUnpack;

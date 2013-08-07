@@ -28,10 +28,11 @@ import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.Security;
 
 /**
  * Performs an initial pass over the object graph to be serialized to populate the
@@ -42,7 +43,7 @@ public class PackScanner extends FlatPackVisitor {
   @Inject
   private SerializationContext context;
   @Inject
-  private PropertySecurity security;
+  private Security security;
   private Deque<HasUuid> stack = new ArrayDeque<HasUuid>();
 
   /**
@@ -66,7 +67,7 @@ public class PackScanner extends FlatPackVisitor {
   @Override
   public boolean visit(Property property, VisitorContext<Property> ctx) {
     context.pushPath("." + property.getName());
-    if (!security.mayGet(property, context.getPrincipal(), stack.peek())) {
+    if (!security.may(context.getPrincipal(), stack.peek(), property, CrudOperation.READ)) {
       return false;
     }
     if (property.isEmbedded()) {

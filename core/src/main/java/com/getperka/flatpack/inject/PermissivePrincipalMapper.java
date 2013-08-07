@@ -39,18 +39,7 @@ class PermissivePrincipalMapper implements PrincipalMapper {
   }
 
   @Override
-  public List<String> getRoles(Principal principal) {
-    return Collections.emptyList();
-  }
-
-  @Override
   public boolean isAccessEnforced(Principal principal, HasUuid entity) {
-    return false;
-  }
-
-  @Override
-  public boolean isMapped(List<Class<? extends HasUuid>> pathSoFar,
-      Class<? extends HasUuid> entitiyType) {
     return false;
   }
 }

@@ -1,12 +1,8 @@
 package com.getperka.flatpack.ext;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.annotation.security.PermitAll;
-
-import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.security.AclGroup;
 
 /**
@@ -14,22 +10,45 @@ import com.getperka.flatpack.security.AclGroup;
  * 
  * @see AclGroup
  */
-@PermitAll
-public class SecurityGroup extends BaseHasUuid {
-  public static final SecurityGroup ALL = new SecurityGroup("*", "All principals");
+public class SecurityGroup {
 
-  public static final SecurityGroup EMPTY = new SecurityGroup("", "No principals");
+  public static final String ALL = "*";
+  public static final String EMPTY = "";
+
+  private static final SecurityGroup ALL_GROUP =
+      new SecurityGroup(ALL, "All principals", Collections.<PropertyPath> emptyList());
+  private static final SecurityGroup EMPTY_GROUP =
+      new SecurityGroup(EMPTY, "No principals", Collections.<PropertyPath> emptyList());
+
+  public static SecurityGroup all() {
+    return ALL_GROUP;
+  }
+
+  public static SecurityGroup create(String name, String description, List<PropertyPath> paths) {
+    if (ALL.equals(name)) {
+      return ALL_GROUP;
+    }
+
+    if (EMPTY.equals(name)) {
+      return EMPTY_GROUP;
+    }
+
+    return new SecurityGroup(name, description, paths);
+  }
+
+  public static SecurityGroup empty() {
+    return EMPTY_GROUP;
+  }
 
   private String description;
   private List<PropertyPath> paths = Collections.emptyList();
   private String name;
 
-  public SecurityGroup(String name, String description) {
+  private SecurityGroup(String name, String description, List<PropertyPath> paths) {
     this.description = description;
     this.name = name;
+    this.paths = paths;
   }
-
-  SecurityGroup() {}
 
   public String getDescription() {
     return description;
@@ -46,15 +65,11 @@ public class SecurityGroup extends BaseHasUuid {
     return paths;
   }
 
-  void setDescription(String description) {
-    this.description = description;
-  }
-
-  void setName(String name) {
-    this.name = name;
-  }
-
-  void setPaths(List<PropertyPath> paths) {
-    this.paths = Collections.unmodifiableList(new ArrayList<PropertyPath>(paths));
+  /**
+   * For debugging use only.
+   */
+  @Override
+  public String toString() {
+    return name + " " + paths;
   }
 }

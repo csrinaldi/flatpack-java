@@ -42,11 +42,12 @@ import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.stream.JsonWriter;
 
@@ -70,7 +71,7 @@ public class PackWriter extends FlatPackVisitor {
   private PersistenceMapper persistenceMapper;
   private List<HasUuid> persistent = FlatPackCollections.listForAny();
   @Inject
-  private PropertySecurity security;
+  private Security security;
   private final Deque<PackWriter.State> stack = new ArrayDeque<PackWriter.State>();
   @Inject
   private TypeContext typeContext;
@@ -195,7 +196,7 @@ public class PackWriter extends FlatPackVisitor {
       return false;
     }
     // Check access
-    if (!security.mayGet(prop, context.getPrincipal(), state.entity)) {
+    if (!security.may(context.getPrincipal(), stack.peek().entity, prop, CrudOperation.READ)) {
       return false;
     }
     // Ignore OneToMany type properties unless specifically requested

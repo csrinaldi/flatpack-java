@@ -30,18 +30,14 @@ import org.slf4j.LoggerFactory;
 import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.PersistenceMapper;
-import com.getperka.flatpack.RoleMapper;
 import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.EntitySecurity;
 import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.PropertySecurity;
-import com.getperka.flatpack.security.AllowAllEntitySecurity;
-import com.getperka.flatpack.security.AllowAllPropertySecurity;
-import com.getperka.flatpack.security.RoleEntitySecurity;
-import com.getperka.flatpack.security.RolePropertySecurity;
+import com.getperka.flatpack.security.NoSecurity;
+import com.getperka.flatpack.security.PrincipalSecurity;
+import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.AbstractModule;
@@ -173,19 +169,10 @@ public class FlatPackModule extends AbstractModule {
     // PrincipalMapper
     if (configuration.getPrincipalMapper() == null) {
       bind(PrincipalMapper.class).to(PermissivePrincipalMapper.class);
-      bind(EntitySecurity.class).to(AllowAllEntitySecurity.class);
+      bind(Security.class).to(NoSecurity.class);
     } else {
       bind(PrincipalMapper.class).toInstance(configuration.getPrincipalMapper());
-      bind(EntitySecurity.class).to(RoleEntitySecurity.class);
-    }
-
-    // RoleMapper and PropertySecurity
-    if (configuration.getRoleMapper() == null) {
-      bind(RoleMapper.class).to(NullRoleMapper.class);
-      bind(PropertySecurity.class).to(AllowAllPropertySecurity.class);
-    } else {
-      bind(RoleMapper.class).toInstance(configuration.getRoleMapper());
-      bind(PropertySecurity.class).to(RolePropertySecurity.class);
+      bind(Security.class).to(PrincipalSecurity.class);
     }
   }
 }
