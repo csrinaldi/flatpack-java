@@ -24,18 +24,6 @@ public class SecurityGroup {
     return ALL_GROUP;
   }
 
-  public static SecurityGroup create(String name, String description, List<PropertyPath> paths) {
-    if (ALL.equals(name)) {
-      return ALL_GROUP;
-    }
-
-    if (EMPTY.equals(name)) {
-      return EMPTY_GROUP;
-    }
-
-    return new SecurityGroup(name, description, paths);
-  }
-
   public static SecurityGroup empty() {
     return EMPTY_GROUP;
   }
@@ -44,7 +32,7 @@ public class SecurityGroup {
   private List<PropertyPath> paths = Collections.emptyList();
   private String name;
 
-  private SecurityGroup(String name, String description, List<PropertyPath> paths) {
+  SecurityGroup(String name, String description, List<PropertyPath> paths) {
     this.description = description;
     this.name = name;
     this.paths = paths;
@@ -63,6 +51,10 @@ public class SecurityGroup {
    */
   public List<PropertyPath> getPaths() {
     return paths;
+  }
+
+  public boolean isImplicitSecurityGroup() {
+    return false;
   }
 
   /**

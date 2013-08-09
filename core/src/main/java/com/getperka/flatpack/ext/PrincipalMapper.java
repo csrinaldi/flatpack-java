@@ -28,6 +28,13 @@ import com.getperka.flatpack.HasUuid;
  * Provides Flatpack with a mapping from entities to identities that may edit the entities.
  */
 public interface PrincipalMapper {
+
+  /**
+   * Returns the names of any global security groups the principal should be considered to be a
+   * member of.
+   */
+  List<String> getGlobalSecurityGroups(Principal principal);
+
   /**
    * Return all principals that are allowed to edit the entity or any entities that have a simple
    * path reference to the object.

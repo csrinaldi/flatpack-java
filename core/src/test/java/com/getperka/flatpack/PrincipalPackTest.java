@@ -73,6 +73,11 @@ public class PrincipalPackTest extends FlatPackTest {
 
   static class TestPrincipalMapper implements PrincipalMapper {
     @Override
+    public List<String> getGlobalSecurityGroups(Principal principal) {
+      return Collections.singletonList("employee");
+    }
+
+    @Override
     public List<Principal> getPrincipals(HasUuid entity) {
       if (entity instanceof Person) {
         return Collections.<Principal> singletonList(new TestPrincipal(entity.getUuid()));

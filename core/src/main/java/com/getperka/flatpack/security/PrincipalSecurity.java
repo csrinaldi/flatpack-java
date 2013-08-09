@@ -11,6 +11,7 @@ import java.util.Map;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.ext.DeclaredSecurityGroups;
 import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
@@ -55,6 +56,8 @@ public class PrincipalSecurity implements Security {
   @Inject
   private PrincipalMapper principalMapper;
   @Inject
+  private SecurityGroups securityGroups;
+  @Inject
   private TypeContext typeContext;
 
   /**
@@ -62,11 +65,11 @@ public class PrincipalSecurity implements Security {
    */
   @Override
   public boolean may(Principal principal, HasUuid entity, CrudOperation op) {
-    SecurityGroups groups = typeContext.getSecurityGroups(entity.getClass());
+    DeclaredSecurityGroups groups = typeContext.getSecurityGroups(entity.getClass());
     if (groups == null) {
       return true;
     }
-    GroupPermissions permissions = GroupPermissions.extract(entity.getClass(), groups);
+    GroupPermissions permissions = securityGroups.getPermissions(groups, entity.getClass());
 
     return check(principal, entity, op, permissions);
   }
@@ -116,11 +119,22 @@ public class PrincipalSecurity implements Security {
       return cached;
     }
 
-    SecurityGroups allGroups = typeContext.getSecurityGroups(entity.getClass());
+    DeclaredSecurityGroups allGroups = typeContext.getSecurityGroups(entity.getClass());
     if (allGroups.isEmpty()) {
       return Collections.emptyList();
     }
     final List<SecurityGroup> toReturn = listForAny();
+
+    // Add any global groups that the principal is a member of
+    List<String> globalGroups = principalMapper.getGlobalSecurityGroups(principal);
+    if (globalGroups != null && !globalGroups.isEmpty()) {
+      for (String globalName : globalGroups) {
+        SecurityGroup globalGroup = securityGroups.getGlobalGroup(globalName);
+        toReturn.add(globalGroup);
+      }
+    }
+
+    // Compute any explicit group mappings
     for (final SecurityGroup group : allGroups) {
       if (isMember(principal, group, entity)) {
         toReturn.add(group);

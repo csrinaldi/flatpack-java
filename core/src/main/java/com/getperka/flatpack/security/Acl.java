@@ -1,5 +1,10 @@
 package com.getperka.flatpack.security;
 
+import static com.getperka.flatpack.security.CrudOperation.CREATE;
+import static com.getperka.flatpack.security.CrudOperation.DELETE;
+import static com.getperka.flatpack.security.CrudOperation.READ;
+import static com.getperka.flatpack.security.CrudOperation.UPDATE;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -12,6 +17,5 @@ import java.lang.annotation.Target;
 public @interface Acl {
   String[] groups();
 
-  CrudOperation[] ops() default {
-      CrudOperation.CREATE, CrudOperation.DELETE, CrudOperation.READ, CrudOperation.UPDATE };
+  CrudOperation[] ops() default { CREATE, DELETE, READ, UPDATE };
 }

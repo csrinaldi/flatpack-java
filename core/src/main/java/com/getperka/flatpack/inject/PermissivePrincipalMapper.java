@@ -34,6 +34,11 @@ class PermissivePrincipalMapper implements PrincipalMapper {
   PermissivePrincipalMapper() {}
 
   @Override
+  public List<String> getGlobalSecurityGroups(Principal principal) {
+    return Collections.emptyList();
+  }
+
+  @Override
   public List<Principal> getPrincipals(HasUuid entity) {
     return Collections.emptyList();
   }

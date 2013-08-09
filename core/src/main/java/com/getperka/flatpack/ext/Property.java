@@ -49,6 +49,8 @@ public class Property extends BaseHasUuid {
     @Inject
     private Property prop;
     @Inject
+    SecurityGroups security;
+    @Inject
     private TypeContext typeContext;
 
     Builder() {}
@@ -128,10 +130,10 @@ public class Property extends BaseHasUuid {
       toReturn.inheritGroups = method.isAnnotationPresent(InheritGroups.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
 
-      SecurityGroups allGroups = typeContext.getSecurityGroups(declaring);
-      toReturn.groupPermissions = GroupPermissions.extract(method, allGroups);
+      DeclaredSecurityGroups allGroups = typeContext.getSecurityGroups(declaring);
+      toReturn.groupPermissions = security.getPermissions(allGroups, method);
       if (toReturn.groupPermissions == null) {
-        toReturn.groupPermissions = GroupPermissions.extract(declaring, allGroups);
+        toReturn.groupPermissions = security.getPermissions(allGroups, declaring);
       }
       if (toReturn.groupPermissions == null) {
         toReturn.groupPermissions = GroupPermissions.permitAll();

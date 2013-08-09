@@ -33,13 +33,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -58,7 +55,6 @@ import com.getperka.flatpack.SparseCollection;
 import com.getperka.flatpack.codexes.DynamicCodex;
 import com.getperka.flatpack.inject.AllTypes;
 import com.getperka.flatpack.inject.FlatPackLogger;
-import com.getperka.flatpack.security.AclGroup;
 import com.getperka.flatpack.security.AclGroups;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
@@ -166,7 +162,8 @@ public class TypeContext {
   @Inject
   private PersistenceMapper persistenceMapper;
   private final Map<Class<?>, List<Property>> properties = mapForLookup();
-  private final Map<Class<?>, SecurityGroups> securityGroups = mapForLookup();
+  @Inject
+  private SecurityGroups securityGroupsFactory;
 
   @Inject
   protected TypeContext() {}
@@ -335,62 +332,8 @@ public class TypeContext {
   /**
    * Examines a class and extracts all {@link AclGroups} information about the type.
    */
-  public synchronized SecurityGroups getSecurityGroups(Class<?> entityType) {
-    SecurityGroups toReturn = securityGroups.get(entityType);
-    if (toReturn != null) {
-      return toReturn;
-    }
-
-    if (entityType == null || Object.class.equals(entityType)) {
-      return SecurityGroups.empty();
-    }
-
-    // Look up the groups inherited from the parent
-    SecurityGroups parent = getSecurityGroups(entityType.getSuperclass());
-
-    AclGroups groups = entityType.getAnnotation(AclGroups.class);
-
-    // Return the parent's data if there are no groups that have been defined
-    if (groups == null) {
-      securityGroups.put(entityType, parent);
-      return parent;
-    }
-
-    // Make a copy of the parent's data and add it to the lookup cache to prevent loops
-    toReturn = new SecurityGroups(parent);
-    securityGroups.put(entityType, toReturn);
-
-    // Create information for the directly-declared properties
-    for (AclGroup group : groups.value()) {
-
-      List<PropertyPath> paths = new ArrayList<PropertyPath>();
-      for (String path : group.path()) {
-        paths.add(constructPath(path, entityType));
-      }
-      // Sort by shortest first
-      Collections.sort(paths, new Comparator<PropertyPath>() {
-        @Override
-        public int compare(PropertyPath o1, PropertyPath o2) {
-          return o1.getPath().size() - o2.getPath().size();
-        }
-      });
-
-      SecurityGroup toAdd = SecurityGroup.create(group.name(), group.description(), paths);
-      toReturn.getDeclared().put(group.name(), toAdd);
-    }
-
-    // Extract groups inherited from referenced entities
-    for (Property prop : extractProperties(entityType)) {
-      if (prop.isInheritGroups()) {
-        SecurityGroups inherited = getSecurityGroups(prop.getGetter().getReturnType());
-        toReturn.getInherited().put(prop.getName(), inherited);
-      }
-    }
-
-    // Make immutable
-    toReturn.setDeclared(Collections.unmodifiableMap(toReturn.getDeclared()));
-    toReturn.setInherited(Collections.unmodifiableMap(toReturn.getInherited()));
-    return toReturn;
+  public DeclaredSecurityGroups getSecurityGroups(Class<?> entityType) {
+    return securityGroupsFactory.getSecurityGroups(entityType);
   }
 
   @Inject
@@ -417,30 +360,6 @@ public class TypeContext {
         logger.debug("Flatpack map: {} -> {}", clazz.getCanonicalName(), payloadName);
       }
     }
-  }
-
-  private PropertyPath constructPath(String path, Class<?> startFrom) {
-    // Treat the empty path as a reference to "this"
-    if (path.isEmpty()) {
-      return new PropertyPath(Collections.<Property> emptyList());
-    }
-
-    String[] parts = path.split(Pattern.quote("."));
-    List<Property> toReturn = new ArrayList<Property>(parts.length);
-
-    part: for (String part : parts) {
-      for (Property p : extractProperties(startFrom)) {
-        if (p.getName().equals(part)) {
-          toReturn.add(p);
-          startFrom = getClass(p.getEnclosingTypeName());
-          continue part;
-        }
-      }
-      throw new IllegalArgumentException("Could not find a property named \"" + part + "\" in "
-        + startFrom.getName() + " while constructing path " + path);
-    }
-
-    return new PropertyPath(toReturn);
   }
 
   /**
