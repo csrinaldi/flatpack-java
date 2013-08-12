@@ -278,10 +278,11 @@ NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init
 [<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
 [<entity.typeName>Entity setManagedObjectClassName:@"<entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
+<if(entity.properties)>
 
-<if(entity.properties)>NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];<endif>
-
-<entity.properties:attributeDescription(entity.typeName); separator="\n\n">
+NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
+<entity.attributes:attributeDescription(entity.typeName); separator="\n\n">
+<endif>
 >>
 
 attributeDescription(property, propertiesPrefix) ::= <<

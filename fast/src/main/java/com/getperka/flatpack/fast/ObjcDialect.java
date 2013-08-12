@@ -204,6 +204,20 @@ public class ObjcDialect implements Dialect {
     return newDocString;
   }
 
+  private List<Property> filterProperties(EntityDescription entity, boolean includeRelationships) {
+    List<Property> props = getSortedProperties(entity);
+    Iterator<Property> iter = props.iterator();
+    while (iter.hasNext()) {
+      Property prop = iter.next();
+      boolean isRelationship = prop.getType().getName() != null ||
+        prop.getType().getListElement() != null;
+      if (isRelationship ^ includeRelationships) {
+        iter.remove();
+      }
+    }
+    return props;
+  }
+
   private String getBuilderReturnType(EndpointDescription end) {
 
     // Convert a path like /api/2/foo/bar/{}/baz to FooBarBazMethod
@@ -271,6 +285,24 @@ public class ObjcDialect implements Dialect {
 
   private String getSafeName(String name) {
     return name + (KEYWORDS.contains(name) ? "Property" : "");
+  }
+
+  private List<Property> getSortedProperties(EntityDescription entity) {
+    Map<String, Property> propertyMap = new HashMap<String, Property>();
+    for (Property p : entity.getProperties()) {
+      propertyMap.put(p.getName(), p);
+    }
+
+    List<Property> sortedProperties = new ArrayList<Property>();
+    sortedProperties.addAll(propertyMap.values());
+    Collections.sort(sortedProperties, new Comparator<Property>() {
+      @Override
+      public int compare(Property p1, Property p2) {
+        return p1.getName().compareTo(p2.getName());
+      }
+    });
+
+    return sortedProperties;
   }
 
   private boolean isRequiredImport(String type) {
@@ -446,12 +478,15 @@ public class ObjcDialect implements Dialect {
               Collections.sort(sortedImports);
               return sortedImports;
             }
+
             if ("docString".equals(propertyName)) {
               return doxygenDocString(entity.getDocString());
             }
+
             else if ("typeNameCapitalized".equals(propertyName)) {
               return upcase(entity.getTypeName());
             }
+
             else if ("payloadName".equals(propertyName)) {
               return entity.getTypeName();
             }
@@ -466,22 +501,15 @@ public class ObjcDialect implements Dialect {
             }
 
             else if ("properties".equals(propertyName)) {
+              return getSortedProperties(entity);
+            }
 
-              Map<String, Property> propertyMap = new HashMap<String, Property>();
-              for (Property p : entity.getProperties()) {
-                propertyMap.put(p.getName(), p);
-              }
+            else if ("attributes".equals(propertyName)) {
+              return filterProperties(entity, false);
+            }
 
-              List<Property> sortedProperties = new ArrayList<Property>();
-              sortedProperties.addAll(propertyMap.values());
-              Collections.sort(sortedProperties, new Comparator<Property>() {
-                @Override
-                public int compare(Property p1, Property p2) {
-                  return p1.getName().compareTo(p2.getName());
-                }
-              });
-
-              return sortedProperties;
+            else if ("relationships".equals(propertyName)) {
+              return filterProperties(entity, true);
             }
 
             else if ("entityProperties".equals(propertyName)) {
