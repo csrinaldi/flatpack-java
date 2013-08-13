@@ -43,6 +43,9 @@ public class FlatPackRequestBase<R extends FlatPackRequest<R, X>, X>
   private FlatPackEntity<X> toSend;
   private final IoObserver ioObserver;
 
+  private static final String HEADER_CONTENT_TYPE = "Content-Type";
+  private static final String CONTENT_TYPE_JSON = "application/json";
+
   protected FlatPackRequestBase(ApiBase api, Type returnType,
       String method, String path, boolean hasPayload, Object... args) {
 
@@ -81,17 +84,21 @@ public class FlatPackRequestBase<R extends FlatPackRequest<R, X>, X>
 
     reader = ioObserver.observe(reader);
 
-    Throwable cause = null;
+    // if the response contains JSON, we attempt to unpack it into an entity
+    String contentType = conn.getHeaderField(HEADER_CONTENT_TYPE);
     FlatPackEntity<X> entity = null;
-    if (reader != null) {
-      try {
-        entity = getApi().getFlatPack().getUnpacker().unpack(returnType, reader, null);
-      } catch (IOException e) {
-        cause = e;
-        status = 0;
-      } catch (RuntimeException e) {
-        cause = e;
-        status = 0;
+    Throwable cause = null;
+    if (contentType.startsWith(CONTENT_TYPE_JSON)) {
+      if (reader != null) {
+        try {
+          entity = getApi().getFlatPack().getUnpacker().unpack(returnType, reader, null);
+        } catch (IOException e) {
+          cause = e;
+          status = 0;
+        } catch (RuntimeException e) {
+          cause = e;
+          status = 0;
+        }
       }
     }
 
@@ -110,7 +117,7 @@ public class FlatPackRequestBase<R extends FlatPackRequest<R, X>, X>
     if (getEntity() == null) {
       return;
     }
-    connection.setRequestProperty("Content-Type", "application/json; charset=UTF8");
+    connection.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON + "; charset=UTF8");
     Writer out = new OutputStreamWriter(connection.getOutputStream(), FlatPackTypes.UTF8);
     out = ioObserver.observe(out);
     getApi().getFlatPack().getPacker().pack(toSend, out);
