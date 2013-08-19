@@ -251,7 +251,8 @@ public class JavaScriptDialect implements Dialect {
         jsType = "Number";
         break;
       case LIST:
-        if (type.getListElement() != null && type.getListElement().getEnumValues() != null) {
+        if (type.getListElement() != null && (type.getListElement().getEnumValues() != null ||
+          type.getListElement().getName() == null)) {
           jsType = "Array";
         } else {
           jsType = "Backbone.Collection";
@@ -408,7 +409,8 @@ public class JavaScriptDialect implements Dialect {
         }
 
         else if ("listElementKind".equals(propertyName)) {
-          if (p.getType().getListElement() != null) {
+          if (p.getType().getListElement() != null &&
+            p.getType().getListElement().getName() != null) {
             return (packageName + "." + upcase(p.getType().getListElement().toString()));
           }
         }
