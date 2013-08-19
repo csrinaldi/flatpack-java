@@ -22,6 +22,9 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
+
+import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.security.Acl;
 import com.getperka.flatpack.security.AclGroup;
 import com.getperka.flatpack.security.AclGroups;
@@ -38,6 +41,9 @@ public class SecurityGroups {
   private final ConcurrentMap<Class<?>, DeclaredSecurityGroups> entityGroups =
       new ConcurrentHashMap<Class<?>, DeclaredSecurityGroups>();
 
+  @FlatPackLogger
+  @Inject
+  Logger logger;
   @Inject
   Provider<DeclaredSecurityGroups> entityGroupsProvider;
   @Inject
@@ -107,7 +113,7 @@ public class SecurityGroups {
         for (String groupName : acl.groups()) {
           SecurityGroup group = allGroups.resolve(groupName);
           if (group == null) {
-            // TODO: Emit warning about unresolved group name
+            logger.warn("Unresolved AclGroup name {} found in {}", groupName, elt);
             continue;
           }
           Set<CrudOperation> ops = EnumSet.noneOf(CrudOperation.class);
@@ -178,7 +184,7 @@ public class SecurityGroups {
     for (Property prop : typeContext.extractProperties(entityType)) {
       if (prop.isInheritGroups()) {
         DeclaredSecurityGroups inherited = getSecurityGroups(prop.getGetter().getReturnType());
-        toReturn.getInherited().put(prop.getName(), inherited);
+        toReturn.getInherited().put(prop, inherited);
       }
     }
 
@@ -234,6 +240,10 @@ public class SecurityGroups {
 
       // Look any inherited group with the same simple name
       for (DeclaredSecurityGroups g : groups.getInherited().values()) {
+        // Avoid infinite loops for self-referential groups
+        if (groups.equals(g)) {
+          continue;
+        }
         // Calling g.resolve() uses the group's resolution cache
         toReturn = g.resolve(part);
         if (toReturn != null) {

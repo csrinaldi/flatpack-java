@@ -96,6 +96,9 @@ public class PropertyPath extends BaseHasUuid {
     try {
       Property prop = properties.get(0);
       Object currentValue = prop.getGetter().invoke(target);
+      if (currentValue == null) {
+        return false;
+      }
       switch (prop.getType().getJsonKind()) {
         case STRING:
           return evaluate(currentValue, properties.subList(1, properties.size()), receiver);

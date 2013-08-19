@@ -71,7 +71,7 @@ public class DeserializationContext extends BaseContext {
    */
   public boolean checkAccess(HasUuid object) {
     // Allow newly-instantiated objects
-    if (!wasResolved(object)) {
+    if (wasResolved(object) && security.may(getPrincipal(), object, CrudOperation.CREATE)) {
       return true;
     }
     if (security.may(getPrincipal(), object, CrudOperation.UPDATE)) {

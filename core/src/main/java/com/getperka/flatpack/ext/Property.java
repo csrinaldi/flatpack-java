@@ -129,15 +129,6 @@ public class Property extends BaseHasUuid {
       toReturn.embedded = hasAnnotationWithSimpleName(method, "Embedded");
       toReturn.inheritGroups = method.isAnnotationPresent(InheritGroups.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
-
-      DeclaredSecurityGroups allGroups = typeContext.getSecurityGroups(declaring);
-      toReturn.groupPermissions = security.getPermissions(allGroups, method);
-      if (toReturn.groupPermissions == null) {
-        toReturn.groupPermissions = security.getPermissions(allGroups, declaring);
-      }
-      if (toReturn.groupPermissions == null) {
-        toReturn.groupPermissions = GroupPermissions.permitAll();
-      }
     }
   }
 

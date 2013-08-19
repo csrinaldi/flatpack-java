@@ -272,6 +272,24 @@ public class TypeContext {
       }
     }
 
+    /*
+     * Wire up security information. Because properties can refer to one another via group
+     * inheritance it is necessary to perform this calculation after the properties have been fully
+     * constructed.
+     */
+    for (Property p : toReturn) {
+      DeclaredSecurityGroups allGroups = securityGroupsFactory.getSecurityGroups(clazz);
+      GroupPermissions groupPermissions =
+          securityGroupsFactory.getPermissions(allGroups, p.getGetter());
+      if (groupPermissions == null) {
+        groupPermissions = securityGroupsFactory.getPermissions(allGroups, clazz);
+      }
+      if (groupPermissions == null) {
+        groupPermissions = GroupPermissions.permitAll();
+      }
+      p.setGroupPermissions(groupPermissions);
+    }
+
     return unmodifiable;
   }
 

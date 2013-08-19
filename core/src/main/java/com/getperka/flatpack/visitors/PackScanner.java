@@ -58,10 +58,8 @@ public class PackScanner extends FlatPackVisitor {
 
   @Override
   public <T extends HasUuid> void endVisit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
-    if (entity.equals(stack.peek())) {
-      stack.pop();
-      context.popPath();
-    }
+    stack.pop();
+    context.popPath();
   }
 
   @Override
@@ -81,9 +79,11 @@ public class PackScanner extends FlatPackVisitor {
 
   @Override
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
-    // TODO: EntitySecurity.mayRead() ?
     context.pushPath("." + entity.getUuid());
     stack.push(entity);
+    if (!security.may(context.getPrincipal(), entity, CrudOperation.READ)) {
+      return false;
+    }
     return context.add(entity);
   }
 }

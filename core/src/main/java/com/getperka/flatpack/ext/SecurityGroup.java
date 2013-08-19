@@ -1,5 +1,7 @@
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -20,10 +22,16 @@ public class SecurityGroup {
   private static final SecurityGroup EMPTY_GROUP =
       new SecurityGroup(EMPTY, "No principals", Collections.<PropertyPath> emptyList());
 
+  /**
+   * Returns a singleton group representing all principals.
+   */
   public static SecurityGroup all() {
     return ALL_GROUP;
   }
 
+  /**
+   * Returns a singleton group representing no principals.
+   */
   public static SecurityGroup empty() {
     return EMPTY_GROUP;
   }
@@ -31,6 +39,18 @@ public class SecurityGroup {
   private String description;
   private List<PropertyPath> paths = Collections.emptyList();
   private String name;
+
+  SecurityGroup(SecurityGroup parent, List<Property> pathPrefix) {
+    this.description = parent.description;
+    this.name = parent.name;
+    this.paths = listForAny();
+    for (PropertyPath path : parent.paths) {
+      List<Property> newProperties = listForAny();
+      newProperties.addAll(pathPrefix);
+      newProperties.addAll(path.getPath());
+      paths.add(new PropertyPath(newProperties));
+    }
+  }
 
   SecurityGroup(String name, String description, List<PropertyPath> paths) {
     this.description = description;

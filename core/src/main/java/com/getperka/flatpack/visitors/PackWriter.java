@@ -219,6 +219,10 @@ public class PackWriter extends FlatPackVisitor {
   @Override
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
+    if (!security.may(context.getPrincipal(), entity, CrudOperation.READ)) {
+      stack.push(null);
+      return false;
+    }
     PackWriter.State state = new State();
     state.entity = entity;
 

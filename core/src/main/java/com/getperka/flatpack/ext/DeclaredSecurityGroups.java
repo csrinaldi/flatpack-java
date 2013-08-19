@@ -1,10 +1,13 @@
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.setForLookup;
 import static com.getperka.flatpack.util.FlatPackCollections.sortedMapForIteration;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -12,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
 
-import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.security.InheritGroups;
 
 /**
@@ -40,7 +42,7 @@ public class DeclaredSecurityGroups implements Iterable<SecurityGroup> {
   }
 
   private Map<String, SecurityGroup> declared = Collections.emptyMap();
-  private Map<String, DeclaredSecurityGroups> inherited = Collections.emptyMap();
+  private Map<Property, DeclaredSecurityGroups> inherited = Collections.emptyMap();
   private Map<String, SecurityGroup> resolved = new ConcurrentHashMap<String, SecurityGroup>();
   @Inject
   private SecurityGroups securityGroups;
@@ -57,7 +59,7 @@ public class DeclaredSecurityGroups implements Iterable<SecurityGroup> {
   public void copyFrom(DeclaredSecurityGroups other) {
     declared = sortedMapForIteration();
     declared.putAll(other.declared);
-    inherited = sortedMapForIteration();
+    inherited = mapForIteration();
     inherited.putAll(other.inherited);
   }
 
@@ -72,7 +74,7 @@ public class DeclaredSecurityGroups implements Iterable<SecurityGroup> {
    * The security groups inherited by the entity type via an {@link InheritGroups} annotation. The
    * map key is the group path prefix.
    */
-  public Map<String, DeclaredSecurityGroups> getInherited() {
+  public Map<Property, DeclaredSecurityGroups> getInherited() {
     return inherited;
   }
 
@@ -80,16 +82,63 @@ public class DeclaredSecurityGroups implements Iterable<SecurityGroup> {
     return declared.isEmpty() && inherited.isEmpty();
   }
 
+  /**
+   * Iterate over both declared and inherited {@link SecurityGroup} instances. In the case of
+   * non-trivial group inheritance, this iterator is guaranteed to return any particular
+   * SecurityGroup at most once.
+   */
   @Override
   public Iterator<SecurityGroup> iterator() {
+    return iterator(Collections.<Property> emptyList());
+  }
+
+  /**
+   * Returns the {@link SecurityGroup} with the given relative name, or
+   * {@code SecurityGroup#empty()} if one is not defined.
+   * 
+   * @param name the name of the security group, which may be a chained reference (e.g.
+   *          {@code manager.director}).
+   */
+  public SecurityGroup resolve(String name) {
+    SecurityGroup toReturn = resolved.get(name);
+    if (toReturn != null) {
+      return toReturn;
+    }
+
+    toReturn = securityGroups.resolve(this, name);
+    if (toReturn != null) {
+      resolved.put(name, toReturn);
+    }
+    return toReturn;
+  }
+
+  void setDeclared(Map<String, SecurityGroup> declared) {
+    this.declared = declared;
+  }
+
+  void setInherited(Map<Property, DeclaredSecurityGroups> inherited) {
+    this.inherited = inherited;
+  }
+
+  /**
+   * Returns an iterator if the current {@link DeclaredSecurityGroups} has not yet been visited.
+   * This method correctly handles self-referential group declarations.
+   */
+  private Iterator<SecurityGroup> iterator(final List<Property> prefix) {
+    // If we're entering a cycle, return an empty iterator
+    if (prefix.size() == 4) {
+      return Collections.<SecurityGroup> emptyList().iterator();
+    }
     return new Iterator<SecurityGroup>() {
       private Iterator<SecurityGroup> current = declared.values().iterator();
-      private Iterator<DeclaredSecurityGroups> more = inherited.values().iterator();
+      private Iterator<Map.Entry<Property, DeclaredSecurityGroups>> more = inherited.entrySet()
+          .iterator();
       private SecurityGroup next;
       private boolean hasNext;
       private Set<SecurityGroup> seen = setForLookup();
 
       {
+        // Initialize the state of this iterator
         pump();
       }
 
@@ -122,9 +171,17 @@ public class DeclaredSecurityGroups implements Iterable<SecurityGroup> {
           if (current.hasNext()) {
             // Try consuming from the current iterator
             maybeNext = current.next();
+            // Prepend any current prefix
+            if (!prefix.isEmpty()) {
+              maybeNext = new SecurityGroup(maybeNext, prefix);
+            }
           } else if (more.hasNext()) {
             // Otherwise, switch to the next inherited SecurityGroups and restart
-            current = more.next().iterator();
+            Map.Entry<Property, DeclaredSecurityGroups> entry = more.next();
+            List<Property> nextPrefix = listForAny();
+            nextPrefix.addAll(prefix);
+            nextPrefix.add(entry.getKey());
+            current = entry.getValue().iterator(nextPrefix);
             continue;
           } else {
             // Nothing left to return
@@ -141,31 +198,5 @@ public class DeclaredSecurityGroups implements Iterable<SecurityGroup> {
         }
       }
     };
-  }
-
-  /**
-   * Returns the {@link SecurityGroup} with the given relative name, or
-   * {@code SecurityGroup#empty()} if one is not defined.
-   * 
-   * @param name the name of the security group, which may be a chained reference (e.g.
-   *          {@code manager.director}).
-   */
-  public SecurityGroup resolve(String name) {
-    SecurityGroup toReturn = resolved.get(name);
-    if (toReturn != null) {
-      return toReturn;
-    }
-    
-    toReturn = securityGroups.resolve(this, name);
-    resolved.put(name, toReturn);
-    return toReturn;
-  }
-
-  void setDeclared(Map<String, SecurityGroup> declared) {
-    this.declared = declared;
-  }
-
-  void setInherited(Map<String, DeclaredSecurityGroups> inherited) {
-    this.inherited = inherited;
   }
 }
