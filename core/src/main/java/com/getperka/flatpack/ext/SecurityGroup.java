@@ -5,6 +5,7 @@ import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import java.util.Collections;
 import java.util.List;
 
+import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.security.AclGroup;
 
 /**
@@ -12,11 +13,13 @@ import com.getperka.flatpack.security.AclGroup;
  * 
  * @see AclGroup
  */
-public class SecurityGroup {
+public class SecurityGroup extends BaseHasUuid {
   private String description;
   private boolean implicitSecurityGroup;
   private List<PropertyPath> paths = Collections.emptyList();
   private String name;
+
+  SecurityGroup() {}
 
   SecurityGroup(SecurityGroup parent, List<Property> pathPrefix) {
     this.description = parent.description;
@@ -63,7 +66,19 @@ public class SecurityGroup {
     return name + " " + paths;
   }
 
+  void setDescription(String description) {
+    this.description = description;
+  }
+
   void setImplicitSecurityGroup(boolean implicitSecurityGroup) {
     this.implicitSecurityGroup = implicitSecurityGroup;
+  }
+
+  void setName(String name) {
+    this.name = name;
+  }
+
+  void setPaths(List<PropertyPath> paths) {
+    this.paths = paths;
   }
 }

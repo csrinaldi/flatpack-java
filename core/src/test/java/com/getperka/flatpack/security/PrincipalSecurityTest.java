@@ -28,6 +28,7 @@ import com.getperka.flatpack.TypeSource;
 import com.getperka.flatpack.ext.DeclaredSecurityGroups;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
@@ -120,6 +121,7 @@ public class PrincipalSecurityTest {
       return name;
     }
 
+    @AclRef("definedRef")
     public List<Person> getPeers() {
       return peers;
     }
@@ -232,6 +234,19 @@ public class PrincipalSecurityTest {
     assertEquals(declared.getInherited().keySet().toString(), 1, declared.getInherited().size());
     assertEquals("boss", declared.getInherited().keySet().iterator().next().getName());
     assertSame(declared, declared.getInherited().values().iterator().next());
+
+    // Test use of AclDef / AclRef
+    Map<SecurityGroup, Set<CrudOperation>> map =
+        personProps.get("peers").getGroupPermissions().getOperations();
+    assertEquals(1, map.size());
+    assertEquals("defined", map.keySet().iterator().next().getName());
+  }
+
+  @Test
+  public void testNobody() {
+    Person p = new Person();
+    check(new MyPrincipal(new Person()), p, null, true, CrudOperation.READ);
+    check(new MyPrincipal(new Person()), p, null, false, CrudOperation.UPDATE);
   }
 
   @Test

@@ -63,7 +63,6 @@ import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.Embedded;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.FlatPackEntity;
-import com.getperka.flatpack.InheritPrincipal;
 import com.getperka.flatpack.JsonTypeName;
 import com.getperka.flatpack.PersistenceAware;
 import com.getperka.flatpack.PostUnpack;
@@ -121,7 +120,7 @@ public class JavaDialect implements Dialect {
       ApiBase.class, Arrays.class, ConnectionRequestBase.class, Collections.class, DirtyFlag.class,
       Embedded.class, FlatPack.class, FlatPackCollections.class, FlatPackEntity.class,
       FlatPackRequest.class, FlatPackRequestBase.class, FlatPackTypes.class, HashSet.class,
-      HttpURLConnection.class, InheritPrincipal.class, IOException.class, JsonTypeName.class,
+      HttpURLConnection.class, IOException.class, JsonTypeName.class,
       PermitAll.class, PersistenceAware.class, PostUnpack.class, Request.class, RolesAllowed.class,
       Set.class, SparseCollection.class, SuppressDefaultValue.class, TypeReference.class,
       TypeSource.class);
@@ -449,13 +448,9 @@ public class JavaDialect implements Dialect {
         Property p = (Property) o;
         if ("getterName".equals(propertyName)) {
           return upcase(p.getName());
-        } else if ("getterPermitAll".equals(propertyName)) {
-          return Collections.singleton("*").equals(p.getGetterRoleNames());
         } else if ("needsImplied".equals(propertyName)) {
           // Returns true if the property has @Implies / @OneToMany and is a list
           return p.getImpliedProperty() != null && p.getType().getListElement() != null;
-        } else if ("setterPermitAll".equals(propertyName)) {
-          return Collections.singleton("*").equals(p.getSetterRoleNames());
         }
         return super.getProperty(interp, self, o, property, propertyName);
       }

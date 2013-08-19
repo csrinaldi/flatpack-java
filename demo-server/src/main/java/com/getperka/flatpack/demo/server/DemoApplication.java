@@ -104,13 +104,6 @@ public class DemoApplication extends Application {
          * properties that have an @InheritPrincipal chain back to the Customer.
          */
         .withPrincipalMapper(new DemoPrincipalMapper())
-        /*
-         * A RoleMapper enables role-based property access, which restricts property getters and
-         * setters based on @PermitAll / @DenyAll / @RolesAllowed annotations. Beyond just simple
-         * security measures, roles can be used to create sets of properties to reduce payload sizes
-         * (e.g. "CustomerSummary" vs. "CustomerDetail").
-         */
-        .withRoleMapper(new DemoRoleMapper())
         .withVerbose(true);
     // The FlatPackResolver makes a FlatPack instance available through the Resources interface
     toReturn.add(new FlatPackResolver(configuration));

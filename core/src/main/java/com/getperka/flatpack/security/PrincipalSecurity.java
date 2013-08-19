@@ -15,9 +15,9 @@ import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
+import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.PropertyPath.Receiver;
 import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.PackScoped;
 

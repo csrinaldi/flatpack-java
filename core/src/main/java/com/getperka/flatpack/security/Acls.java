@@ -8,6 +8,9 @@ import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+/**
+ * Allows multiple {@link Acl} annotations to be applied to a type or method.
+ */
 @Documented
 @Retention(RUNTIME)
 @Target({ TYPE, METHOD })

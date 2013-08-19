@@ -61,11 +61,11 @@ import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.dto.TypeDescription;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
+import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.inject.HasInjector;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
+import com.getperka.flatpack.security.AclGroup;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
@@ -88,13 +88,11 @@ public class ApiDescriber {
   private Set<String> limitRoles;
   private final Map<String, Class<? extends HasUuid>> payloadNamesToClasses = mapForLookup();
   private final Map<Property, EntityDescription> propertiesToEntities = mapForLookup();
-  private final PropertySecurity propertySecurity;
   private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
 
   public ApiDescriber(FlatPack flatpack, Collection<Method> apiMethods) {
     this.apiMethods = apiMethods;
     ctx = flatpack.getTypeContext();
-    propertySecurity = ((HasInjector) flatpack).getInjector().getInstance(PropertySecurity.class);
   }
 
   /**
@@ -343,10 +341,11 @@ public class ApiDescriber {
       // Filter by roles
       if (limitRoles != null) {
         Set<String> interestingRoles = new HashSet<String>();
-        interestingRoles.addAll(propertySecurity.getGetterRoleNames(prop));
-        interestingRoles.addAll(propertySecurity.getSetterRoleNames(prop));
+        for (SecurityGroup group : prop.getGroupPermissions().getOperations().keySet()) {
+          interestingRoles.add(group.getName());
+        }
         // Ignore the property if it's not a @PermitAll and it is disjoint from the filter roles
-        if (Collections.disjoint(interestingRoles, PropertySecurity.allRoleNames) &&
+        if (Collections.disjoint(interestingRoles, Collections.singleton(AclGroup.ALL)) &&
           Collections.disjoint(interestingRoles, limitRoles)) {
           it.remove();
           continue;

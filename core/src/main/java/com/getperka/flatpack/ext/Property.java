@@ -45,7 +45,6 @@ public class Property extends BaseHasUuid {
    * Constructs {@link Property} instances.
    */
   static class Builder {
-    private Class<?> declaring;
     @Inject
     private Property prop;
     @Inject
@@ -93,7 +92,6 @@ public class Property extends BaseHasUuid {
     public Builder withGetter(Method getter) {
       getter.setAccessible(true);
       prop.getter = getter;
-      declaring = getter.getDeclaringClass();
 
       if (prop.enclosingTypeName == null) {
         Class<?> enclosingType = getter.getDeclaringClass();
@@ -116,7 +114,6 @@ public class Property extends BaseHasUuid {
     public Builder withSetter(Method setter) {
       setter.setAccessible(true);
       prop.setter = setter;
-      declaring = setter.getDeclaringClass();
 
       if (prop.enclosingTypeName == null) {
         Class<?> enclosingType = setter.getDeclaringClass();

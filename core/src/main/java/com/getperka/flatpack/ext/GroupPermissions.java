@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.security.Acl;
 import com.getperka.flatpack.security.CrudOperation;
 
@@ -13,7 +14,8 @@ import com.getperka.flatpack.security.CrudOperation;
  * 
  * @see Acl
  */
-public class GroupPermissions {
+public class GroupPermissions extends BaseHasUuid {
+
   private Map<SecurityGroup, Set<CrudOperation>> operations = Collections.emptyMap();
 
   public Map<SecurityGroup, Set<CrudOperation>> getOperations() {

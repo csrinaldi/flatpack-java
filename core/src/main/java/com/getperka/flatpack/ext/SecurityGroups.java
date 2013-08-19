@@ -5,8 +5,10 @@ import static com.getperka.flatpack.security.AclGroup.EMPTY;
 import static com.getperka.flatpack.security.AclGroup.THIS;
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
+import static com.getperka.flatpack.util.FlatPackCollections.sortedMapForIteration;
 
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,8 +32,11 @@ import org.slf4j.Logger;
 
 import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.security.Acl;
+import com.getperka.flatpack.security.AclDef;
+import com.getperka.flatpack.security.AclDefs;
 import com.getperka.flatpack.security.AclGroup;
 import com.getperka.flatpack.security.AclGroups;
+import com.getperka.flatpack.security.AclRef;
 import com.getperka.flatpack.security.Acls;
 import com.getperka.flatpack.security.CrudOperation;
 
@@ -59,7 +64,7 @@ public class SecurityGroups {
       new SecurityGroup(ALL, "All principals", Collections.<PropertyPath> emptyList());
   private final SecurityGroup groupEmpty =
       new SecurityGroup(EMPTY, "No principals", Collections.<PropertyPath> emptyList());
-  private final SecurityGroup groupThis =
+  private final SecurityGroup groupReflexive =
       new SecurityGroup(THIS, "The principal that represents the entity",
           Collections.singletonList(new PropertyPath(Collections.<Property> emptyList())));
 
@@ -91,22 +96,6 @@ public class SecurityGroups {
    * Requires injection.
    */
   SecurityGroups() {}
-
-  /**
-   * Denies all requests.
-   * 
-   * @see DenyAll
-   */
-  public GroupPermissions getPermissionsNone() {
-    return permissionsDenyAll;
-  }
-
-  public SecurityGroup getGroupGlobal(String name) {
-    SecurityGroup toReturn = getGroup(getClass(), name, "Global group " + name,
-        Collections.<PropertyPath> emptyList());
-    toReturn.setImplicitSecurityGroup(true);
-    return toReturn;
-  }
 
   /**
    * Create (or find) a group declared by a particular type.
@@ -145,6 +134,21 @@ public class SecurityGroups {
     return groupEmpty;
   }
 
+  public SecurityGroup getGroupGlobal(String name) {
+    SecurityGroup toReturn = getGroup(getClass(), name, "Global group " + name,
+        Collections.<PropertyPath> emptyList());
+    toReturn.setImplicitSecurityGroup(true);
+    return toReturn;
+  }
+
+  /**
+   * Returns a singleton group for the reflexive group (i.e. the principal that represents the
+   * entity).
+   */
+  public SecurityGroup getGroupReflexive() {
+    return groupReflexive;
+  }
+
   /**
    * Extract the {@link Acl} and/or {@link Acls} declared by a particular class or method. This
    * method is also aware of {@link PermitAll} and {@link DenyAll} annotations.
@@ -162,6 +166,22 @@ public class SecurityGroups {
     }
 
     List<Acl> toConvert = listForAny();
+
+    // Look up and convert any ACL preset references
+    AclRef refs = elt.getAnnotation(AclRef.class);
+    if (refs != null) {
+      Map<String, List<Acl>> defs = extractAclDefs(elt);
+      for (String ref : refs.value()) {
+        List<Acl> list = defs.get(ref);
+        if (list == null) {
+          logger.warn("Unresolved AclRef name {} found in {}", ref, elt);
+        } else {
+          toConvert.addAll(list);
+        }
+      }
+    }
+
+    // Look for any Acls / Acl annotations on the target
     Acls acls = elt.getAnnotation(Acls.class);
     if (acls != null) {
       toConvert.addAll(Arrays.asList(acls.value()));
@@ -170,6 +190,8 @@ public class SecurityGroups {
     if (annotation != null) {
       toConvert.add(annotation);
     }
+
+    // Convert any acls that were found
     if (!toConvert.isEmpty()) {
       Map<SecurityGroup, Set<CrudOperation>> map = mapForIteration();
       for (Acl acl : toConvert) {
@@ -188,6 +210,7 @@ public class SecurityGroups {
       p.setOperations(Collections.unmodifiableMap(map));
     }
 
+    // A DenyAll has the highest precedence
     if (elt.isAnnotationPresent(DenyAll.class)) {
       p = permissionsDenyAll;
     }
@@ -196,11 +219,21 @@ public class SecurityGroups {
   }
 
   /**
-   * Returns a singleton group for the reflexive group (i.e. the principal that represents the
-   * entity).
+   * Allows all requests.
+   * 
+   * @see PermitAll
    */
-  public SecurityGroup getGroupReflexive() {
-    return groupThis;
+  public GroupPermissions getPermissionsAll() {
+    return permissionsPermitAll;
+  }
+
+  /**
+   * Denies all requests.
+   * 
+   * @see DenyAll
+   */
+  public GroupPermissions getPermissionsNone() {
+    return permissionsDenyAll;
   }
 
   /**
@@ -270,15 +303,6 @@ public class SecurityGroups {
   }
 
   /**
-   * Allows all requests.
-   * 
-   * @see PermitAll
-   */
-  public GroupPermissions getPermissionsAll() {
-    return permissionsPermitAll;
-  }
-
-  /**
    * Returns the {@link SecurityGroup} with the given relative name, or
    * {@code SecurityGroup#empty()} if one is not defined.
    * 
@@ -306,7 +330,7 @@ public class SecurityGroups {
     if (AclGroup.THIS.equals(parsed.get(0))) {
       switch (parsed.size()) {
         case 1:
-          return groupThis;
+          return groupReflexive;
         default:
           throw new IllegalArgumentException("The reflexive group \"this\" cannot be dereferenced");
       }
@@ -385,6 +409,50 @@ public class SecurityGroups {
     }
 
     return new PropertyPath(toReturn);
+  }
+
+  /**
+   * Extracts any {@link AclDef} or {@link AclDefs} annotations on a method, class or package.
+   */
+  private Map<String, List<Acl>> extractAclDefs(AnnotatedElement elt) {
+
+    if (elt instanceof Method) {
+      return extractAclDefs(((Method) elt).getDeclaringClass());
+    }
+
+    Map<String, List<Acl>> toReturn = sortedMapForIteration();
+
+    if (elt instanceof Class) {
+      // Extract all defs from enclosing packages
+      String[] parts = ((Class<?>) elt).getPackage().getName().split(Pattern.quote("."));
+      StringBuilder sb = new StringBuilder();
+      for (String part : parts) {
+        if (sb.length() > 0) {
+          sb.append(".");
+        }
+        sb.append(part);
+        Package pkg = Package.getPackage(sb.toString());
+        if (pkg != null) {
+          toReturn.putAll(extractAclDefs(pkg));
+        }
+      }
+    }
+
+    List<AclDef> toMap = listForAny();
+    AclDefs defs = elt.getAnnotation(AclDefs.class);
+    if (defs != null) {
+      toMap.addAll(Arrays.asList(defs.value()));
+    }
+    AclDef def = elt.getAnnotation(AclDef.class);
+    if (def != null) {
+      toMap.add(def);
+    }
+
+    for (AclDef d : toMap) {
+      toReturn.put(d.name(), Arrays.asList(d.acl()));
+    }
+
+    return toReturn;
   }
 
   private List<String> parseName(String name) {
