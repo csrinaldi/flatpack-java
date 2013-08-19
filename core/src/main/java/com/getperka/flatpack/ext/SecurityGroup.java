@@ -13,30 +13,8 @@ import com.getperka.flatpack.security.AclGroup;
  * @see AclGroup
  */
 public class SecurityGroup {
-
-  public static final String ALL = "*";
-  public static final String EMPTY = "";
-
-  private static final SecurityGroup ALL_GROUP =
-      new SecurityGroup(ALL, "All principals", Collections.<PropertyPath> emptyList());
-  private static final SecurityGroup EMPTY_GROUP =
-      new SecurityGroup(EMPTY, "No principals", Collections.<PropertyPath> emptyList());
-
-  /**
-   * Returns a singleton group representing all principals.
-   */
-  public static SecurityGroup all() {
-    return ALL_GROUP;
-  }
-
-  /**
-   * Returns a singleton group representing no principals.
-   */
-  public static SecurityGroup empty() {
-    return EMPTY_GROUP;
-  }
-
   private String description;
+  private boolean implicitSecurityGroup;
   private List<PropertyPath> paths = Collections.emptyList();
   private String name;
 
@@ -74,7 +52,7 @@ public class SecurityGroup {
   }
 
   public boolean isImplicitSecurityGroup() {
-    return false;
+    return implicitSecurityGroup;
   }
 
   /**
@@ -83,5 +61,9 @@ public class SecurityGroup {
   @Override
   public String toString() {
     return name + " " + paths;
+  }
+
+  void setImplicitSecurityGroup(boolean implicitSecurityGroup) {
+    this.implicitSecurityGroup = implicitSecurityGroup;
   }
 }

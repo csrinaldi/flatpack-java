@@ -23,12 +23,10 @@ import com.getperka.flatpack.PostUnpack;
 import com.getperka.flatpack.PreUnpack;
 import com.getperka.flatpack.security.Acl;
 import com.getperka.flatpack.security.AclGroup;
-import com.getperka.flatpack.security.AclGroups;
 import com.getperka.flatpack.security.Acls;
 import com.google.gson.JsonObject;
 
-@AclGroups(@AclGroup(name = "self", path = { "" }))
-@Acls(@Acl(groups = "self"))
+@Acls(@Acl(groups = AclGroup.THIS))
 public class Employee extends Person {
   private int employeeNumber;
   public boolean employeePreUnpack;

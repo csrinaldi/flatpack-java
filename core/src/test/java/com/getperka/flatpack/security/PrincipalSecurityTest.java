@@ -28,7 +28,6 @@ import com.getperka.flatpack.TypeSource;
 import com.getperka.flatpack.ext.DeclaredSecurityGroups;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
@@ -92,12 +91,11 @@ public class PrincipalSecurityTest {
 
   @AclGroups({
       @AclGroup(name = "boss", path = "boss"),
-      @AclGroup(name = "self", path = ""),
       @AclGroup(name = "peer", path = "peers")
   })
   @Acls({
-      @Acl(groups = SecurityGroup.ALL, ops = CrudOperation.READ),
-      @Acl(groups = "self")
+      @Acl(groups = AclGroup.ALL, ops = CrudOperation.READ),
+      @Acl(groups = AclGroup.THIS)
   })
   static class Person extends BaseHasUuid {
     private Person boss;
@@ -200,11 +198,17 @@ public class PrincipalSecurityTest {
     Person b = new Person();
     b.setPeers(Collections.singletonList(bPeer));
 
+    Person pPeer = new Person();
+
     Person p = new Person();
     p.setBoss(b);
+    p.setPeers(Collections.singletonList(pPeer));
 
     // Verify the boss's peer can edit the child object's property
     check(new MyPrincipal(bPeer), p, personProps.get("boss"), true, ALL_OPS);
+
+    // Verify that the person's peers cannot edit the property
+    check(new MyPrincipal(pPeer), p, personProps.get("boss"), false, ALL_OPS);
   }
 
   @Test
@@ -220,21 +224,22 @@ public class PrincipalSecurityTest {
   public void testGroups() {
     DeclaredSecurityGroups declared = groups.getSecurityGroups(Person.class);
     declared.getDeclared();
-    assertEquals(declared.getDeclared().keySet().toString(), 3, declared.getDeclared().size());
+    assertEquals(declared.getDeclared().keySet().toString(), 2, declared.getDeclared().size());
     assertNotNull(declared.getDeclared().get("boss"));
     assertNotNull(declared.getDeclared().get("peer"));
-    assertNotNull(declared.getDeclared().get("self"));
 
     assertTrue(personProps.get("boss").isInheritGroups());
     assertEquals(declared.getInherited().keySet().toString(), 1, declared.getInherited().size());
-    assertNotNull(declared.getInherited().get("boss"));
-    assertSame(declared, declared.getInherited().get("boss"));
+    assertEquals("boss", declared.getInherited().keySet().iterator().next().getName());
+    assertSame(declared, declared.getInherited().values().iterator().next());
   }
 
   @Test
   public void testSelf() {
     Person p = new Person();
     checkMay(p, ALL_OPS);
+    // Check property with no particular annotation
+    checkMay(p, personProps.get("name"), ALL_OPS);
     // Check property inherited from BaseHasUuid
     checkMay(p, personProps.get("uuid"), ALL_OPS);
     // Verify that it can't edit its own boss property

@@ -1,12 +1,11 @@
 package com.getperka.flatpack.security;
 
-import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 
 import java.security.Principal;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -25,12 +24,17 @@ import com.getperka.flatpack.inject.PackScoped;
 @PackScoped
 public class PrincipalSecurity implements Security {
   static class PrincipalEntityKey {
-    private final Principal principal;
     private final HasUuid entity;
+    private final SecurityGroup group;
+    private final Principal principal;
+    private final int hashCode;
 
-    public PrincipalEntityKey(Principal principal, HasUuid entity) {
-      this.principal = principal;
+    public PrincipalEntityKey(HasUuid entity, SecurityGroup group, Principal principal) {
       this.entity = entity;
+      this.group = group;
+      this.principal = principal;
+
+      hashCode = entity.hashCode() * 3 + group.hashCode() * 5 + principal.hashCode() * 7;
     }
 
     @Override
@@ -43,16 +47,17 @@ public class PrincipalSecurity implements Security {
       }
       PrincipalEntityKey other = (PrincipalEntityKey) obj;
 
-      return principal.equals(other.principal) && entity.equals(other.entity);
+      return entity.equals(other.entity) && group.equals(other.group)
+        && principal.equals(other.principal);
     }
 
     @Override
     public int hashCode() {
-      return principal.hashCode() * 3 + entity.hashCode() * 5;
+      return hashCode;
     }
   }
 
-  private final Map<PrincipalEntityKey, List<SecurityGroup>> membershipCache = mapForLookup();
+  private final Map<PrincipalEntityKey, Boolean> memberCache = mapForLookup();
   @Inject
   private PrincipalMapper principalMapper;
   @Inject
@@ -65,6 +70,9 @@ public class PrincipalSecurity implements Security {
    */
   @Override
   public boolean may(Principal principal, HasUuid entity, CrudOperation op) {
+    if (!principalMapper.isAccessEnforced(principal, entity)) {
+      return true;
+    }
     DeclaredSecurityGroups groups = typeContext.getSecurityGroups(entity.getClass());
     if (groups == null) {
       return true;
@@ -79,6 +87,9 @@ public class PrincipalSecurity implements Security {
    */
   @Override
   public boolean may(Principal principal, HasUuid entity, Property property, CrudOperation op) {
+    if (!principalMapper.isAccessEnforced(principal, entity)) {
+      return true;
+    }
     GroupPermissions permissions = property.getGroupPermissions();
     if (permissions == null) {
       // Delegate to the entity-level permissions if no specific data is available
@@ -94,62 +105,41 @@ public class PrincipalSecurity implements Security {
       return true;
     }
 
-    List<SecurityGroup> memberships = getMemberships(principal, entity);
-    if (memberships.isEmpty()) {
-      memberships = Collections.singletonList(SecurityGroup.all());
-    }
-    for (SecurityGroup membership : memberships) {
-      if (permissions.allow(membership, op)) {
-        return true;
+    for (Map.Entry<SecurityGroup, Set<CrudOperation>> entry : permissions.getOperations()
+        .entrySet()) {
+      if (isMember(entity, entry.getKey(), principal)) {
+        // Don't simply return contains() since there may be other grops to test
+        if (entry.getValue().contains(op)) {
+          return true;
+        }
       }
     }
 
     return false;
   }
 
-  /**
-   * Determine which groups the a principal is in, relative to the specified entity. This method
-   * will memoize its results, since group evaluation may require non-trivial amounts of entity
-   * traversal.
-   */
-  private List<SecurityGroup> getMemberships(final Principal principal, HasUuid entity) {
-    PrincipalEntityKey key = new PrincipalEntityKey(principal, entity);
-    List<SecurityGroup> cached = membershipCache.get(key);
+  private boolean isMember(HasUuid entity, SecurityGroup group, final Principal principal) {
+    PrincipalEntityKey key = new PrincipalEntityKey(entity, group, principal);
+    Boolean cached = memberCache.get(key);
     if (cached != null) {
       return cached;
     }
 
-    DeclaredSecurityGroups allGroups = typeContext.getSecurityGroups(entity.getClass());
-    if (allGroups.isEmpty()) {
-      return Collections.emptyList();
-    }
-    final List<SecurityGroup> toReturn = listForAny();
-
-    // Add any global groups that the principal is a member of
-    List<String> globalGroups = principalMapper.getGlobalSecurityGroups(principal);
-    if (globalGroups != null && !globalGroups.isEmpty()) {
-      for (String globalName : globalGroups) {
-        SecurityGroup globalGroup = securityGroups.getGlobalGroup(globalName);
-        toReturn.add(globalGroup);
-      }
-    }
-
-    // Compute any explicit group mappings
-    for (final SecurityGroup group : allGroups) {
-      if (isMember(principal, group, entity)) {
-        toReturn.add(group);
-      }
-    }
-
-    return toReturn;
-  }
-
-  private boolean isMember(final Principal principal, SecurityGroup group, HasUuid entity) {
-    if (SecurityGroup.all().equals(group)) {
+    if (securityGroups.getGroupAll().equals(group)) {
+      memberCache.put(key, true);
       return true;
     }
-    if (SecurityGroup.empty().equals(group)) {
+    if (securityGroups.getGroupEmpty().equals(group)) {
+      memberCache.put(key, false);
       return false;
+    }
+
+    if (group.isImplicitSecurityGroup()) {
+      List<String> global = principalMapper.getGlobalSecurityGroups(principal);
+      if (global != null && global.contains(group.getName())) {
+        memberCache.put(key, true);
+        return true;
+      }
     }
 
     final boolean[] toReturn = { false };
@@ -169,6 +159,8 @@ public class PrincipalSecurity implements Security {
         }
       });
     }
+
+    memberCache.put(key, toReturn[0]);
     return toReturn[0];
   }
 }

@@ -1,7 +1,10 @@
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.security.AclGroup.ALL;
+import static com.getperka.flatpack.security.AclGroup.EMPTY;
+import static com.getperka.flatpack.security.AclGroup.THIS;
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
-import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 
 import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
@@ -11,6 +14,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -36,27 +40,72 @@ import com.getperka.flatpack.security.CrudOperation;
  */
 @Singleton
 public class SecurityGroups {
-  private final ConcurrentMap<String, SecurityGroup> allGroups =
-      new ConcurrentHashMap<String, SecurityGroup>();
-  private final ConcurrentMap<Class<?>, DeclaredSecurityGroups> entityGroups =
-      new ConcurrentHashMap<Class<?>, DeclaredSecurityGroups>();
 
   @FlatPackLogger
   @Inject
   Logger logger;
   @Inject
+  DeclaredSecurityGroups emptyGroups;
+  @Inject
   Provider<DeclaredSecurityGroups> entityGroupsProvider;
   @Inject
   TypeContext typeContext;
+
+  private final ConcurrentMap<String, SecurityGroup> allGroups =
+      new ConcurrentHashMap<String, SecurityGroup>();
+  private final ConcurrentMap<Class<?>, DeclaredSecurityGroups> entityGroups =
+      new ConcurrentHashMap<Class<?>, DeclaredSecurityGroups>();
+  private final SecurityGroup groupAll =
+      new SecurityGroup(ALL, "All principals", Collections.<PropertyPath> emptyList());
+  private final SecurityGroup groupEmpty =
+      new SecurityGroup(EMPTY, "No principals", Collections.<PropertyPath> emptyList());
+  private final SecurityGroup groupThis =
+      new SecurityGroup(THIS, "The principal that represents the entity",
+          Collections.singletonList(new PropertyPath(Collections.<Property> emptyList())));
+
+  private GroupPermissions permissionsDenyAll = new GroupPermissions() {
+    @Override
+    public Map<SecurityGroup, Set<CrudOperation>> getOperations() {
+      return Collections.emptyMap();
+    }
+
+    @Override
+    public String toString() {
+      return "Deny all";
+    }
+  };
+
+  private final GroupPermissions permissionsPermitAll = new GroupPermissions() {
+    {
+      setOperations(Collections.singletonMap(groupAll,
+          Collections.unmodifiableSet(EnumSet.allOf(CrudOperation.class))));
+    }
+
+    @Override
+    public String toString() {
+      return "Permit all";
+    }
+  };
 
   /**
    * Requires injection.
    */
   SecurityGroups() {}
 
-  public SecurityGroup getGlobalGroup(String name) {
-    return getGroup(getClass(), name, "Global group " + name,
+  /**
+   * Denies all requests.
+   * 
+   * @see DenyAll
+   */
+  public GroupPermissions getPermissionsNone() {
+    return permissionsDenyAll;
+  }
+
+  public SecurityGroup getGroupGlobal(String name) {
+    SecurityGroup toReturn = getGroup(getClass(), name, "Global group " + name,
         Collections.<PropertyPath> emptyList());
+    toReturn.setImplicitSecurityGroup(true);
+    return toReturn;
   }
 
   /**
@@ -83,6 +132,20 @@ public class SecurityGroups {
   }
 
   /**
+   * Returns a singleton group representing all principals.
+   */
+  public SecurityGroup getGroupAll() {
+    return groupAll;
+  }
+
+  /**
+   * Returns a singleton group representing no principals.
+   */
+  public SecurityGroup getGroupEmpty() {
+    return groupEmpty;
+  }
+
+  /**
    * Extract the {@link Acl} and/or {@link Acls} declared by a particular class or method. This
    * method is also aware of {@link PermitAll} and {@link DenyAll} annotations.
    * 
@@ -95,7 +158,7 @@ public class SecurityGroups {
     GroupPermissions p = null;
 
     if (elt.isAnnotationPresent(PermitAll.class)) {
-      p = GroupPermissions.permitAll();
+      p = permissionsPermitAll;
     }
 
     List<Acl> toConvert = listForAny();
@@ -108,7 +171,7 @@ public class SecurityGroups {
       toConvert.add(annotation);
     }
     if (!toConvert.isEmpty()) {
-      Map<SecurityGroup, Set<CrudOperation>> map = mapForLookup();
+      Map<SecurityGroup, Set<CrudOperation>> map = mapForIteration();
       for (Acl acl : toConvert) {
         for (String groupName : acl.groups()) {
           SecurityGroup group = allGroups.resolve(groupName);
@@ -126,10 +189,18 @@ public class SecurityGroups {
     }
 
     if (elt.isAnnotationPresent(DenyAll.class)) {
-      p = GroupPermissions.denyAll();
+      p = permissionsDenyAll;
     }
 
     return p;
+  }
+
+  /**
+   * Returns a singleton group for the reflexive group (i.e. the principal that represents the
+   * entity).
+   */
+  public SecurityGroup getGroupReflexive() {
+    return groupThis;
   }
 
   /**
@@ -142,7 +213,7 @@ public class SecurityGroups {
     }
 
     if (entityType == null || Object.class.equals(entityType)) {
-      return DeclaredSecurityGroups.empty();
+      return emptyGroups;
     }
 
     // Look up the groups inherited from the parent
@@ -163,6 +234,10 @@ public class SecurityGroups {
 
     // Create information for the directly-declared properties
     for (AclGroup group : groups.value()) {
+      if (group.path().length == 0) {
+        throw new IllegalArgumentException(entityType.getName() + " defines an AclGroup named "
+          + group.name() + " which does not specify any paths");
+      }
 
       List<PropertyPath> paths = new ArrayList<PropertyPath>();
       for (String path : group.path()) {
@@ -195,6 +270,15 @@ public class SecurityGroups {
   }
 
   /**
+   * Allows all requests.
+   * 
+   * @see PermitAll
+   */
+  public GroupPermissions getPermissionsAll() {
+    return permissionsPermitAll;
+  }
+
+  /**
    * Returns the {@link SecurityGroup} with the given relative name, or
    * {@code SecurityGroup#empty()} if one is not defined.
    * 
@@ -202,39 +286,55 @@ public class SecurityGroups {
    *          {@code manager.director}).
    */
   public SecurityGroup resolve(DeclaredSecurityGroups groups, String name) {
-
     SecurityGroup toReturn;
 
     List<String> parsed = parseName(name);
 
     // Handle special case of * and *.foo
-    if (SecurityGroup.ALL.equals(parsed.get(0))) {
+    if (AclGroup.ALL.equals(parsed.get(0))) {
       switch (parsed.size()) {
         case 1:
-          return SecurityGroup.all();
+          return groupAll;
         case 2:
-          return getGlobalGroup(parsed.get(1));
+          return getGroupGlobal(parsed.get(1));
         default:
           // Should be prevented by name parsing code
           throw new UnsupportedOperationException();
       }
     }
 
+    if (AclGroup.THIS.equals(parsed.get(0))) {
+      switch (parsed.size()) {
+        case 1:
+          return groupThis;
+        default:
+          throw new IllegalArgumentException("The reflexive group \"this\" cannot be dereferenced");
+      }
+    }
+
+    List<Property> propertyPrefix = listForAny();
     for (int i = 0, j = parsed.size(); i < j; i++) {
       String part = parsed.get(i);
 
       // If we're in the middle of a chain, a.b.c, then just look for inherited groups
       if (i < j - 1) {
-        groups = groups.getInherited().get(part);
-        if (groups == null) {
-          return null;
+        for (Entry<Property, DeclaredSecurityGroups> entry : groups.getInherited().entrySet()) {
+          if (entry.getKey().getName().equals(part)) {
+            propertyPrefix.add(entry.getKey());
+            groups = entry.getValue();
+          } else {
+            return null;
+          }
         }
         continue;
       }
 
-      // Find the terminal group
+      // Find the terminal group, possibly appending the dotted path
       toReturn = groups.getDeclared().get(part);
       if (toReturn != null) {
+        if (!propertyPrefix.isEmpty()) {
+          toReturn = new SecurityGroup(toReturn, propertyPrefix);
+        }
         return toReturn;
       }
 
@@ -247,12 +347,15 @@ public class SecurityGroups {
         // Calling g.resolve() uses the group's resolution cache
         toReturn = g.resolve(part);
         if (toReturn != null) {
+          if (!propertyPrefix.isEmpty()) {
+            toReturn = new SecurityGroup(toReturn, propertyPrefix);
+          }
           return toReturn;
         }
       }
 
       // Otherwise, treat the terminal symbol as a reference to a global group
-      return getGlobalGroup(part);
+      return getGroupGlobal(part);
     }
 
     // Should never get here
@@ -262,7 +365,8 @@ public class SecurityGroups {
   private PropertyPath constructPath(String path, Class<?> startFrom) {
     // Treat the empty path as a reference to "this"
     if (path.isEmpty()) {
-      return new PropertyPath(Collections.<Property> emptyList());
+      throw new IllegalArgumentException(startFrom.getName()
+        + " declares an AclGroup with an empty path");
     }
 
     String[] parts = path.split(Pattern.quote("."));

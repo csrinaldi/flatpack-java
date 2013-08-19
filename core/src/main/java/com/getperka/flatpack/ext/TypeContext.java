@@ -279,13 +279,14 @@ public class TypeContext {
      */
     for (Property p : toReturn) {
       DeclaredSecurityGroups allGroups = securityGroupsFactory.getSecurityGroups(clazz);
+      Method m = p.getGetter() == null ? p.getSetter() : p.getGetter();
       GroupPermissions groupPermissions =
-          securityGroupsFactory.getPermissions(allGroups, p.getGetter());
+          securityGroupsFactory.getPermissions(allGroups, m);
       if (groupPermissions == null) {
         groupPermissions = securityGroupsFactory.getPermissions(allGroups, clazz);
       }
       if (groupPermissions == null) {
-        groupPermissions = GroupPermissions.permitAll();
+        groupPermissions = securityGroupsFactory.getPermissionsAll();
       }
       p.setGroupPermissions(groupPermissions);
     }
