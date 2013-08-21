@@ -19,6 +19,7 @@
  */
 package com.getperka.flatpack.jersey;
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.net.URLDecoder;
@@ -66,7 +68,6 @@ import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
-import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
 
@@ -325,6 +326,9 @@ public class ApiDescriber {
       entity.setSupertype(describeEntity(clazz.getSuperclass().asSubclass(HasUuid.class)));
     }
 
+    // Attach interesting annotations
+    entity.setDocAnnotations(extractInterestingAnnotations(clazz));
+
     // Attach the docstring
     Map<String, String> strings = getDocStrings(clazz);
     String docString = strings.get(clazz.getName());
@@ -361,6 +365,9 @@ public class ApiDescriber {
         accessor = prop.getSetter();
       }
 
+      // Send down interesting annotations
+      prop.setDocAnnotations(extractInterestingAnnotations(accessor));
+
       // The property set include all properties defined in supertypes
       Class<?> declaringClass = accessor.getDeclaringClass();
       strings = getDocStrings(declaringClass);
@@ -372,12 +379,32 @@ public class ApiDescriber {
     return entity;
   }
 
+  private List<Annotation> extractInterestingAnnotations(AnnotatedElement elt) {
+    List<Annotation> toReturn = listForAny();
+
+    for (Annotation a : elt.getAnnotations()) {
+      if (a.annotationType().equals(Deprecated.class)) {
+        toReturn.add(a);
+        continue;
+      }
+
+      // Look for JSR-303 constraints
+      for (Annotation meta : a.annotationType().getAnnotations()) {
+        if (meta.annotationType().getName().equals("javax.validation.Constraint")) {
+          toReturn.add(a);
+        }
+      }
+    }
+
+    return toReturn.isEmpty() ? Collections.<Annotation> emptyList() : toReturn;
+  }
+
   private Set<String> extractRoles(Method method) {
     RolesAllowed annotation = method.getAnnotation(RolesAllowed.class);
     if (annotation == null) {
       return allRoles;
     }
-    Set<String> toReturn = FlatPackCollections.setForIteration();
+    Set<String> toReturn = setForIteration();
     toReturn.addAll(Arrays.asList(annotation.value()));
     return Collections.unmodifiableSet(toReturn);
   }
