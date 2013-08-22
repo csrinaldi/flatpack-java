@@ -1,4 +1,5 @@
 package com.getperka.flatpack.fast;
+
 /*
  * #%L
  * FlatPack Automatic Source Tool
@@ -361,7 +362,7 @@ public class JavaScriptDialect implements Dialect {
               List<Property> properties = new ArrayList<Property>();
               for (Property p : entity.getProperties()) {
                 if (p.getType().getListElement() != null &&
-                  !jsTypeForType(p.getType().getListElement()).equals("String")) {
+                  p.getType().getListElement().getName() != null) {
                   properties.add(p);
                 }
               }
@@ -467,7 +468,7 @@ public class JavaScriptDialect implements Dialect {
             jsTypeForType(p.getType());
           }
           else if (p.getType().getJsonKind().equals(JsonKind.LIST) &&
-            !jsTypeForType(p.getType().getListElement()).equals("String")) {
+            p.getType().getListElement().getName() != null) {
             defaultVal = "new " + collectionNameForProperty(p) + "()";
           }
           return defaultVal;
