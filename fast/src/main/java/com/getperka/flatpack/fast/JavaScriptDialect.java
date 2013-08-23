@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Size;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +77,41 @@ public class JavaScriptDialect implements Dialect {
   static String packageName;
 
   private static final Logger logger = LoggerFactory.getLogger(JavaScriptDialect.class);
+
+  private static final Map<String, String> validationMap = new HashMap<String, String>();
+
+  static {
+
+    validationMap.put("javax.validation.Valid",
+        "com.getperka.flatpack.validation.Valid");
+    validationMap.put("javax.validation.constraints.AssertFalse",
+        "com.getperka.flatpack.validation.AssertFalse");
+    validationMap.put("javax.validation.constraints.AssertTrue",
+        "com.getperka.flatpack.validation.AssertTrue");
+    validationMap.put("javax.validation.constraints.DecimalMax",
+        "com.getperka.flatpack.validation.Max");
+    validationMap.put("javax.validation.constraints.DecimalMin",
+        "com.getperka.flatpack.validation.Min");
+    validationMap.put("javax.validation.constraints.Future",
+        "com.getperka.flatpack.validation.Future");
+    validationMap.put("javax.validation.constraints.Min",
+        "com.getperka.flatpack.validation.Min");
+    validationMap.put("javax.validation.constraints.Max",
+        "com.getperka.flatpack.validation.Max");
+    validationMap.put("javax.validation.constraints.NotNull",
+        "com.getperka.flatpack.validation.NotNull");
+    validationMap.put("javax.validation.constraints.Null",
+        "com.getperka.flatpack.validation.Null");
+    validationMap.put("javax.validation.constraints.Past",
+        "com.getperka.flatpack.validation.Past");
+    validationMap.put("javax.validation.constraints.Size",
+        "com.getperka.flatpack.validation.Size");
+
+    // validationMap.put("javax.validation.constraints.Digits",
+    // "com.getperka.flatpack.validation.");
+    // validationMap.put("javax.validation.constraints.Pattern",
+    // "com.getperka.flatpack.validation.");
+  }
 
   private static String upcase(String s) {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
@@ -179,6 +221,33 @@ public class JavaScriptDialect implements Dialect {
     name = name == null || name.trim().length() == 0 ? type.getJsonKind().name()
         .toLowerCase() : name;
     return name;
+  }
+
+  private String getValidationParameters(Annotation annotation) {
+    String params = "";
+
+    if (annotation instanceof Min) {
+      params += ((Min) annotation).value();
+    }
+
+    if (annotation instanceof Max) {
+      params += ((Max) annotation).value();
+    }
+
+    if (annotation instanceof DecimalMin) {
+      params += ((DecimalMax) annotation).value();
+    }
+
+    if (annotation instanceof DecimalMax) {
+      params += ((DecimalMax) annotation).value();
+    }
+
+    if (annotation instanceof Size) {
+      Size size = (Size) annotation;
+      params += size.min() + ", " + size.max();
+    }
+
+    return params;
   }
 
   private boolean hasCustomRequestBuilderClass(EndpointDescription end) {
@@ -377,8 +446,56 @@ public class JavaScriptDialect implements Dialect {
               return sortedProperties;
             }
 
+            else if ("validations".equals(propertyName)) {
+              Map<String, List<String>> map = new HashMap<String, List<String>>();
+
+              for (Property p : entity.getProperties()) {
+                List<String> validations = new ArrayList<String>();
+
+                List<Annotation> docAnnotations = p.getDocAnnotations();
+                if (docAnnotations != null) {
+                  for (Annotation a : docAnnotations) {
+                    String name = a.annotationType().getName();
+
+                    String validation = validationMap.get(name);
+                    if (validation != null) {
+                      validation = "new " + validation + "(";
+                      validation += getValidationParameters(a);
+                      validation += ")";
+                      validations.add(validation);
+                    }
+                  }
+                }
+
+                if (!validations.isEmpty()) {
+                  map.put(p.getName(), validations);
+                }
+              }
+              return map;
+            }
+
+            else if ("validationRequires".equals(propertyName)) {
+              Set<String> requires = new HashSet<String>();
+
+              for (Property p : entity.getProperties()) {
+                List<Annotation> docAnnotations = p.getDocAnnotations();
+                if (docAnnotations != null) {
+                  for (Annotation a : docAnnotations) {
+                    String name = a.annotationType().getName();
+                    String require = validationMap.get(name);
+                    if (require != null) {
+                      requires.add(require);
+                    }
+                  }
+                }
+              }
+
+              return requires;
+            }
+
             return super.getProperty(interp, self, o, property, propertyName);
           }
+
         });
 
     group.registerModelAdaptor(Property.class, new ObjectModelAdaptor() {

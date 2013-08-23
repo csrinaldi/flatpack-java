@@ -388,6 +388,10 @@ public class ApiDescriber {
         continue;
       }
 
+      if (a.annotationType().getName().equals("javax.validation.Valid")) {
+        toReturn.add(a);
+      }
+
       // Look for JSR-303 constraints
       for (Annotation meta : a.annotationType().getAnnotations()) {
         if (meta.annotationType().getName().equals("javax.validation.Constraint")) {
