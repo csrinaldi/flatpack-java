@@ -21,6 +21,7 @@ package com.getperka.flatpack.client.dto;
 
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,7 +33,9 @@ import com.getperka.flatpack.ext.Property;
 /**
  * A description of an entity type.
  */
+@PermitAll
 public class EntityDescription extends BaseHasUuid {
+  private List<Annotation> docAnnotations;
   private String docString;
   private boolean persistent;
   private List<Property> properties;
@@ -46,22 +49,26 @@ public class EntityDescription extends BaseHasUuid {
 
   EntityDescription() {}
 
-  @PermitAll
+  /**
+   * Annotations that provide additional information about the entity. This could include
+   * deprecation or JSR-303 validation constraints.
+   */
+  public List<Annotation> getDocAnnotations() {
+    return docAnnotations;
+  }
+
   public String getDocString() {
     return docString;
   }
 
-  @PermitAll
   public List<Property> getProperties() {
     return properties;
   }
 
-  @PermitAll
   public EntityDescription getSupertype() {
     return supertype;
   }
 
-  @PermitAll
   public String getTypeName() {
     return typeName;
   }
@@ -70,9 +77,12 @@ public class EntityDescription extends BaseHasUuid {
    * Indicates that instance of the the type may be persisted by the server. This hint can be used
    * to reduce payload sizes by transmitting only mutated properties.
    */
-  @PermitAll
   public boolean isPersistent() {
     return persistent;
+  }
+
+  public void setDocAnnotations(List<Annotation> annotations) {
+    this.docAnnotations = annotations;
   }
 
   public void setDocString(String docString) {
