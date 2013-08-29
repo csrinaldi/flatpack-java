@@ -1,0 +1,63 @@
+// Implicit definition
+verb crudOperation = create, read, update, delete;
+
+// Default values if a type contains no allow block
+allow {
+  * to read;
+  // Matches all verbs, even custom ones
+  internalUser to *;
+}
+
+type merchant {
+  // implicit inherit global if no inherit
+  group {
+    clerk = merchantLocations.clerks;
+    merchantUser = merchantUsers;
+    integratorUser = integratorUser;
+  }
+
+  // Defaults for the type and its properties
+  allow {
+    clerk to read;
+    integratorUser to create, read, update, delete;
+    merchantUser to update;
+    * to read;
+  }
+    
+
+  // A policy has a name to make logging saner
+  policy publicThings {
+    /*
+     * A property may be referenced by at most one
+     * policy to prevent overloaded behaviors.
+     */
+    property name, headline;
+    // Don't need curly braces for singleton rulesets
+    allow * to read;
+  }
+  
+  policy internalOnly {
+    property note, foo, bar;
+    allow internalUser to *;
+  }
+}
+
+type merchantLocation {
+  // Inherits all groups from merchant, but overrides the clerk group
+  group inherit merchant {
+    clerk = clerks;
+  }
+
+  // Allows other actions to be defined
+  verb validatorActions = redeemCoupon, validate;
+
+  allow inherit merchant {
+    clerk to read, validatorActions.*;
+    merchantUser to *;
+  }
+
+  policy thingsToForget {
+    property hidden;
+    // No allow is like @DenyAll
+  }
+}

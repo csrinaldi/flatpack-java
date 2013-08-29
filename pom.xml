@@ -51,6 +51,7 @@
     <module>fast</module>
     <module>fast-plugin</module>
     <module>jersey</module>
+    <module>policy</module>
     <module>search</module>
   </modules>
 
