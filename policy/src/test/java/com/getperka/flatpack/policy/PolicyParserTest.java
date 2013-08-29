@@ -21,8 +21,6 @@ import org.parboiled.support.NodeFormatter;
 import org.parboiled.support.ParsingResult;
 import org.parboiled.trees.GraphUtils;
 
-import com.getperka.flatpack.policy.PolicyParser.PolicyFile;
-
 public class PolicyParserTest {
   private PolicyParser parser;
 
@@ -35,7 +33,7 @@ public class PolicyParserTest {
   public void test() throws IOException {
     String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
     PolicyFile p = (PolicyFile) testRule(parser.PolicyFile(), contents);
-    assertNotNull(p.allows);
+    assertNotNull(p.getAllows());
   }
 
   private void checkResult(ParsingResult<Object> res) {

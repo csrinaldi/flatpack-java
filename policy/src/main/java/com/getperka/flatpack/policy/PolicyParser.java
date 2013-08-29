@@ -1,7 +1,6 @@
 package com.getperka.flatpack.policy;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.parboiled.Action;
@@ -17,366 +16,10 @@ import org.parboiled.support.StringVar;
 import org.parboiled.support.Var;
 
 public class PolicyParser extends BaseParser<Object> {
-  static class AclRule extends PolicyNode {
-    Ident<Group> groupName;
-    List<Ident<Verb>> verbNames = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        // No sub-nodes
-      }
-      v.endVisit(this);
-    }
-  }
-
-  static class Allow extends PolicyNode implements HasInheritFrom<Allow> {
-    List<AclRule> aclRules = list();
-    Ident<Allow> inheritFrom;
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        v.traverse(aclRules);
-      }
-      v.endVisit(this);
-    }
-
-    @Override
-    public Ident<Allow> getInheritFrom() {
-      return inheritFrom;
-    }
-
-    @Override
-    public void setInheritFrom(Ident<Allow> inheritFrom) {
-      this.inheritFrom = inheritFrom;
-    }
-  }
-
-  static class Group extends PolicyNode implements HasInheritFrom<Group> {
-    List<GroupDefinition> definitions = list();
-    Ident<Group> inheritFrom;
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        v.traverse(definitions);
-      }
-      v.endVisit(this);
-    }
-
-    @Override
-    public Ident<Group> getInheritFrom() {
-      return inheritFrom;
-    }
-
-    @Override
-    public void setInheritFrom(Ident<Group> inheritFrom) {
-      this.inheritFrom = inheritFrom;
-    }
-  }
-
-  static class GroupDefinition extends PolicyNode implements HasName<GroupDefinition> {
-    Ident<GroupDefinition> name;
-    List<PropertyPath> paths = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        v.traverse(paths);
-      }
-      v.endVisit(this);
-    }
-
-    @Override
-    public Ident<GroupDefinition> getName() {
-      return name;
-    }
-
-    @Override
-    public void setName(Ident<GroupDefinition> name) {
-      this.name = name;
-    }
-  }
-
-  interface HasInheritFrom<P extends PolicyNode & HasInheritFrom<P>> {
-    public Ident<P> getInheritFrom();
-
-    public void setInheritFrom(Ident<P> inheritFrom);
-  }
-
-  interface HasName<P extends PolicyNode & HasName<P>> {
-    public Ident<P> getName();
-
-    public void setName(Ident<P> name);
-  }
-
-  static class Ident<R> {
-    List<Ident<?>> compoundName;
-    String simpleName;
-    R referent;
-
-    public Ident(Ident<?>... compoundName) {
-      this(Arrays.asList(compoundName));
-    }
-
-    public Ident(List<Ident<?>> compoundName) {
-      this.compoundName = compoundName;
-    }
-
-    public Ident(String simpleName) {
-      this.simpleName = simpleName;
-    }
-
-    public List<Ident<?>> getCompoundName() {
-      return compoundName;
-    }
-
-    public R getReferent() {
-      return referent;
-    }
-
-    public String getSimpleName() {
-      return simpleName;
-    }
-
-    public boolean isCompound() {
-      return compoundName != null;
-    }
-
-    public boolean isSimple() {
-      return simpleName != null;
-    }
-
-    public boolean isWildcard() {
-      return "*".equals(simpleName);
-    }
-
-    public void setReferent(R referent) {
-      this.referent = referent;
-    }
-  }
-
-  static class Policy extends PolicyNode implements HasInheritFrom<Policy>, HasName<Policy> {
-    Ident<Policy> name;
-    Ident<Policy> inheritFrom;
-    List<Allow> allows = list();
-    List<PropertyList> propertyLists = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        v.traverse(allows);
-        v.traverse(propertyLists);
-      }
-      v.endVisit(this);
-    }
-
-    @Override
-    public Ident<Policy> getInheritFrom() {
-      return inheritFrom;
-    }
-
-    @Override
-    public Ident<Policy> getName() {
-      return name;
-    }
-
-    @Override
-    public void setInheritFrom(Ident<Policy> inheritFrom) {
-      this.inheritFrom = inheritFrom;
-    }
-
-    @Override
-    public void setName(Ident<Policy> name) {
-      this.name = name;
-    }
-  }
-
-  static class PolicyFile extends PolicyNode {
-    List<Allow> allows = list();
-    List<Policy> policies = list();
-    List<Verb> verbs = list();
-    List<Type> types = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        v.traverse(allows);
-        v.traverse(policies);
-        v.traverse(verbs);
-        v.traverse(types);
-      }
-      v.endVisit(this);
-    }
-  }
-
-  static abstract class PolicyNode {
-    public abstract void accept(PolicyVisitor v);
-  }
-
-  static class PolicyVisitor {
-    public void endVisit(AclRule x) {}
-
-    public void endVisit(Allow x) {}
-
-    public void endVisit(Group x) {}
-
-    public void endVisit(GroupDefinition x) {}
-
-    public void endVisit(Policy x) {}
-
-    public void endVisit(PolicyFile x) {}
-
-    public void endVisit(PolicyNode x) {}
-
-    public void endVisit(PropertyList x) {}
-
-    public void endVisit(PropertyPath x) {}
-
-    public void endVisit(Type x) {}
-
-    public void endVisit(Verb x) {}
-
-    public boolean visit(AclRule x) {
-      return true;
-    }
-
-    public boolean visit(Allow x) {
-      return true;
-    }
-
-    public boolean visit(Group x) {
-      return true;
-    }
-
-    public boolean visit(GroupDefinition x) {
-      return true;
-    }
-
-    public boolean visit(Policy x) {
-      return true;
-    }
-
-    public boolean visit(PolicyFile x) {
-      return true;
-    }
-
-    public boolean visit(PolicyNode x) {
-      return true;
-    }
-
-    public boolean visit(PropertyList x) {
-      return true;
-    }
-
-    public boolean visit(PropertyPath x) {
-      return true;
-    }
-
-    public boolean visit(Type x) {
-      return true;
-    }
-
-    public boolean visit(Verb x) {
-      return true;
-    }
-
-    protected void traverse(List<? extends PolicyNode> list) {
-      for (PolicyNode x : list) {
-        x.accept(this);
-      }
-    }
-
-    protected void traverse(PolicyNode x) {
-      x.accept(this);
-    }
-  }
-
-  static class PropertyList extends PolicyNode {
-    List<Ident<?>> propertyNames = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        // No sub-nodes
-      }
-      v.endVisit(this);
-    }
-  }
-
-  static class PropertyPath extends PolicyNode {
-    List<Ident<?>> pathParts = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        // No sub-nodes
-      }
-      v.endVisit(this);
-    }
-  }
-
-  static class Type extends PolicyNode implements HasName<Type> {
-    Ident<Type> name;
-    List<Allow> allow = list();
-    List<Group> group = list();
-    List<Policy> policy = list();
-    List<Verb> verb = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        v.traverse(allow);
-        v.traverse(group);
-        v.traverse(policy);
-        v.traverse(verb);
-      }
-      v.endVisit(this);
-    }
-
-    @Override
-    public Ident<Type> getName() {
-      return name;
-    }
-
-    @Override
-    public void setName(Ident<Type> name) {
-      this.name = name;
-    }
-  }
-
-  static class Verb extends PolicyNode implements HasName<Verb> {
-    Ident<Verb> name;
-    List<Ident<?>> verbs = list();
-
-    @Override
-    public void accept(PolicyVisitor v) {
-      if (v.visit(this)) {
-        // No sub-nodes
-      }
-      v.endVisit(this);
-    }
-
-    @Override
-    public Ident<Verb> getName() {
-      return name;
-    }
-
-    @Override
-    public void setName(Ident<Verb> name) {
-      this.name = name;
-    }
-  }
-
   private static final PolicyParser parser = Parboiled.createParser(PolicyParser.class);
 
   public static PolicyParser get() {
     return parser.newInstance();
-  }
-
-  static <T> List<T> list() {
-    return new ArrayList<T>();
   }
 
   public Rule PolicyFile() {
@@ -384,10 +27,10 @@ public class PolicyParser extends BaseParser<Object> {
     return Sequence(
         WS(),
         ZeroOrMore(FirstOf(
-            Sequence(Allow(), ACTION(x.get().allows.add((Allow) pop()))),
-            Sequence(Policy(), ACTION(x.get().policies.add((Policy) pop()))),
-            Sequence(VerbDef(), ACTION(x.get().verbs.add((Verb) pop()))),
-            Sequence(Type(), ACTION(x.get().types.add((Type) pop())))
+            Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
+            Sequence(Policy(), ACTION(x.get().getPolicies().add((Policy) pop()))),
+            Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop()))),
+            Sequence(Type(), ACTION(x.get().getTypes().add((Type) pop())))
         )),
         EOI,
         ACTION(push(x.get())));
@@ -406,14 +49,14 @@ public class PolicyParser extends BaseParser<Object> {
     return Sequence(
         WildcardOrIdent(),
         "to",
-        OneOrListOf(VerbName(), Ident.class, ","),
+        OneOrListOf(VerbIdent(), Ident.class, ","),
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             AclRule x = new AclRule();
-            x.verbNames = (List<Ident<Verb>>) pop();
-            x.groupName = (Ident<Group>) pop();
+            x.setVerbNames((List<Ident<Verb>>) pop());
+            x.setGroupName((Ident<Group>) pop());
             push(x);
             return true;
           }
@@ -431,7 +74,7 @@ public class PolicyParser extends BaseParser<Object> {
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             Allow x = var.get();
-            x.aclRules = (List<AclRule>) pop();
+            x.setAclRules((List<AclRule>) pop());
             push(x);
             return true;
           }
@@ -469,7 +112,7 @@ public class PolicyParser extends BaseParser<Object> {
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             Group x = var.get();
-            x.definitions = (List<GroupDefinition>) pop();
+            x.setDefinitions((List<GroupDefinition>) pop());
             push(x);
             return true;
           }
@@ -487,7 +130,7 @@ public class PolicyParser extends BaseParser<Object> {
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             GroupDefinition x = var.get();
-            x.paths = (List<PropertyPath>) pop();
+            x.setPaths((List<PropertyPath>) pop());
             push(x);
             return true;
           }
@@ -582,10 +225,10 @@ public class PolicyParser extends BaseParser<Object> {
             FirstOf(
                 Sequence(
                     Allow(),
-                    ACTION(x.get().allows.add((Allow) pop()))),
+                    ACTION(x.get().getAllows().add((Allow) pop()))),
                 Sequence(
                     PropertyList(),
-                    ACTION(x.get().propertyLists.add((PropertyList) pop())))
+                    ACTION(x.get().getPropertyLists().add((PropertyList) pop())))
             ), null),
         ACTION(push(x.get())));
   }
@@ -606,7 +249,7 @@ public class PolicyParser extends BaseParser<Object> {
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             PropertyList x = new PropertyList();
-            x.propertyNames = (List<Ident<?>>) pop();
+            x.setPropertyNames((List<Ident<Object>>) pop());
             push(x);
             return true;
           }
@@ -621,7 +264,7 @@ public class PolicyParser extends BaseParser<Object> {
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             PropertyPath x = new PropertyPath();
-            x.pathParts = (List<Ident<?>>) pop();
+            x.setPathParts((List<Ident<Object>>) pop());
             push(x);
             return true;
           }
@@ -635,10 +278,10 @@ public class PolicyParser extends BaseParser<Object> {
         NodeName(x),
         "{",
         ZeroOrMore(FirstOf(
-            Sequence(Allow(), ACTION(x.get().allow.add((Allow) pop()))),
-            Sequence(Group(), ACTION(x.get().group.add((Group) pop()))),
-            Sequence(Policy(), ACTION(x.get().policy.add((Policy) pop()))),
-            Sequence(VerbDef(), ACTION(x.get().verb.add((Verb) pop()))))),
+            Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
+            Sequence(Group(), ACTION(x.get().getGroups().add((Group) pop()))),
+            Sequence(Policy(), ACTION(x.get().getPolicies().add((Policy) pop()))),
+            Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop()))))),
         "}",
         ACTION(push(x.get())));
   }
@@ -656,20 +299,21 @@ public class PolicyParser extends BaseParser<Object> {
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             Verb x = var.get();
-            x.verbs = (List<Ident<?>>) pop();
+            x.setVerbIdents((List<Ident<Object>>) pop());
             push(x);
             return true;
           }
         });
   }
 
-  Rule VerbName() {
+  @SuppressWarnings("unchecked")
+  Rule VerbIdent() {
     return FirstOf(
         Sequence(
             Ident(),
             ".",
             WildcardOrIdent(),
-            ACTION(swap() && push(new Ident<Verb>((Ident<?>) pop(), (Ident<?>) pop())))),
+            ACTION(swap() && push(new Ident<Verb>((Ident<Object>) pop(), (Ident<Object>) pop())))),
         WildcardOrIdent());
   }
 
