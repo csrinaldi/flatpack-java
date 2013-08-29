@@ -33,7 +33,7 @@ type merchant {
      */
     property name, headline;
     // Don't need curly braces for singleton rulesets
-    allow * to read;
+    allow * to read; 
   }
   
   policy internalOnly {

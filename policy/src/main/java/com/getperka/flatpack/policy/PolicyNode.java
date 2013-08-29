@@ -12,4 +12,11 @@ public abstract class PolicyNode {
   }
 
   public abstract void accept(PolicyVisitor v);
+
+  @Override
+  public String toString() {
+    ToStringVisitor v = new ToStringVisitor();
+    accept(v);
+    return v.toString();
+  }
 }

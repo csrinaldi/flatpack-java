@@ -9,6 +9,7 @@ public class GroupDefinition extends PolicyNode implements HasName<GroupDefiniti
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
+      v.traverse(name);
       v.traverse(paths);
     }
     v.endVisit(this);

@@ -2,16 +2,19 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
-public class Policy extends PolicyNode implements HasInheritFrom<Policy>, HasName<Policy> {
+public class PropertyPolicy extends PolicyNode implements HasInheritFrom<PropertyPolicy>,
+    HasName<PropertyPolicy> {
   private List<Allow> allows = list();
-  private Ident<Policy> inheritFrom;
-  private Ident<Policy> name;
+  private Ident<PropertyPolicy> inheritFrom;
+  private Ident<PropertyPolicy> name;
   private List<PropertyList> propertyLists = list();
 
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
       v.traverse(allows);
+      v.traverse(inheritFrom);
+      v.traverse(name);
       v.traverse(propertyLists);
     }
     v.endVisit(this);
@@ -22,12 +25,12 @@ public class Policy extends PolicyNode implements HasInheritFrom<Policy>, HasNam
   }
 
   @Override
-  public Ident<Policy> getInheritFrom() {
+  public Ident<PropertyPolicy> getInheritFrom() {
     return inheritFrom;
   }
 
   @Override
-  public Ident<Policy> getName() {
+  public Ident<PropertyPolicy> getName() {
     return name;
   }
 
@@ -40,12 +43,12 @@ public class Policy extends PolicyNode implements HasInheritFrom<Policy>, HasNam
   }
 
   @Override
-  public void setInheritFrom(Ident<Policy> inheritFrom) {
+  public void setInheritFrom(Ident<PropertyPolicy> inheritFrom) {
     this.inheritFrom = inheritFrom;
   }
 
   @Override
-  public void setName(Ident<Policy> name) {
+  public void setName(Ident<PropertyPolicy> name) {
     this.name = name;
   }
 

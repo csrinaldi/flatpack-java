@@ -9,7 +9,8 @@ public class Verb extends PolicyNode implements HasName<Verb> {
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
-      // No sub-nodes
+      v.traverse(name);
+      v.traverse(verbIdents);
     }
     v.endVisit(this);
   }

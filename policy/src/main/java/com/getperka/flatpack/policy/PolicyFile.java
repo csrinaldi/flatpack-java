@@ -4,17 +4,15 @@ import java.util.List;
 
 public class PolicyFile extends PolicyNode {
   private List<Allow> allows = list();
-  private List<Policy> policies = list();
   private List<Verb> verbs = list();
-  private List<Type> types = list();
+  private List<TypePolicy> typePolicies = list();
 
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
       v.traverse(allows);
-      v.traverse(policies);
       v.traverse(verbs);
-      v.traverse(types);
+      v.traverse(typePolicies);
     }
     v.endVisit(this);
   }
@@ -23,12 +21,8 @@ public class PolicyFile extends PolicyNode {
     return allows;
   }
 
-  public List<Policy> getPolicies() {
-    return policies;
-  }
-
-  public List<Type> getTypes() {
-    return types;
+  public List<TypePolicy> getTypePolicies() {
+    return typePolicies;
   }
 
   public List<Verb> getVerbs() {
@@ -39,12 +33,8 @@ public class PolicyFile extends PolicyNode {
     this.allows = allows;
   }
 
-  public void setPolicies(List<Policy> policies) {
-    this.policies = policies;
-  }
-
-  public void setTypes(List<Type> types) {
-    this.types = types;
+  public void setTypePolicies(List<TypePolicy> types) {
+    this.typePolicies = types;
   }
 
   public void setVerbs(List<Verb> verbs) {

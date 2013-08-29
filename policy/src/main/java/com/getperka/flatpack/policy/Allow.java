@@ -10,6 +10,7 @@ public class Allow extends PolicyNode implements HasInheritFrom<Allow> {
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
       v.traverse(aclRules);
+      v.traverse(inheritFrom);
     }
     v.endVisit(this);
   }

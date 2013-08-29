@@ -1,6 +1,6 @@
 package com.getperka.flatpack.policy;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,7 +33,12 @@ public class PolicyParserTest {
   public void test() throws IOException {
     String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
     PolicyFile p = (PolicyFile) testRule(parser.PolicyFile(), contents);
-    assertNotNull(p.getAllows());
+
+    // Test print-parse-print to make sure nothing is getting used
+    String string = p.toString();
+    System.out.println(string);
+    PolicyFile p2 = (PolicyFile) testRule(parser.PolicyFile(), string);
+    assertEquals(string, p2.toString());
   }
 
   private void checkResult(ParsingResult<Object> res) {

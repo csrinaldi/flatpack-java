@@ -3,7 +3,7 @@ package com.getperka.flatpack.policy;
 import java.util.Arrays;
 import java.util.List;
 
-public class Ident<R> {
+public class Ident<R> extends PolicyNode {
   private final List<Ident<Object>> compoundName;
   private final String simpleName;
   private R referent;
@@ -20,6 +20,14 @@ public class Ident<R> {
   public Ident(String simpleName) {
     this.compoundName = null;
     this.simpleName = simpleName;
+  }
+
+  @Override
+  public void accept(PolicyVisitor v) {
+    if (v.visit(this)) {
+      v.traverse(compoundName);
+    }
+    v.endVisit(this);
   }
 
   public List<Ident<Object>> getCompoundName() {
@@ -48,26 +56,5 @@ public class Ident<R> {
 
   public void setReferent(R referent) {
     this.referent = referent;
-  }
-
-  @Override
-  public String toString() {
-    if (isSimple()) {
-      return getSimpleName();
-    } else if (isCompound()) {
-      StringBuilder sb = new StringBuilder();
-      boolean needsDot = false;
-      for (Ident<?> ident : compoundName) {
-        if (needsDot) {
-          sb.append(".");
-        } else {
-          needsDot = true;
-        }
-        sb.append(ident.toString());
-      }
-      return sb.toString();
-    } else {
-      return "<NULL>";
-    }
   }
 }

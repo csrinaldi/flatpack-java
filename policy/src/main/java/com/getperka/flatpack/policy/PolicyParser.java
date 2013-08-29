@@ -28,9 +28,8 @@ public class PolicyParser extends BaseParser<Object> {
         WS(),
         ZeroOrMore(FirstOf(
             Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
-            Sequence(Policy(), ACTION(x.get().getPolicies().add((Policy) pop()))),
             Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop()))),
-            Sequence(Type(), ACTION(x.get().getTypes().add((Type) pop())))
+            Sequence(TypePolicy(), ACTION(x.get().getTypePolicies().add((TypePolicy) pop())))
         )),
         EOI,
         ACTION(push(x.get())));
@@ -194,6 +193,7 @@ public class PolicyParser extends BaseParser<Object> {
                 "}"),
             Sequence(
                 r,
+                ";",
                 ACTION(popToList(clazz, var)))),
         ACTION(clazz == null || push(var.get())));
   }
@@ -215,24 +215,6 @@ public class PolicyParser extends BaseParser<Object> {
         ACTION(clazz == null || push(var.get())));
   }
 
-  Rule Policy() {
-    Var<Policy> x = new Var<Policy>(new Policy());
-    return Sequence(
-        "policy",
-        NodeName(x),
-        MaybeInherit(x),
-        OneOrBlock(
-            FirstOf(
-                Sequence(
-                    Allow(),
-                    ACTION(x.get().getAllows().add((Allow) pop()))),
-                Sequence(
-                    PropertyList(),
-                    ACTION(x.get().getPropertyLists().add((PropertyList) pop())))
-            ), null),
-        ACTION(push(x.get())));
-  }
-
   <T> boolean popToList(Class<T> clazz, Var<List<T>> list) {
     if (clazz != null) {
       list.get().add(clazz.cast(pop()));
@@ -244,6 +226,7 @@ public class PolicyParser extends BaseParser<Object> {
     return Sequence(
         "property",
         OneOrListOf(Ident(), Ident.class, ","),
+        ";",
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
@@ -271,8 +254,27 @@ public class PolicyParser extends BaseParser<Object> {
         });
   }
 
-  Rule Type() {
-    Var<Type> x = new Var<Type>(new Type());
+  Rule PropertyPolicy() {
+    Var<PropertyPolicy> x = new Var<PropertyPolicy>(new PropertyPolicy());
+    return Sequence(
+        "policy",
+        NodeName(x),
+        MaybeInherit(x),
+        "{",
+        ZeroOrMore(FirstOf(
+            Sequence(
+                Allow(),
+                ACTION(x.get().getAllows().add((Allow) pop()))),
+            Sequence(
+                PropertyList(),
+                ACTION(x.get().getPropertyLists().add((PropertyList) pop())))
+        )),
+        "}",
+        ACTION(push(x.get())));
+  }
+
+  Rule TypePolicy() {
+    Var<TypePolicy> x = new Var<TypePolicy>(new TypePolicy());
     return Sequence(
         "type",
         NodeName(x),
@@ -280,7 +282,7 @@ public class PolicyParser extends BaseParser<Object> {
         ZeroOrMore(FirstOf(
             Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
             Sequence(Group(), ACTION(x.get().getGroups().add((Group) pop()))),
-            Sequence(Policy(), ACTION(x.get().getPolicies().add((Policy) pop()))),
+            Sequence(PropertyPolicy(), ACTION(x.get().getPolicies().add((PropertyPolicy) pop()))),
             Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop()))))),
         "}",
         ACTION(push(x.get())));

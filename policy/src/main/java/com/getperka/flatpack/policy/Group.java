@@ -10,6 +10,7 @@ public class Group extends PolicyNode implements HasInheritFrom<Group> {
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
       v.traverse(definitions);
+      v.traverse(inheritFrom);
     }
     v.endVisit(this);
   }

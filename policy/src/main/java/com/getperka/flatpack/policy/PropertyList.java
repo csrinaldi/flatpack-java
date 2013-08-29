@@ -8,7 +8,7 @@ public class PropertyList extends PolicyNode {
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
-      // No sub-nodes
+      v.traverse(propertyNames);
     }
     v.endVisit(this);
   }

@@ -2,11 +2,11 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
-public class Type extends PolicyNode implements HasName<Type> {
+public class TypePolicy extends PolicyNode implements HasName<TypePolicy> {
   private List<Allow> allows = list();
   private List<Group> groups = list();
-  private Ident<Type> name;
-  private List<Policy> policies = list();
+  private Ident<TypePolicy> name;
+  private List<PropertyPolicy> policies = list();
   private List<Verb> verbs = list();
 
   @Override
@@ -14,6 +14,7 @@ public class Type extends PolicyNode implements HasName<Type> {
     if (v.visit(this)) {
       v.traverse(allows);
       v.traverse(groups);
+      v.traverse(name);
       v.traverse(policies);
       v.traverse(verbs);
     }
@@ -29,11 +30,11 @@ public class Type extends PolicyNode implements HasName<Type> {
   }
 
   @Override
-  public Ident<Type> getName() {
+  public Ident<TypePolicy> getName() {
     return name;
   }
 
-  public List<Policy> getPolicies() {
+  public List<PropertyPolicy> getPolicies() {
     return policies;
   }
 
@@ -50,11 +51,11 @@ public class Type extends PolicyNode implements HasName<Type> {
   }
 
   @Override
-  public void setName(Ident<Type> name) {
+  public void setName(Ident<TypePolicy> name) {
     this.name = name;
   }
 
-  public void setPolicies(List<Policy> policy) {
+  public void setPolicies(List<PropertyPolicy> policy) {
     this.policies = policy;
   }
 

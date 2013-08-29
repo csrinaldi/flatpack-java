@@ -9,7 +9,8 @@ public class AclRule extends PolicyNode {
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
-      // No sub-nodes
+      v.traverse(groupName);
+      v.traverse(verbNames);
     }
     v.endVisit(this);
   }

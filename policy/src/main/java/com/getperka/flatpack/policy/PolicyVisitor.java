@@ -11,17 +11,17 @@ public class PolicyVisitor {
 
   public void endVisit(GroupDefinition x) {}
 
-  public void endVisit(Policy x) {}
+  public void endVisit(Ident<?> x) {}
 
   public void endVisit(PolicyFile x) {}
-
-  public void endVisit(PolicyNode x) {}
 
   public void endVisit(PropertyList x) {}
 
   public void endVisit(PropertyPath x) {}
 
-  public void endVisit(Type x) {}
+  public void endVisit(PropertyPolicy x) {}
+
+  public void endVisit(TypePolicy x) {}
 
   public void endVisit(Verb x) {}
 
@@ -41,15 +41,11 @@ public class PolicyVisitor {
     return true;
   }
 
-  public boolean visit(Policy x) {
+  public boolean visit(Ident<?> x) {
     return true;
   }
 
   public boolean visit(PolicyFile x) {
-    return true;
-  }
-
-  public boolean visit(PolicyNode x) {
     return true;
   }
 
@@ -61,7 +57,11 @@ public class PolicyVisitor {
     return true;
   }
 
-  public boolean visit(Type x) {
+  public boolean visit(PropertyPolicy x) {
+    return true;
+  }
+
+  public boolean visit(TypePolicy x) {
     return true;
   }
 
@@ -70,12 +70,17 @@ public class PolicyVisitor {
   }
 
   protected void traverse(List<? extends PolicyNode> list) {
+    if (list == null) {
+      return;
+    }
     for (PolicyNode x : list) {
-      x.accept(this);
+      traverse(x);
     }
   }
 
   protected void traverse(PolicyNode x) {
-    x.accept(this);
+    if (x != null) {
+      x.accept(this);
+    }
   }
 }
