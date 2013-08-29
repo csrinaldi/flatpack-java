@@ -144,8 +144,15 @@ public class JavaScriptDialect implements Dialect {
           it.remove();
         }
       }
+
       requires.add(packageName + "." + upcase(entity.getTypeName()));
+
+      if (entity.getSupertype() != null) {
+        allEntities.put(entity.getSupertype().getTypeName(), entity.getSupertype());
+        requires.add(packageName + "." + upcase(entity.getSupertype().getTypeName()));
+      }
     }
+
     // Ensure that the "real" implementations are used
     allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
