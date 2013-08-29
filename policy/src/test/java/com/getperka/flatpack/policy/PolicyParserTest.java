@@ -1,5 +1,6 @@
 package com.getperka.flatpack.policy;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -20,6 +21,8 @@ import org.parboiled.support.NodeFormatter;
 import org.parboiled.support.ParsingResult;
 import org.parboiled.trees.GraphUtils;
 
+import com.getperka.flatpack.policy.PolicyParser.PolicyFile;
+
 public class PolicyParserTest {
   private PolicyParser parser;
 
@@ -31,7 +34,8 @@ public class PolicyParserTest {
   @Test
   public void test() throws IOException {
     String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
-    testRule(parser.PolicyFile(), contents);
+    PolicyFile p = (PolicyFile) testRule(parser.PolicyFile(), contents);
+    assertNotNull(p.allows);
   }
 
   private void checkResult(ParsingResult<Object> res) {
