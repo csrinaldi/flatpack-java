@@ -43,7 +43,11 @@ goog.require('<entity.supertype.canonicalName>');
     superType : <entity.supertype.canonicalName>.entityDescription(),
     typeName : ENTITY_NAME,
     kind : '<entity.canonicalName>',
-    properties : allProperties
+    properties : allProperties<if(entity.validations)>,
+    validations : {
+      <validationMap(entity.validations)>
+    }
+    <endif>
   });
   
   com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
@@ -77,12 +81,6 @@ goog.require('<entity.supertype.canonicalName>');
         <entity.supertype.canonicalName>.prototype.initialize.call(this, arguments);
         this.set({entityName : ENTITY_NAME});
       },
-      <if(entity.validations)>
-      
-      validations : {
-        <validationMap(entity.validations)>
-      },
-      <endif>
       
       entityDescription : entityDescription
     },
