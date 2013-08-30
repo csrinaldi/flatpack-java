@@ -5,21 +5,24 @@ import java.util.List;
 
 public class Ident<R> extends PolicyNode {
   private final List<Ident<Object>> compoundName;
-  private final String simpleName;
   private R referent;
+  private final Class<R> referentType;
+  private final String simpleName;
 
-  public Ident(Ident<Object>... compoundName) {
-    this(Arrays.asList(compoundName));
+  public Ident(Class<R> type, Ident<Object>... compoundName) {
+    this(type, Arrays.asList(compoundName));
   }
 
-  public Ident(List<Ident<Object>> compoundName) {
+  public Ident(Class<R> type, List<Ident<Object>> compoundName) {
     this.compoundName = compoundName;
     this.simpleName = null;
+    this.referentType = type;
   }
 
-  public Ident(String simpleName) {
+  public Ident(Class<R> type, String simpleName) {
     this.compoundName = null;
     this.simpleName = simpleName;
+    this.referentType = type;
   }
 
   @Override
@@ -36,6 +39,10 @@ public class Ident<R> extends PolicyNode {
 
   public R getReferent() {
     return referent;
+  }
+
+  public Class<R> getReferentType() {
+    return referentType;
   }
 
   public String getSimpleName() {
@@ -55,6 +62,6 @@ public class Ident<R> extends PolicyNode {
   }
 
   public void setReferent(R referent) {
-    this.referent = referent;
+    this.referent = referentType.cast(referent);
   }
 }

@@ -2,9 +2,11 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
+import com.getperka.flatpack.ext.PropertyPath;
+
 public class GroupDefinition extends PolicyNode implements HasName<GroupDefinition> {
   private Ident<GroupDefinition> name;
-  private List<PropertyPath> paths = list();
+  private List<Ident<PropertyPath>> paths = list();
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -20,7 +22,7 @@ public class GroupDefinition extends PolicyNode implements HasName<GroupDefiniti
     return name;
   }
 
-  public List<PropertyPath> getPaths() {
+  public List<Ident<PropertyPath>> getPaths() {
     return paths;
   }
 
@@ -29,7 +31,7 @@ public class GroupDefinition extends PolicyNode implements HasName<GroupDefiniti
     this.name = name;
   }
 
-  public void setPaths(List<PropertyPath> paths) {
+  public void setPaths(List<Ident<PropertyPath>> paths) {
     this.paths = paths;
   }
 }

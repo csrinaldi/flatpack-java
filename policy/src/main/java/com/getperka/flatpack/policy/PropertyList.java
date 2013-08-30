@@ -2,8 +2,10 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
+import com.getperka.flatpack.ext.Property;
+
 public class PropertyList extends PolicyNode {
-  private List<Ident<Object>> propertyNames = list();
+  private List<Ident<Property>> propertyNames = list();
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -13,11 +15,11 @@ public class PropertyList extends PolicyNode {
     v.endVisit(this);
   }
 
-  public List<Ident<Object>> getPropertyNames() {
+  public List<Ident<Property>> getPropertyNames() {
     return propertyNames;
   }
 
-  public void setPropertyNames(List<Ident<Object>> propertyNames) {
+  public void setPropertyNames(List<Ident<Property>> propertyNames) {
     this.propertyNames = propertyNames;
   }
 }

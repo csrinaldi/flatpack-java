@@ -55,6 +55,8 @@ type merchantLocation {
     clerk to read, validatorActions.*;
     merchantUser to *;
   }
+  
+  allow inherit otherProperty;
 
   policy thingsToForget {
     property hidden;

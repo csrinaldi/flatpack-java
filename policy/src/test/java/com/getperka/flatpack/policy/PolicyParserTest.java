@@ -9,7 +9,6 @@ import java.io.IOException;
 import org.junit.Before;
 import org.junit.Test;
 import org.parboiled.Rule;
-import org.parboiled.buffers.DefaultInputBuffer;
 import org.parboiled.common.FileUtils;
 import org.parboiled.common.Predicates;
 import org.parboiled.errors.ErrorUtils;
@@ -17,9 +16,7 @@ import org.parboiled.parserunners.ParseRunner;
 import org.parboiled.parserunners.ReportingParseRunner;
 import org.parboiled.parserunners.TracingParseRunner;
 import org.parboiled.support.Filters;
-import org.parboiled.support.NodeFormatter;
 import org.parboiled.support.ParsingResult;
-import org.parboiled.trees.GraphUtils;
 
 public class PolicyParserTest {
   private PolicyParser parser;
@@ -35,10 +32,10 @@ public class PolicyParserTest {
     PolicyFile p = (PolicyFile) testRule(parser.PolicyFile(), contents);
 
     // Test print-parse-print to make sure nothing is getting used
-    String string = p.toString();
+    String string = p.toSource();
     System.out.println(string);
     PolicyFile p2 = (PolicyFile) testRule(parser.PolicyFile(), string);
-    assertEquals(string, p2.toString());
+    assertEquals(string, p2.toSource());
   }
 
   private void checkResult(ParsingResult<Object> res) {
@@ -52,7 +49,7 @@ public class PolicyParserTest {
   @SuppressWarnings("unused")
   private ParseRunner<Object> runner(Rule rule) {
     // Enable to turn on lots of parsing spam
-    if (true) {
+    if (false) {
       TracingParseRunner<Object> trace = new TracingParseRunner<Object>(rule);
       trace.withFilter(Predicates.not(Filters.rules(parser.WS())));
       return trace;
@@ -63,9 +60,6 @@ public class PolicyParserTest {
 
   private Object testRule(Rule rule, String input) {
     ParsingResult<Object> result = runner(rule).run(input);
-    System.out.println(GraphUtils.printTree(result.parseTreeRoot, new NodeFormatter<Object>(
-        new DefaultInputBuffer(
-            input.toCharArray()))));
     checkResult(result);
     assertTrue(result.matched);
     return result.resultValue;

@@ -15,13 +15,32 @@ import org.parboiled.annotations.Label;
 import org.parboiled.support.StringVar;
 import org.parboiled.support.Var;
 
-public class PolicyParser extends BaseParser<Object> {
+import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertyPath;
+
+/**
+ * The grammar definition for the policy file.
+ * <p>
+ * The method names in this type use parboiled's <a
+ * href="https://github.com/sirthias/parboiled/wiki/Style-Guide">naming scheme</a>, where methods
+ * returning {@link Rule} objects are named with a capitalized first letter. Since most rules will
+ * push an object onto the value stack, the rules are generally named in accordance with the object
+ * type that they will push.
+ */
+class PolicyParser extends BaseParser<Object> {
+  private static final String WILDCARD = "*";
   private static final PolicyParser parser = Parboiled.createParser(PolicyParser.class);
 
+  /**
+   * Return a new instance of a PolicyParser.
+   */
   public static PolicyParser get() {
     return parser.newInstance();
   }
 
+  /**
+   * The top-level parse rule.
+   */
   public Rule PolicyFile() {
     Var<PolicyFile> x = new Var<PolicyFile>(new PolicyFile());
     return Sequence(
@@ -36,7 +55,20 @@ public class PolicyParser extends BaseParser<Object> {
   }
 
   /**
-   * Consumes whitespace.
+   * Tweak the value-stack push method to record the line number on which the current rule started.
+   */
+  @Override
+  public boolean push(Object value) {
+    if (value instanceof PolicyNode) {
+      PolicyNode x = (PolicyNode) value;
+      int startIndex = getContext().getStartIndex();
+      x.setLineNumber(getContext().getInputBuffer().getPosition(startIndex).line);
+    }
+    return super.push(value);
+  }
+
+  /**
+   * Makes string literals passed to Rule objects also consume any trailing whitespace.
    */
   @Override
   @DontExtend
@@ -44,9 +76,16 @@ public class PolicyParser extends BaseParser<Object> {
     return Sequence(String(string), WS());
   }
 
+  /**
+   * An individual ACL rule:
+   * 
+   * <pre>
+   * groupName to verbName.actionName
+   * </pre>
+   */
   Rule AclRule() {
     return Sequence(
-        WildcardOrIdent(),
+        WildcardOrIdent(Group.class),
         "to",
         OneOrListOf(VerbIdent(), Ident.class, ","),
         new Action<Object>() {
@@ -62,12 +101,28 @@ public class PolicyParser extends BaseParser<Object> {
         });
   }
 
+  /**
+   * An inheritable block which holds zero or more {@link AclRule}. Also supports a single-line
+   * version.
+   * 
+   * <pre>
+   * allow [ inherit somePropertyName ] {
+   *   aclRule;
+   *   ...;
+   *   aclRule;
+   * }
+   * </pre>
+   * 
+   * <pre>
+   * allow [ inherit somePropertyName ] [ aclRule ];
+   * </pre>
+   */
   Rule Allow() {
     final Var<Allow> var = new Var<Allow>(new Allow());
     return Sequence(
         "allow",
-        MaybeInherit(var),
-        OneOrBlock(AclRule(), AclRule.class),
+        MaybeInherit(Allow.class, var),
+        ZeroOneOrBlock(AclRule(), AclRule.class),
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
@@ -94,18 +149,56 @@ public class PolicyParser extends BaseParser<Object> {
             String("/*"),
             ZeroOrMore(
             FirstOf(
-                NoneOf("*"),
-                Sequence(String("*"), NoneOf("/")))),
+                NoneOf(WILDCARD),
+                Sequence(String(WILDCARD), NoneOf("/")))),
             String("*/"),
             WS()));
   }
 
+  @Cached
+  <R> Rule CompoundIdent(final Class<R> referentType) {
+    @SuppressWarnings("rawtypes")
+    final Var<List<Ident>> parts = new Var<List<Ident>>(new ArrayList<Ident>());
+    return Sequence(
+        Ident(Object.class),
+        popToList(Ident.class, parts),
+        ZeroOrMore(".", Ident(Object.class), popToList(Ident.class, parts)),
+        new Action<Object>() {
+          @Override
+          public boolean run(Context<Object> ctx) {
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            List<Ident<Object>> list = (List) parts.get();
+            if (list.size() == 1) {
+              push(list.get(0));
+            } else {
+              push(new Ident<R>(referentType, list));
+            }
+            return true;
+          }
+        });
+  }
+
+  /**
+   * An inheritable group which holds zero or more {@link GroupDefinition}.
+   * 
+   * <pre>
+   * group [ inherit somePropertyName ] {
+   *   groupDefinition;
+   *   ...
+   *   groupDefinition;
+   * }
+   * </pre>
+   * 
+   * <pre>
+   * group [ inherit somePropertyName ] [ groupDefinition ];
+   * </pre>
+   */
   Rule Group() {
     final Var<Group> var = new Var<Group>(new Group());
     return Sequence(
         "group",
-        MaybeInherit(var),
-        OneOrBlock(GroupDefinition(), GroupDefinition.class),
+        MaybeInherit(Group.class, var),
+        ZeroOneOrBlock(GroupDefinition(), GroupDefinition.class),
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
@@ -118,25 +211,36 @@ public class PolicyParser extends BaseParser<Object> {
         });
   }
 
+  /**
+   * Associates one or more {@link PropertyPath property paths} with a group name.
+   * 
+   * <pre>
+   * groupName = some.property.path [ , another.path ]
+   * </pre>
+   */
   Rule GroupDefinition() {
     final Var<GroupDefinition> var = new Var<GroupDefinition>(new GroupDefinition());
     return Sequence(
-        NodeName(var),
+        NodeName(GroupDefinition.class, var),
         "=",
-        OneOrListOf(PropertyPath(), PropertyPath.class, ","),
+        OneOrListOf(CompoundIdent(PropertyPath.class), Ident.class, ","),
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             GroupDefinition x = var.get();
-            x.setPaths((List<PropertyPath>) pop());
+            x.setPaths((List<Ident<PropertyPath>>) pop());
             push(x);
             return true;
           }
         });
   }
 
-  Rule Ident() {
+  /**
+   * A lazy, by-name reference to another object. The syntax for these identifiers uses the same
+   * rules as Java identifiers.
+   */
+  <R> Rule Ident(Class<R> referentType) {
     StringVar x = new StringVar();
     return Sequence(
         ANY,
@@ -145,15 +249,20 @@ public class PolicyParser extends BaseParser<Object> {
             ANY,
             ACTION(Character.isJavaIdentifierPart(matchedChar()) && x.append(matchedChar()))
         ),
-        ACTION(push(new Ident<PolicyNode>(x.get()))),
+        ACTION(push(new Ident<R>(referentType, x.get()))),
         WS());
   }
 
+  /**
+   * Support rule to allow an optional {@code inherit ident} clause. If the inherit clause is
+   * present, an {@link Ident} will be created and passed to
+   * {@link HasInheritFrom#setInheritFrom(Ident) target}.
+   */
   @Cached
-  <P extends PolicyNode & HasInheritFrom<P>> Rule MaybeInherit(final Var<P> target) {
+  <P extends PolicyNode & HasInheritFrom<P>> Rule MaybeInherit(Class<P> clazz, final Var<P> target) {
     return Optional(
         "inherit",
-        Ident(),
+        Ident(clazz),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
@@ -165,10 +274,14 @@ public class PolicyParser extends BaseParser<Object> {
         });
   }
 
+  /**
+   * Support rule to parse a single {@link Ident} and set {@code x}'s {@link HasName#setName(Ident)
+   * name}.
+   */
   @Cached
-  <P extends PolicyNode & HasName<P>> Rule NodeName(final Var<P> x) {
+  <P extends PolicyNode & HasName<P>> Rule NodeName(Class<P> clazz, final Var<P> x) {
     return Sequence(
-        Ident(),
+        Ident(clazz),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
@@ -182,28 +295,12 @@ public class PolicyParser extends BaseParser<Object> {
         });
   }
 
-  @Cached
-  <T> Rule OneOrBlock(Rule r, Class<T> clazz) {
-    Var<List<T>> var = new Var<List<T>>(new ArrayList<T>());
-    return Sequence(
-        FirstOf(
-            Sequence(
-                "{",
-                ZeroOrMore(r, ";", ACTION(popToList(clazz, var))),
-                "}"),
-            Sequence(
-                r,
-                ";",
-                ACTION(popToList(clazz, var)))),
-        ACTION(clazz == null || push(var.get())));
-  }
-
   /**
    * Matches at least one instance of {@code r}, which must push exactly one value onto the stack.
    * The matched values will be added to a list, which will be placed on the stack.
    */
   @Cached
-  <T> Rule OneOrListOf(Rule r, Class<T> clazz, String separator) {
+  <T extends PolicyNode> Rule OneOrListOf(Rule r, Class<T> clazz, String separator) {
     Var<List<T>> var = new Var<List<T>>(new ArrayList<T>());
     return Sequence(
         r,
@@ -215,6 +312,10 @@ public class PolicyParser extends BaseParser<Object> {
         ACTION(clazz == null || push(var.get())));
   }
 
+  /**
+   * Utility method to pop a value from the value stack, cast it to {@code clazz} and add it to
+   * {@code list}. if {@code clazz} is {@code null}, this method is a no-op.
+   */
   <T> boolean popToList(Class<T> clazz, Var<List<T>> list) {
     if (clazz != null) {
       list.get().add(clazz.cast(pop()));
@@ -222,44 +323,48 @@ public class PolicyParser extends BaseParser<Object> {
     return true;
   }
 
+  /**
+   * One or more property-name references.
+   * 
+   * <pre>
+   * property ident [ , ident [ ... ] ];
+   * </pre>
+   */
   Rule PropertyList() {
     return Sequence(
         "property",
-        OneOrListOf(Ident(), Ident.class, ","),
+        OneOrListOf(Ident(Property.class), Ident.class, ","),
         ";",
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             PropertyList x = new PropertyList();
-            x.setPropertyNames((List<Ident<Object>>) pop());
+            x.setPropertyNames((List<Ident<Property>>) pop());
             push(x);
             return true;
           }
         });
   }
 
-  Rule PropertyPath() {
-    return Sequence(
-        OneOrListOf(Ident(), Ident.class, "."),
-        new Action<Object>() {
-          @Override
-          @SuppressWarnings("unchecked")
-          public boolean run(Context<Object> ctx) {
-            PropertyPath x = new PropertyPath();
-            x.setPathParts((List<Ident<Object>>) pop());
-            push(x);
-            return true;
-          }
-        });
-  }
-
+  /**
+   * An named, inheritable block that contains {@link Allow} and {@link PropertyList} nodes.
+   * 
+   * <pre>
+   * policy name [ , inherit someProperty ] {
+   *   property a, b, c;
+   *   allow {
+   *     ...
+   *   }
+   * }
+   * </pre>
+   */
   Rule PropertyPolicy() {
     Var<PropertyPolicy> x = new Var<PropertyPolicy>(new PropertyPolicy());
     return Sequence(
         "policy",
-        NodeName(x),
-        MaybeInherit(x),
+        NodeName(PropertyPolicy.class, x),
+        MaybeInherit(PropertyPolicy.class, x),
         "{",
         ZeroOrMore(FirstOf(
             Sequence(
@@ -273,11 +378,23 @@ public class PolicyParser extends BaseParser<Object> {
         ACTION(push(x.get())));
   }
 
+  /**
+   * Defines policies for an entity type.
+   * 
+   * <pre>
+   * type typeName {
+   *   allow { ... }
+   *   group { ... }
+   *   policy { ... }
+   *   verb ...;
+   * }
+   * </pre>
+   */
   Rule TypePolicy() {
     Var<TypePolicy> x = new Var<TypePolicy>(new TypePolicy());
     return Sequence(
         "type",
-        NodeName(x),
+        NodeName(TypePolicy.class, x),
         "{",
         ZeroOrMore(FirstOf(
             Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
@@ -288,41 +405,63 @@ public class PolicyParser extends BaseParser<Object> {
         ACTION(push(x.get())));
   }
 
+  Rule VerbAction() {
+    Var<VerbAction> var = new Var<VerbAction>(new VerbAction());
+    return Sequence(
+        NodeName(VerbAction.class, var),
+        ACTION(push(var.get())));
+  }
+
+  /**
+   * Defines an action verb.
+   * 
+   * <pre>
+   * verb name = action, anotherAction, ...;
+   * </pre>
+   */
   Rule VerbDef() {
     final Var<Verb> var = new Var<Verb>(new Verb());
     return Sequence(
         "verb",
-        NodeName(var),
+        NodeName(Verb.class, var),
         "=",
-        OneOrListOf(Ident(), Ident.class, ","),
+        OneOrListOf(VerbAction(), VerbAction.class, ","),
         ";",
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             Verb x = var.get();
-            x.setVerbIdents((List<Ident<Object>>) pop());
+            x.setActions((List<VerbAction>) pop());
             push(x);
             return true;
           }
         });
   }
 
+  /**
+   * A reference to an action. This may be a single {@link Ident} or a wildcard, possibly qualified
+   * by a verb name.
+   */
   @SuppressWarnings("unchecked")
   Rule VerbIdent() {
     return FirstOf(
         Sequence(
-            Ident(),
+            Ident(Verb.class),
             ".",
-            WildcardOrIdent(),
-            ACTION(swap() && push(new Ident<Verb>((Ident<Object>) pop(), (Ident<Object>) pop())))),
-        WildcardOrIdent());
+            WildcardOrIdent(Verb.class),
+            ACTION(swap()
+              && push(new Ident<Verb>(Verb.class, (Ident<Object>) pop(), (Ident<Object>) pop())))),
+        WildcardOrIdent(Verb.class));
   }
 
-  <T> Rule WildcardOrIdent() {
+  /**
+   * A single identifier or a wildcard.
+   */
+  <R> Rule WildcardOrIdent(Class<R> referentType) {
     return FirstOf(
-        Sequence("*", ACTION(push(new Ident<T>("*")))),
-        Ident());
+        Sequence(WILDCARD, ACTION(push(new Ident<R>(referentType, WILDCARD)))),
+        Ident(referentType));
   }
 
   /**
@@ -333,6 +472,38 @@ public class PolicyParser extends BaseParser<Object> {
     return Sequence(
         ZeroOrMore(AnyOf(new char[] { ' ', '\n', '\r', '\t' })),
         Optional(Comment()));
+  }
+
+  /**
+   * A utility rule to allow another rule to be specified zero, one, or any number of times.
+   * 
+   * <pre>
+   * {
+   *   rule;
+   *   rule;
+   *   ...
+   * }
+   * 
+   * rule;
+   * 
+   * ;
+   * </pre>
+   */
+  @Cached
+  <T> Rule ZeroOneOrBlock(Rule r, Class<T> clazz) {
+    Var<List<T>> var = new Var<List<T>>(new ArrayList<T>());
+    return Sequence(
+        FirstOf(
+            Sequence(
+                "{",
+                ZeroOrMore(r, ";", ACTION(popToList(clazz, var))),
+                "}"),
+            Sequence(
+                r,
+                ";",
+                ACTION(popToList(clazz, var))),
+            ";"),
+        ACTION(clazz == null || push(var.get())));
   }
 
 }
