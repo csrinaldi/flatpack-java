@@ -129,28 +129,11 @@ public class JavaScriptDialect implements Dialect {
 
     // first collect just our model entities
     Set<String> requires = new HashSet<String>();
-    Map<String, EntityDescription> allEntities = FlatPackCollections
-        .mapForIteration();
+    Map<String, EntityDescription> allEntities =
+        FlatPackCollections.mapForIteration();
+
     for (EntityDescription entity : api.getEntities()) {
-      allEntities.put(entity.getTypeName(), entity);
-      for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
-        Property prop = it.next();
-        // Remove the uuid property
-        if ("uuid".equals(prop.getName())) {
-          it.remove();
-        }
-        // and properties not declared in the current type
-        else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
-          it.remove();
-        }
-      }
-
-      requires.add(packageName + "." + upcase(entity.getTypeName()));
-
-      if (entity.getSupertype() != null) {
-        allEntities.put(entity.getSupertype().getTypeName(), entity.getSupertype());
-        requires.add(packageName + "." + upcase(entity.getSupertype().getTypeName()));
-      }
+      addEntity(allEntities, requires, entity);
     }
 
     // Ensure that the "real" implementations are used
@@ -175,6 +158,48 @@ public class JavaScriptDialect implements Dialect {
   @Override
   public String getDialectName() {
     return "js";
+  }
+
+  /**
+   * Adds an entity and its supertypes to a map. The properties defined by the entity will be pruned
+   * so that the entity contains only its declared properties.
+   * 
+   * @param allEntities an accumulator map of entity payload names to descriptions
+   * @param entity the entity to add
+   */
+  protected void addEntity(Map<String, EntityDescription> allEntities,
+      Set<String> requires, EntityDescription entity) {
+
+    if (entity == null) {
+      return;
+    }
+
+    String typeName = entity.getTypeName();
+
+    if (allEntities.containsKey(typeName)) {
+      // Already processed
+      return;
+    } else if ("baseHasUuid".equals(typeName) || "hasUuid".equals(typeName)) {
+      // Ensure that the "real" implementations are used
+      return;
+    }
+
+    allEntities.put(typeName, entity);
+    for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
+      Property prop = it.next();
+      if ("uuid".equals(prop.getName())) {
+        // Crop the UUID property
+        it.remove();
+      } else if (!prop.getEnclosingTypeName().equals(typeName)) {
+        // Remove properties not declared in the current type
+        it.remove();
+      }
+    }
+
+    requires.add(getPackageName(entity) + "." + upcase(entity.getTypeName()));
+
+    // Add the supertype
+    addEntity(allEntities, requires, entity.getSupertype());
   }
 
   private String camelCaseToUnderscore(String s) {
@@ -228,6 +253,11 @@ public class JavaScriptDialect implements Dialect {
     name = name == null || name.trim().length() == 0 ? type.getJsonKind().name()
         .toLowerCase() : name;
     return name;
+  }
+
+  private String getPackageName(EntityDescription entity) {
+    return entity.getTypeName().equals("baseHasUuid") ?
+        "com.getperka.flatpack.core" : packageName;
   }
 
   private String getValidationParameters(Annotation annotation) {
@@ -401,13 +431,7 @@ public class JavaScriptDialect implements Dialect {
             }
 
             else if ("canonicalName".equals(propertyName)) {
-              String prefix = packageName;
-              String typeName = entity.getTypeName();
-              if (entity.getTypeName().equalsIgnoreCase("baseHasUuid")) {
-                prefix = "com.getperka.flatpack.core";
-              }
-
-              return prefix + "." + upcase(typeName);
+              return getPackageName(entity) + "." + upcase(entity.getTypeName());
             }
 
             else if ("supertype".equals(propertyName)) {
