@@ -260,6 +260,25 @@ public class JavaScriptDialect implements Dialect {
         "com.getperka.flatpack.core" : packageName;
   }
 
+  private List<Property> getSortedCollectionProperties(EntityDescription entity) {
+    List<Property> properties = new ArrayList<Property>();
+    for (Property p : entity.getProperties()) {
+      if (p.getType().getListElement() != null &&
+        p.getType().getListElement().getName() != null) {
+        properties.add(p);
+      }
+    }
+    List<Property> sortedProperties = new ArrayList<Property>();
+    sortedProperties.addAll(properties);
+    Collections.sort(sortedProperties, new Comparator<Property>() {
+      @Override
+      public int compare(Property p1, Property p2) {
+        return p1.getName().compareTo(p2.getName());
+      }
+    });
+    return sortedProperties;
+  }
+
   private String getValidationParameters(Annotation annotation) {
     String params = "";
 
@@ -459,22 +478,25 @@ public class JavaScriptDialect implements Dialect {
             }
 
             else if ("collectionProperties".equals(propertyName)) {
-              List<Property> properties = new ArrayList<Property>();
-              for (Property p : entity.getProperties()) {
-                if (p.getType().getListElement() != null &&
-                  p.getType().getListElement().getName() != null) {
-                  properties.add(p);
+              return getSortedCollectionProperties(entity);
+            }
+
+            else if ("uniqueTypeCollectionListProperties".equals(propertyName)) {
+              List<Property> props = getSortedCollectionProperties(entity);
+              Iterator<Property> iter = props.iterator();
+
+              Set<String> seen = new HashSet<String>();
+              while (iter.hasNext()) {
+                Property prop = iter.next();
+                String name = collectionNameForProperty(prop);
+                if (!seen.contains(name)) {
+                  seen.add(name);
+                }
+                else {
+                  iter.remove();
                 }
               }
-              List<Property> sortedProperties = new ArrayList<Property>();
-              sortedProperties.addAll(properties);
-              Collections.sort(sortedProperties, new Comparator<Property>() {
-                @Override
-                public int compare(Property p1, Property p2) {
-                  return p1.getName().compareTo(p2.getName());
-                }
-              });
-              return sortedProperties;
+              return props;
             }
 
             else if ("validations".equals(propertyName)) {
@@ -600,7 +622,7 @@ public class JavaScriptDialect implements Dialect {
                 "    }";
             }
             else {
-              return (collectionModelType);
+              return collectionModelType;
             }
           }
         }
