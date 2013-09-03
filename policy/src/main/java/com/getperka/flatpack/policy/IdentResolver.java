@@ -194,6 +194,26 @@ public class IdentResolver extends PolicyLocationVisitor {
   }
 
   boolean securityAction(Ident<SecurityAction> x) {
+    if (x.isCompound()) {
+      Ident<Verb> verb = x.getCompoundName().get(0).cast(Verb.class);
+      Ident<SecurityAction> actionName = x.getCompoundName().get(1).cast(SecurityAction.class);
+      if (actionName.isWildcard()) {
+        // CrudOperation.*
+        for (Ident<SecurityAction> toAdd : ensureReferent(verb).getActions()) {
+          x.setReferent(new SecurityAction(verb.getSimpleName(), toAdd.getSimpleName()));
+        }
+      } else {
+        // CrudOperation.read
+        // XXX Verify that the verb actually declared this action
+        x.setReferent(new SecurityAction(verb.getSimpleName(), actionName.getSimpleName()));
+      }
+    } else {
+      // read
+      // XXX Need to find all declared Verbs in scope and then iterate over their declared values
+      // XXX Should be an error if multiple verbs declare the same matching action name
+      error("Unknown verb");
+    }
+
     return false;
   }
 
@@ -259,7 +279,8 @@ public class IdentResolver extends PolicyLocationVisitor {
     return false;
   }
 
-  boolean verbAction(Ident<VerbAction> x) {
+  boolean verb(Ident<Verb> x) {
+    x.setReferent(getNamedThingInScope(Verb.class, x));
     return false;
   }
 

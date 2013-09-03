@@ -94,7 +94,7 @@ class PolicyParser extends BaseParser<Object> {
           @Override
           public boolean run(Context<Object> ctx) {
             AclRule x = new AclRule();
-            x.setVerbActions(popIdentList(VerbAction.class));
+            x.setSecurityActions(popIdentList(SecurityAction.class));
             x.setGroupName(popIdent(SecurityGroup.class));
             push(x);
             return true;
@@ -168,7 +168,7 @@ class PolicyParser extends BaseParser<Object> {
           @Override
           public boolean run(Context<Object> ctx) {
             @SuppressWarnings({ "unchecked", "rawtypes" })
-            List<Ident<Object>> list = (List) parts.get();
+            List<Ident<?>> list = (List) parts.get();
             if (list.size() == 1) {
               push(new Ident<R>(referentType, list.get(0).getSimpleName()));
             } else {
@@ -425,28 +425,20 @@ class PolicyParser extends BaseParser<Object> {
         ACTION(push(x.get())));
   }
 
-  Rule VerbAction() {
-    Var<VerbAction> var = new Var<VerbAction>(new VerbAction());
-    return Sequence(
-        NodeName(SecurityAction.class, var),
-        ACTION(push(var.get())));
-  }
-
   /**
    * A reference to an action. This may be a single {@link Ident} or a wildcard, possibly qualified
    * by a verb name.
    */
-  @SuppressWarnings("unchecked")
   Rule VerbActionOrWildcard() {
     return FirstOf(
         Sequence(
             Ident(Verb.class),
             ".",
-            WildcardOrIdent(VerbAction.class),
+            WildcardOrIdent(SecurityAction.class),
             ACTION(swap()
-              && push(new Ident<VerbAction>(VerbAction.class, popIdent(Object.class),
-                  popIdent(Object.class))))),
-        WildcardOrIdent(VerbAction.class));
+              && push(new Ident<SecurityAction>(SecurityAction.class, popIdent(Verb.class),
+                  popIdent(SecurityAction.class))))),
+        WildcardOrIdent(SecurityAction.class));
   }
 
   /**
@@ -462,14 +454,13 @@ class PolicyParser extends BaseParser<Object> {
         "verb",
         NodeName(Verb.class, var),
         "=",
-        OneOrListOf(VerbAction(), VerbAction.class, ","),
+        OneOrListOf(Ident(SecurityAction.class), Ident.class, ","),
         ";",
         new Action<Object>() {
           @Override
-          @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             Verb x = var.get();
-            x.setActions((List<VerbAction>) pop());
+            x.setActions(popIdentList(SecurityAction.class));
             push(x);
             return true;
           }

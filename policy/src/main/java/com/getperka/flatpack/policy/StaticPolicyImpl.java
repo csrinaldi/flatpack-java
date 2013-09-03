@@ -174,27 +174,11 @@ class StaticPolicyImpl implements SecurityPolicy {
   }
 
   private void extract(AclRule x, GroupPermissions p) {
-    SecurityGroup group = x.getGroupName().getReferent();
     Set<SecurityAction> set = setForIteration();
-    for (Ident<VerbAction> actionName : x.getVerbActions()) {
-      if (actionName.isCompound()) {
-        Ident<VerbAction> a = actionName.getCompoundName().get(1).cast(VerbAction.class);
-        if (a.isWildcard()) {
-          // CrudOperation.*
-          Verb verb = actionName.getCompoundName().get(0).cast(Verb.class).getReferent();
-          for (VerbAction toAdd : verb.getActions()) {
-            set.add(new SecurityAction(verb.getName().getSimpleName(), toAdd.getName()
-                .getSimpleName()));
-          }
-        } else {
-          // CrudOperation.read
-          set.add(a.getReferent().getName().getReferent());
-        }
-      } else {
-        // read
-        set.add(actionName.getReferent().getName().getReferent());
-      }
+    for (Ident<SecurityAction> ident : x.getSecurityActions()) {
+      set.add(ident.getReferent());
     }
+    SecurityGroup group = x.getGroupName().getReferent();
     p.getOperations().put(group, set);
   }
 }

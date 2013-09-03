@@ -12,16 +12,16 @@ import java.util.List;
  * @param <R> the referent type
  */
 public class Ident<R> extends PolicyNode {
-  private final List<Ident<Object>> compoundName;
+  private final List<Ident<?>> compoundName;
   private R referent;
   private final Class<R> referentType;
   private final String simpleName;
 
-  public Ident(Class<R> type, Ident<Object>... compoundName) {
+  public Ident(Class<R> type, Ident<?>... compoundName) {
     this(type, Arrays.asList(compoundName));
   }
 
-  public Ident(Class<R> type, List<Ident<Object>> compoundName) {
+  public Ident(Class<R> type, List<Ident<?>> compoundName) {
     this.compoundName = compoundName;
     this.simpleName = null;
     this.referentType = type;
@@ -57,7 +57,7 @@ public class Ident<R> extends PolicyNode {
   /**
    * If the ident is a compound name (e.g. {@code foo.bar}), returns the component identifiers.
    */
-  public List<Ident<Object>> getCompoundName() {
+  public List<Ident<?>> getCompoundName() {
     if (compoundName == null) {
       throw new IllegalStateException("Not a compound identifier: " + this);
     }

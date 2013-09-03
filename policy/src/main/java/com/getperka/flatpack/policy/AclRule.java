@@ -2,17 +2,18 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
+import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
 
 public class AclRule extends PolicyNode {
   private Ident<SecurityGroup> groupName;
-  private List<Ident<VerbAction>> verbActions = list();
+  private List<Ident<SecurityAction>> securityActions = list();
 
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
       v.traverse(groupName);
-      v.traverse(verbActions);
+      v.traverse(securityActions);
     }
     v.endVisit(this);
   }
@@ -21,15 +22,15 @@ public class AclRule extends PolicyNode {
     return groupName;
   }
 
-  public List<Ident<VerbAction>> getVerbActions() {
-    return verbActions;
+  public List<Ident<SecurityAction>> getSecurityActions() {
+    return securityActions;
   }
 
   public void setGroupName(Ident<SecurityGroup> groupName) {
     this.groupName = groupName;
   }
 
-  public void setVerbActions(List<Ident<VerbAction>> verbNames) {
-    this.verbActions = verbNames;
+  public void setSecurityActions(List<Ident<SecurityAction>> verbNames) {
+    this.securityActions = verbNames;
   }
 }

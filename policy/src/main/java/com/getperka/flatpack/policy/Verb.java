@@ -2,8 +2,10 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
+import com.getperka.flatpack.ext.SecurityAction;
+
 public class Verb extends PolicyNode implements HasName<Verb> {
-  private List<VerbAction> actions = list();
+  private List<Ident<SecurityAction>> actions = list();
   private Ident<Verb> name;
 
   @Override
@@ -15,7 +17,7 @@ public class Verb extends PolicyNode implements HasName<Verb> {
     v.endVisit(this);
   }
 
-  public List<VerbAction> getActions() {
+  public List<Ident<SecurityAction>> getActions() {
     return actions;
   }
 
@@ -24,7 +26,7 @@ public class Verb extends PolicyNode implements HasName<Verb> {
     return name;
   }
 
-  public void setActions(List<VerbAction> actions) {
+  public void setActions(List<Ident<SecurityAction>> actions) {
     this.actions = actions;
   }
 

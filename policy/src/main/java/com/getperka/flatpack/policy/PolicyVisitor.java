@@ -23,8 +23,6 @@ public class PolicyVisitor {
 
   public void endVisit(Verb x) {}
 
-  public void endVisit(VerbAction x) {}
-
   public boolean visit(AclRule x) {
     return defaultVisit();
   }
@@ -62,10 +60,6 @@ public class PolicyVisitor {
   }
 
   public boolean visit(Verb x) {
-    return defaultVisit();
-  }
-
-  public boolean visit(VerbAction x) {
     return defaultVisit();
   }
 
