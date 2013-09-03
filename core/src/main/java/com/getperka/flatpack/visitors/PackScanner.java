@@ -19,6 +19,8 @@ package com.getperka.flatpack.visitors;
  * limitations under the License.
  * #L%
  */
+import static com.getperka.flatpack.security.CrudOperation.READ_ACTION;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -65,7 +67,7 @@ public class PackScanner extends FlatPackVisitor {
   @Override
   public boolean visit(Property property, VisitorContext<Property> ctx) {
     context.pushPath("." + property.getName());
-    if (!security.may(context.getPrincipal(), stack.peek(), property, CrudOperation.READ)) {
+    if (!security.may(context.getPrincipal(), stack.peek(), property, READ_ACTION)) {
       return false;
     }
     if (property.isEmbedded()) {
@@ -81,7 +83,7 @@ public class PackScanner extends FlatPackVisitor {
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
     stack.push(entity);
-    if (!security.may(context.getPrincipal(), entity, CrudOperation.READ)) {
+    if (!security.may(context.getPrincipal(), entity, CrudOperation.READ_ACTION)) {
       return false;
     }
     return context.add(entity);

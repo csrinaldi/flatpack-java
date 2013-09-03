@@ -31,7 +31,7 @@ public class ToSourceVisitor extends PolicyVisitor {
   public boolean visit(AclRule x) {
     traverse(x.getGroupName());
     print(" to ");
-    traverse(x.getVerbNames(), ", ");
+    traverse(x.getVerbActions(), ", ");
     return false;
   }
 

@@ -1,7 +1,9 @@
 package com.getperka.flatpack.policy;
 
-public class VerbAction extends PolicyNode implements HasName<VerbAction> {
-  private Ident<VerbAction> name;
+import com.getperka.flatpack.ext.SecurityAction;
+
+public class VerbAction extends PolicyNode implements HasName<SecurityAction> {
+  private Ident<SecurityAction> name;
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -12,12 +14,12 @@ public class VerbAction extends PolicyNode implements HasName<VerbAction> {
   }
 
   @Override
-  public Ident<VerbAction> getName() {
+  public Ident<SecurityAction> getName() {
     return name;
   }
 
   @Override
-  public void setName(Ident<VerbAction> name) {
+  public void setName(Ident<SecurityAction> name) {
     this.name = name;
   }
 }

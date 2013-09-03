@@ -55,7 +55,6 @@ import com.getperka.flatpack.SparseCollection;
 import com.getperka.flatpack.codexes.DynamicCodex;
 import com.getperka.flatpack.inject.AllTypes;
 import com.getperka.flatpack.inject.FlatPackLogger;
-import com.getperka.flatpack.security.AclGroups;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 
@@ -163,7 +162,9 @@ public class TypeContext {
   private PersistenceMapper persistenceMapper;
   private final Map<Class<?>, List<Property>> properties = mapForLookup();
   @Inject
-  private SecurityGroups securityGroupsFactory;
+  private SecurityPolicy securityPolicy;
+
+  private boolean isExtracting;
 
   @Inject
   protected TypeContext() {}
@@ -194,6 +195,15 @@ public class TypeContext {
     List<Property> toReturn = properties.get(clazz);
     if (toReturn != null) {
       return toReturn;
+    }
+
+    // Keep track of reentrant calls to prevent bad initialization order
+    boolean topCall;
+    if (isExtracting) {
+      topCall = false;
+    } else {
+      topCall = true;
+      isExtracting = true;
     }
 
     toReturn = listForAny();
@@ -277,18 +287,18 @@ public class TypeContext {
      * inheritance it is necessary to perform this calculation after the properties have been fully
      * constructed.
      */
-    for (Property p : toReturn) {
-      DeclaredSecurityGroups allGroups = securityGroupsFactory.getSecurityGroups(clazz);
-      Method m = p.getGetter() == null ? p.getSetter() : p.getGetter();
-      GroupPermissions groupPermissions =
-          securityGroupsFactory.getPermissions(allGroups, m);
-      if (groupPermissions == null) {
-        groupPermissions = securityGroupsFactory.getPermissions(allGroups, clazz);
+    if (topCall) {
+      for (Property p : toReturn) {
+        GroupPermissions groupPermissions = securityPolicy.getPermissions(p);
+        if (groupPermissions == null) {
+          groupPermissions = securityPolicy.getPermissions(clazz.asSubclass(HasUuid.class));
+        }
+        if (groupPermissions == null) {
+          groupPermissions = securityPolicy.getDefaultPermissions();
+        }
+        p.setGroupPermissions(groupPermissions);
       }
-      if (groupPermissions == null) {
-        groupPermissions = securityGroupsFactory.getPermissionsAll();
-      }
-      p.setGroupPermissions(groupPermissions);
+      isExtracting = false;
     }
 
     return unmodifiable;
@@ -346,13 +356,6 @@ public class TypeContext {
       return override.value();
     }
     return FlatPackTypes.decapitalize(clazz.getSimpleName());
-  }
-
-  /**
-   * Examines a class and extracts all {@link AclGroups} information about the type.
-   */
-  public DeclaredSecurityGroups getSecurityGroups(Class<?> entityType) {
-    return securityGroupsFactory.getSecurityGroups(entityType);
   }
 
   @Inject

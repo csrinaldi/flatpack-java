@@ -1,7 +1,7 @@
 package com.getperka.flatpack.policy;
 
-public interface HasInheritFrom<P extends PolicyNode & HasInheritFrom<P>> {
-  Ident<P> getInheritFrom();
+public interface HasInheritFrom<R> {
+  Ident<R> getInheritFrom();
 
-  void setInheritFrom(Ident<P> inheritFrom);
+  void setInheritFrom(Ident<R> inheritFrom);
 }

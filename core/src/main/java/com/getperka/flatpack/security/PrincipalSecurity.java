@@ -10,14 +10,15 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.DeclaredSecurityGroups;
 import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
-import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.PropertyPath.Receiver;
+import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.ext.SecurityGroups;
+import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.PackScoped;
 
@@ -63,30 +64,20 @@ public class PrincipalSecurity implements Security {
   @Inject
   private SecurityGroups securityGroups;
   @Inject
+  private SecurityPolicy securityPolicy;
+  @Inject
   private TypeContext typeContext;
 
   /**
-   * Determines if the given principal may perform the requested operation on the entity.
+   * Requires injection.
    */
-  @Override
-  public boolean may(Principal principal, HasUuid entity, CrudOperation op) {
-    if (!principalMapper.isAccessEnforced(principal, entity)) {
-      return true;
-    }
-    DeclaredSecurityGroups groups = typeContext.getSecurityGroups(entity.getClass());
-    if (groups == null) {
-      return true;
-    }
-    GroupPermissions permissions = securityGroups.getPermissions(groups, entity.getClass());
-
-    return check(principal, entity, op, permissions);
-  }
+  protected PrincipalSecurity() {}
 
   /**
    * Determines if the given principal may perform the requested operation on the entity.
    */
   @Override
-  public boolean may(Principal principal, HasUuid entity, Property property, CrudOperation op) {
+  public boolean may(Principal principal, HasUuid entity, Property property, SecurityAction op) {
     if (!principalMapper.isAccessEnforced(principal, entity)) {
       return true;
     }
@@ -99,13 +90,26 @@ public class PrincipalSecurity implements Security {
     return check(principal, entity, op, permissions);
   }
 
-  private boolean check(Principal principal, HasUuid entity, CrudOperation op,
+  /**
+   * Determines if the given principal may perform the requested operation on the entity.
+   */
+  @Override
+  public boolean may(Principal principal, HasUuid entity, SecurityAction op) {
+    if (!principalMapper.isAccessEnforced(principal, entity)) {
+      return true;
+    }
+    GroupPermissions permissions = securityPolicy.getPermissions(entity.getClass());
+
+    return check(principal, entity, op, permissions);
+  }
+
+  private boolean check(Principal principal, HasUuid entity, SecurityAction op,
       GroupPermissions permissions) {
     if (permissions == null) {
       return true;
     }
 
-    for (Map.Entry<SecurityGroup, Set<CrudOperation>> entry : permissions.getOperations()
+    for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : permissions.getOperations()
         .entrySet()) {
       if (isMember(entity, entry.getKey(), principal)) {
         // Don't simply return contains() since there may be other grops to test
@@ -151,7 +155,7 @@ public class PrincipalSecurity implements Security {
             return true;
           }
           List<Principal> principals = principalMapper.getPrincipals((HasUuid) value);
-          if (principals.contains(principal)) {
+          if (principals != null && principals.contains(principal)) {
             toReturn[0] = true;
             return false;
           }

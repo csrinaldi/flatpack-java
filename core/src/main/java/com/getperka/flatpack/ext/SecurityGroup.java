@@ -6,12 +6,9 @@ import java.util.Collections;
 import java.util.List;
 
 import com.getperka.flatpack.BaseHasUuid;
-import com.getperka.flatpack.security.AclGroup;
 
 /**
  * A definition for an ACL security group.
- * 
- * @see AclGroup
  */
 public class SecurityGroup extends BaseHasUuid {
   private String description;

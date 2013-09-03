@@ -17,6 +17,8 @@ import org.parboiled.support.Var;
 
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
+import com.getperka.flatpack.ext.SecurityAction;
+import com.getperka.flatpack.ext.SecurityGroup;
 
 /**
  * The grammar definition for the policy file.
@@ -85,16 +87,15 @@ class PolicyParser extends BaseParser<Object> {
    */
   Rule AclRule() {
     return Sequence(
-        WildcardOrIdent(Group.class),
+        WildcardOrIdent(SecurityGroup.class),
         "to",
-        OneOrListOf(VerbIdent(), Ident.class, ","),
+        OneOrListOf(VerbActionOrWildcard(), Ident.class, ","),
         new Action<Object>() {
           @Override
-          @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             AclRule x = new AclRule();
-            x.setVerbNames((List<Ident<Verb>>) pop());
-            x.setGroupName((Ident<Group>) pop());
+            x.setVerbActions(popIdentList(VerbAction.class));
+            x.setGroupName(popIdent(SecurityGroup.class));
             push(x);
             return true;
           }
@@ -121,7 +122,7 @@ class PolicyParser extends BaseParser<Object> {
     final Var<Allow> var = new Var<Allow>(new Allow());
     return Sequence(
         "allow",
-        MaybeInherit(Allow.class, var),
+        MaybeInherit(Property.class, var),
         ZeroOneOrBlock(AclRule(), AclRule.class),
         new Action<Object>() {
           @Override
@@ -169,7 +170,7 @@ class PolicyParser extends BaseParser<Object> {
             @SuppressWarnings({ "unchecked", "rawtypes" })
             List<Ident<Object>> list = (List) parts.get();
             if (list.size() == 1) {
-              push(list.get(0));
+              push(new Ident<R>(referentType, list.get(0).getSimpleName()));
             } else {
               push(new Ident<R>(referentType, list));
             }
@@ -197,7 +198,7 @@ class PolicyParser extends BaseParser<Object> {
     final Var<Group> var = new Var<Group>(new Group());
     return Sequence(
         "group",
-        MaybeInherit(Group.class, var),
+        MaybeInherit(Property.class, var),
         ZeroOneOrBlock(GroupDefinition(), GroupDefinition.class),
         new Action<Object>() {
           @Override
@@ -221,15 +222,14 @@ class PolicyParser extends BaseParser<Object> {
   Rule GroupDefinition() {
     final Var<GroupDefinition> var = new Var<GroupDefinition>(new GroupDefinition());
     return Sequence(
-        NodeName(GroupDefinition.class, var),
+        NodeName(SecurityGroup.class, var),
         "=",
         OneOrListOf(CompoundIdent(PropertyPath.class), Ident.class, ","),
         new Action<Object>() {
           @Override
-          @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             GroupDefinition x = var.get();
-            x.setPaths((List<Ident<PropertyPath>>) pop());
+            x.setPaths(popIdentList(PropertyPath.class));
             push(x);
             return true;
           }
@@ -259,16 +259,14 @@ class PolicyParser extends BaseParser<Object> {
    * {@link HasInheritFrom#setInheritFrom(Ident) target}.
    */
   @Cached
-  <P extends PolicyNode & HasInheritFrom<P>> Rule MaybeInherit(Class<P> clazz, final Var<P> target) {
+  <P extends HasInheritFrom<R>, R> Rule MaybeInherit(final Class<R> clazz, final Var<P> target) {
     return Optional(
         "inherit",
         Ident(clazz),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
-            @SuppressWarnings("unchecked")
-            Ident<P> ident = (Ident<P>) pop();
-            target.get().setInheritFrom(ident);
+            target.get().setInheritFrom(popIdent(clazz));
             return true;
           }
         });
@@ -279,20 +277,30 @@ class PolicyParser extends BaseParser<Object> {
    * name}.
    */
   @Cached
-  <P extends PolicyNode & HasName<P>> Rule NodeName(Class<P> clazz, final Var<P> x) {
+  <P extends HasName<R>, R> Rule NodeName(final Class<R> clazz, final Var<P> x) {
     return Sequence(
         Ident(clazz),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
-            @SuppressWarnings("unchecked")
-            Ident<P> ident = (Ident<P>) pop();
+            Ident<R> ident = popIdent(clazz);
             P node = x.get();
             node.setName(ident);
-            ident.setReferent(node);
+            if (ident.getReferentType().isInstance(node)) {
+              ident.setReferent(ident.getReferentType().cast(node));
+            }
             return true;
           }
         });
+  }
+
+  /**
+   * A hack when generics get in the way.
+   */
+  @Cached
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  Rule NodeNameRaw(Class clazz, final Var x) {
+    return NodeName(clazz, x);
   }
 
   /**
@@ -310,6 +318,19 @@ class PolicyParser extends BaseParser<Object> {
             r,
             ACTION(popToList(clazz, var))),
         ACTION(clazz == null || push(var.get())));
+  }
+
+  <T> Ident<T> popIdent(Class<T> clazz) {
+    return ((Ident<?>) pop()).cast(clazz);
+  }
+
+  <T> List<Ident<T>> popIdentList(Class<T> clazz) {
+    @SuppressWarnings("unchecked")
+    List<Ident<T>> toReturn = (List<Ident<T>>) pop();
+    for (Ident<T> ident : toReturn) {
+      ident.cast(clazz);
+    }
+    return toReturn;
   }
 
   /**
@@ -337,10 +358,9 @@ class PolicyParser extends BaseParser<Object> {
         ";",
         new Action<Object>() {
           @Override
-          @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
             PropertyList x = new PropertyList();
-            x.setPropertyNames((List<Ident<Property>>) pop());
+            x.setPropertyNames(popIdentList(Property.class));
             push(x);
             return true;
           }
@@ -391,10 +411,10 @@ class PolicyParser extends BaseParser<Object> {
    * </pre>
    */
   Rule TypePolicy() {
-    Var<TypePolicy> x = new Var<TypePolicy>(new TypePolicy());
+    final Var<TypePolicy> x = new Var<TypePolicy>(new TypePolicy());
     return Sequence(
         "type",
-        NodeName(TypePolicy.class, x),
+        NodeNameRaw(Class.class, x),
         "{",
         ZeroOrMore(FirstOf(
             Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
@@ -408,8 +428,25 @@ class PolicyParser extends BaseParser<Object> {
   Rule VerbAction() {
     Var<VerbAction> var = new Var<VerbAction>(new VerbAction());
     return Sequence(
-        NodeName(VerbAction.class, var),
+        NodeName(SecurityAction.class, var),
         ACTION(push(var.get())));
+  }
+
+  /**
+   * A reference to an action. This may be a single {@link Ident} or a wildcard, possibly qualified
+   * by a verb name.
+   */
+  @SuppressWarnings("unchecked")
+  Rule VerbActionOrWildcard() {
+    return FirstOf(
+        Sequence(
+            Ident(Verb.class),
+            ".",
+            WildcardOrIdent(VerbAction.class),
+            ACTION(swap()
+              && push(new Ident<VerbAction>(VerbAction.class, popIdent(Object.class),
+                  popIdent(Object.class))))),
+        WildcardOrIdent(VerbAction.class));
   }
 
   /**
@@ -437,22 +474,6 @@ class PolicyParser extends BaseParser<Object> {
             return true;
           }
         });
-  }
-
-  /**
-   * A reference to an action. This may be a single {@link Ident} or a wildcard, possibly qualified
-   * by a verb name.
-   */
-  @SuppressWarnings("unchecked")
-  Rule VerbIdent() {
-    return FirstOf(
-        Sequence(
-            Ident(Verb.class),
-            ".",
-            WildcardOrIdent(Verb.class),
-            ACTION(swap()
-              && push(new Ident<Verb>(Verb.class, (Ident<Object>) pop(), (Ident<Object>) pop())))),
-        WildcardOrIdent(Verb.class));
   }
 
   /**

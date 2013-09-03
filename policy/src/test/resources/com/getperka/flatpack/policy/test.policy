@@ -56,7 +56,7 @@ type merchantLocation {
     merchantUser to *;
   }
   
-  allow inherit otherProperty;
+  allow inherit templateLocation;
 
   policy thingsToForget {
     property hidden;

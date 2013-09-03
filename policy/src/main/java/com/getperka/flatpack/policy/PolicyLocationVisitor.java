@@ -29,6 +29,10 @@ public class PolicyLocationVisitor extends PolicyVisitor {
     return null;
   }
 
+  protected void doTraverse(PolicyNode x) {
+    super.traverse(x);
+  }
+
   protected String summarizeLocation() {
     if (location.isEmpty()) {
       return null;
@@ -46,12 +50,12 @@ public class PolicyLocationVisitor extends PolicyVisitor {
   }
 
   @Override
-  protected void traverse(PolicyNode x) {
+  protected final void traverse(PolicyNode x) {
     if (x != null) {
       location.push(x);
     }
     try {
-      super.traverse(x);
+      doTraverse(x);
     } finally {
       if (x != null) {
         location.pop();

@@ -5,8 +5,6 @@ import java.util.List;
 public class PolicyVisitor {
   public void endVisit(AclRule x) {}
 
-  public void endVisit(VerbAction x) {}
-
   public void endVisit(Allow x) {}
 
   public void endVisit(Group x) {}
@@ -25,47 +23,53 @@ public class PolicyVisitor {
 
   public void endVisit(Verb x) {}
 
-  public boolean visit(AclRule x) {
-    return true;
-  }
+  public void endVisit(VerbAction x) {}
 
-  public boolean visit(VerbAction x) {
-    return true;
+  public boolean visit(AclRule x) {
+    return defaultVisit();
   }
 
   public boolean visit(Allow x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(Group x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(GroupDefinition x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(Ident<?> x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(PolicyFile x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(PropertyList x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(PropertyPolicy x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(TypePolicy x) {
-    return true;
+    return defaultVisit();
   }
 
   public boolean visit(Verb x) {
+    return defaultVisit();
+  }
+
+  public boolean visit(VerbAction x) {
+    return defaultVisit();
+  }
+
+  protected boolean defaultVisit() {
     return true;
   }
 

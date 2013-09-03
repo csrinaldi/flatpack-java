@@ -34,7 +34,6 @@ import javax.inject.Inject;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.SuppressDefaultValue;
-import com.getperka.flatpack.security.InheritGroups;
 
 /**
  * An immutable view of a property that should be serialized.
@@ -124,7 +123,6 @@ public class Property extends BaseHasUuid {
 
     private void analyzeAnnotations(Property toReturn, AnnotatedElement method) {
       toReturn.embedded = hasAnnotationWithSimpleName(method, "Embedded");
-      toReturn.inheritGroups = method.isAnnotationPresent(InheritGroups.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
     }
   }
@@ -151,7 +149,6 @@ public class Property extends BaseHasUuid {
   private Method getter;
   private GroupPermissions groupPermissions;
   private Property implied;
-  private boolean inheritGroups;
   private String name;
   private Method setter;
   private boolean suppressDefaultValue;
@@ -247,14 +244,6 @@ public class Property extends BaseHasUuid {
   }
 
   /**
-   * Returns {@code true} if the entity inherits the ACL groups defined by the referenced entity.
-   */
-  @PermitAll
-  public boolean isInheritGroups() {
-    return inheritGroups;
-  }
-
-  /**
    * If {@code true}, non-null properties that contain the property type's default value will not be
    * serialized. For example, integer properties whose values are {@code 0} will not be serialized.
    */
@@ -265,6 +254,10 @@ public class Property extends BaseHasUuid {
 
   public void setDocString(String docString) {
     this.docString = docString;
+  }
+
+  public void setGroupPermissions(GroupPermissions groupPermissions) {
+    this.groupPermissions = groupPermissions;
   }
 
   /**
@@ -295,10 +288,6 @@ public class Property extends BaseHasUuid {
     this.enclosingTypeName = enclosingTypeName;
   }
 
-  void setGroupPermissions(GroupPermissions groupPermissions) {
-    this.groupPermissions = groupPermissions;
-  }
-
   void setImplied(Property implied) {
     this.implied = implied;
   }
@@ -309,10 +298,6 @@ public class Property extends BaseHasUuid {
    */
   void setImpliedProperty(Property implied) {
     this.implied = implied;
-  }
-
-  void setInheritGroups(boolean inheritGroups) {
-    this.inheritGroups = inheritGroups;
   }
 
   void setName(String name) {

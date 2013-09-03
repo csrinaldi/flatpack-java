@@ -35,6 +35,8 @@ import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.ReflexiveSecurityPolicy;
+import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.security.NoSecurity;
 import com.getperka.flatpack.security.PrincipalSecurity;
 import com.getperka.flatpack.security.Security;
@@ -169,10 +171,20 @@ public class FlatPackModule extends AbstractModule {
     // PrincipalMapper
     if (configuration.getPrincipalMapper() == null) {
       bind(PrincipalMapper.class).to(PermissivePrincipalMapper.class);
-      bind(Security.class).to(NoSecurity.class);
+      bind(SecurityPolicy.class).to(NoSecurity.class);
     } else {
       bind(PrincipalMapper.class).toInstance(configuration.getPrincipalMapper());
-      bind(Security.class).to(PrincipalSecurity.class);
+
+      // SecurityPolicy
+      if (configuration.getSecurityPolicy() == null) {
+        bind(SecurityPolicy.class).to(ReflexiveSecurityPolicy.class);
+      } else {
+        bind(SecurityPolicy.class).toInstance(configuration.getSecurityPolicy());
+      }
     }
+
+    // Security
+    bind(Security.class).to(PrincipalSecurity.class);
+
   }
 }

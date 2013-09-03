@@ -20,6 +20,8 @@ package com.getperka.flatpack.visitors;
  * #L%
  */
 
+import static com.getperka.flatpack.security.CrudOperation.READ_ACTION;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -46,7 +48,6 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.stream.JsonWriter;
@@ -196,7 +197,7 @@ public class PackWriter extends FlatPackVisitor {
       return false;
     }
     // Check access
-    if (!security.may(context.getPrincipal(), stack.peek().entity, prop, CrudOperation.READ)) {
+    if (!security.may(context.getPrincipal(), stack.peek().entity, prop, READ_ACTION)) {
       return false;
     }
     // Ignore OneToMany type properties unless specifically requested
@@ -219,7 +220,7 @@ public class PackWriter extends FlatPackVisitor {
   @Override
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
-    if (!security.may(context.getPrincipal(), entity, CrudOperation.READ)) {
+    if (!security.may(context.getPrincipal(), entity, READ_ACTION)) {
       stack.push(null);
       return false;
     }

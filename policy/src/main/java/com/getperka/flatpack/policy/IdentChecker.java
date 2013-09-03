@@ -11,7 +11,7 @@ public class IdentChecker extends PolicyLocationVisitor {
   @Override
   public void endVisit(Ident<?> x) {
     if (x.getReferent() == null) {
-      errors.add(summarizeLocation());
+      errors.add(summarizeLocation() + " expecting a " + x.getReferentType().getSimpleName());
     }
     super.endVisit(x);
   }

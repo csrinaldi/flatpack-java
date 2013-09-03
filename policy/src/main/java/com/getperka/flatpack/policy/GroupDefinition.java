@@ -3,9 +3,10 @@ package com.getperka.flatpack.policy;
 import java.util.List;
 
 import com.getperka.flatpack.ext.PropertyPath;
+import com.getperka.flatpack.ext.SecurityGroup;
 
-public class GroupDefinition extends PolicyNode implements HasName<GroupDefinition> {
-  private Ident<GroupDefinition> name;
+public class GroupDefinition extends PolicyNode implements HasName<SecurityGroup> {
+  private Ident<SecurityGroup> name;
   private List<Ident<PropertyPath>> paths = list();
 
   @Override
@@ -18,7 +19,7 @@ public class GroupDefinition extends PolicyNode implements HasName<GroupDefiniti
   }
 
   @Override
-  public Ident<GroupDefinition> getName() {
+  public Ident<SecurityGroup> getName() {
     return name;
   }
 
@@ -27,7 +28,7 @@ public class GroupDefinition extends PolicyNode implements HasName<GroupDefiniti
   }
 
   @Override
-  public void setName(Ident<GroupDefinition> name) {
+  public void setName(Ident<SecurityGroup> name) {
     this.name = name;
   }
 

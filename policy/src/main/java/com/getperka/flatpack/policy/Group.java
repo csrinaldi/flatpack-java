@@ -2,9 +2,11 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
-public class Group extends PolicyNode implements HasInheritFrom<Group> {
+import com.getperka.flatpack.ext.Property;
+
+public class Group extends PolicyNode implements HasInheritFrom<Property> {
   private List<GroupDefinition> definitions = list();
-  private Ident<Group> inheritFrom;
+  private Ident<Property> inheritFrom;
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -20,7 +22,7 @@ public class Group extends PolicyNode implements HasInheritFrom<Group> {
   }
 
   @Override
-  public Ident<Group> getInheritFrom() {
+  public Ident<Property> getInheritFrom() {
     return inheritFrom;
   }
 
@@ -29,7 +31,7 @@ public class Group extends PolicyNode implements HasInheritFrom<Group> {
   }
 
   @Override
-  public void setInheritFrom(Ident<Group> inheritFrom) {
+  public void setInheritFrom(Ident<Property> inheritFrom) {
     this.inheritFrom = inheritFrom;
   }
 }

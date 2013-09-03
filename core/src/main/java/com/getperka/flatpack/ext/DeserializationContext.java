@@ -19,6 +19,9 @@
  */
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.security.CrudOperation.CREATE_ACTION;
+import static com.getperka.flatpack.security.CrudOperation.UPDATE_ACTION;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +31,6 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.FlatPackCollections;
 
@@ -71,10 +73,10 @@ public class DeserializationContext extends BaseContext {
    */
   public boolean checkAccess(HasUuid object) {
     // Allow newly-instantiated objects
-    if (wasResolved(object) && security.may(getPrincipal(), object, CrudOperation.CREATE)) {
+    if (wasResolved(object) && security.may(getPrincipal(), object, CREATE_ACTION)) {
       return true;
     }
-    if (security.may(getPrincipal(), object, CrudOperation.UPDATE)) {
+    if (security.may(getPrincipal(), object, UPDATE_ACTION)) {
       return true;
     }
     addWarning(object, "User %s does not have permission to edit this %s", getPrincipal(),

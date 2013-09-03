@@ -9,8 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
 
-import com.getperka.flatpack.security.InheritGroups;
-
 /**
  * A summary of all security groups both declared and inherited by an entity type.
  */
@@ -45,8 +43,8 @@ public class DeclaredSecurityGroups {
   }
 
   /**
-   * The security groups inherited by the entity type via an {@link InheritGroups} annotation. The
-   * map key is the group path prefix.
+   * The security groups inherited by the entity type via its properties. The map key is the group
+   * path prefix.
    */
   public Map<Property, DeclaredSecurityGroups> getInherited() {
     return inherited;
@@ -73,19 +71,23 @@ public class DeclaredSecurityGroups {
     return toReturn;
   }
 
+  public void setDeclared(Map<String, SecurityGroup> declared) {
+    Map<String, SecurityGroup> map = mapForIteration();
+    map.putAll(declared);
+    this.declared = Collections.unmodifiableMap(map);
+  }
+
+  public void setInherited(Map<Property, DeclaredSecurityGroups> inherited) {
+    Map<Property, DeclaredSecurityGroups> map = mapForIteration();
+    map.putAll(inherited);
+    this.inherited = map;
+  }
+
   /**
    * For debugging use only.
    */
   @Override
   public String toString() {
     return declared + " " + inherited;
-  }
-
-  void setDeclared(Map<String, SecurityGroup> declared) {
-    this.declared = declared;
-  }
-
-  void setInherited(Map<Property, DeclaredSecurityGroups> inherited) {
-    this.inherited = inherited;
   }
 }

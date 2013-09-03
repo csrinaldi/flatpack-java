@@ -1,7 +1,7 @@
 package com.getperka.flatpack.policy;
 
-public interface HasName<P extends PolicyNode & HasName<P>> {
-  Ident<P> getName();
+public interface HasName<R> {
+  Ident<R> getName();
 
-  void setName(Ident<P> name);
+  void setName(Ident<R> name);
 }

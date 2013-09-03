@@ -26,6 +26,7 @@ import java.util.Set;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -39,6 +40,7 @@ public class Configuration {
   private List<PersistenceMapper> persistenceMappers;
   private PrincipalMapper principalMapper;
   private List<EntityResolver> resolvers = FlatPackCollections.listForAny();
+  private SecurityPolicy securityPolicy;
   private boolean verbose;
   private int verboseLogChunkSize = Integer.MAX_VALUE;
 
@@ -108,6 +110,10 @@ public class Configuration {
     return principalMapper;
   }
 
+  public SecurityPolicy getSecurityPolicy() {
+    return securityPolicy;
+  }
+
   /**
    * If verbose logging is enabled, this configuration parameter can be used to break logging of
    * large payloads across several log messages for logging systems that impose a maximum size on
@@ -157,6 +163,11 @@ public class Configuration {
 
   public Configuration withPrincipalMapper(PrincipalMapper mapper) {
     this.principalMapper = mapper;
+    return this;
+  }
+
+  public Configuration withSecurityPolicy(SecurityPolicy securityPolicy) {
+    this.securityPolicy = securityPolicy;
     return this;
   }
 

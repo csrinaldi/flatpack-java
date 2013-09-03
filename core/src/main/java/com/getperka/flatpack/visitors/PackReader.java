@@ -19,6 +19,7 @@ package com.getperka.flatpack.visitors;
  * limitations under the License.
  * #L%
  */
+import static com.getperka.flatpack.security.CrudOperation.UPDATE_ACTION;
 
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
@@ -36,7 +37,6 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.Security;
 import com.google.gson.JsonObject;
 
@@ -119,7 +119,7 @@ public class PackReader extends FlatPackVisitor {
         }
 
         // Verify the new value may be set
-        if (!security.may(context.getPrincipal(), stack.peek().entity, CrudOperation.UPDATE)) {
+        if (!security.may(context.getPrincipal(), stack.peek().entity, UPDATE_ACTION)) {
           return;
         }
 
