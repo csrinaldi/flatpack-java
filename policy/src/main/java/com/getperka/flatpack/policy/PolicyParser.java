@@ -157,13 +157,13 @@ class PolicyParser extends BaseParser<Object> {
   }
 
   @Cached
-  <R> Rule CompoundIdent(final Class<R> referentType) {
+  <R, E> Rule CompoundIdent(final Class<R> referentType, final Class<E> elementType) {
     @SuppressWarnings("rawtypes")
     final Var<List<Ident>> parts = new Var<List<Ident>>(new ArrayList<Ident>());
     return Sequence(
-        Ident(Object.class),
+        Ident(elementType),
         popToList(Ident.class, parts),
-        ZeroOrMore(".", Ident(Object.class), popToList(Ident.class, parts)),
+        ZeroOrMore(".", Ident(elementType), popToList(Ident.class, parts)),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
@@ -224,7 +224,7 @@ class PolicyParser extends BaseParser<Object> {
     return Sequence(
         NodeName(SecurityGroup.class, var),
         "=",
-        OneOrListOf(CompoundIdent(PropertyPath.class), Ident.class, ","),
+        OneOrListOf(CompoundIdent(PropertyPath.class, Property.class), Ident.class, ","),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {

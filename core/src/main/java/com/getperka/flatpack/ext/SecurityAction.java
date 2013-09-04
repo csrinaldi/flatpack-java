@@ -12,7 +12,7 @@ public class SecurityAction extends BaseHasUuid {
 
   public SecurityAction(Enum<?> e) {
     this.name = e.name();
-    this.type = e.getDeclaringClass().getName();
+    this.type = e.getDeclaringClass().getSimpleName();
   }
 
   public SecurityAction(String type, String name) {
