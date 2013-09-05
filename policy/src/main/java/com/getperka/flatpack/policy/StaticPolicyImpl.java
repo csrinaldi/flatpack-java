@@ -24,6 +24,7 @@ import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.util.FlatPackCollections;
 
 class StaticPolicyImpl implements SecurityPolicy {
   @Inject
@@ -67,8 +68,10 @@ class StaticPolicyImpl implements SecurityPolicy {
       @Override
       public boolean visit(AclRule x) {
         // XXX Globals?
-        extract(x, toReturn.get());
-        return super.visit(x);
+        if (p != null) {
+          extract(x, p);
+        }
+        return false;
       }
 
       @Override
@@ -103,6 +106,7 @@ class StaticPolicyImpl implements SecurityPolicy {
        */
       @Override
       public boolean visit(AclRule x) {
+        GroupPermissions extracted = new GroupPermissions();
         PropertyPolicy propertyPolicy = currentLocation(PropertyPolicy.class);
         TypePolicy typePolicy = currentLocation(TypePolicy.class);
         if (propertyPolicy != null) {
@@ -119,12 +123,14 @@ class StaticPolicyImpl implements SecurityPolicy {
             return false;
           }
 
-          extract(x, explicit.get());
-          return false;
+          explicit.set(extracted);
+          extract(x, extracted);
         } else if (typePolicy != null) {
-          extract(x, typeDefault.get());
+          typeDefault.set(extracted);
+          extract(x, extracted);
         } else {
-          extract(x, globalDefault.get());
+          globalDefault.set(extracted);
+          extract(x, extracted);
         }
         return false;
       }
@@ -179,6 +185,10 @@ class StaticPolicyImpl implements SecurityPolicy {
       set.add(ident.getReferent());
     }
     SecurityGroup group = x.getGroupName().getReferent();
+    // XXX ugly, need temporary mutable state?
+    if (p.getOperations().isEmpty()) {
+      p.setOperations(FlatPackCollections.<SecurityGroup, Set<SecurityAction>> mapForIteration());
+    }
     p.getOperations().put(group, set);
   }
 }

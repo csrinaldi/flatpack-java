@@ -144,6 +144,7 @@ public class TypeContext {
    */
   @Inject
   private Provider<Property.Builder> builderProvider;
+
   private final Map<String, Class<? extends HasUuid>> classes = sortedMapForIteration();
   @Inject
   private CodexMapper codexMapper;
@@ -163,7 +164,6 @@ public class TypeContext {
   private final Map<Class<?>, List<Property>> properties = mapForLookup();
   @Inject
   private SecurityPolicy securityPolicy;
-
   private boolean isExtracting;
 
   @Inject
@@ -345,6 +345,12 @@ public class TypeContext {
 
   public Collection<Class<? extends HasUuid>> getEntityTypes() {
     return Collections.unmodifiableCollection(classes.values());
+  }
+
+  public GroupPermissions getGroupPermissions(Class<? extends HasUuid> clazz) {
+    // XXX initialization order problem, must have Properties before the policy can be set up
+    extractProperties(clazz);
+    return securityPolicy.getPermissions(clazz);
   }
 
   /**

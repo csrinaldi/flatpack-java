@@ -22,4 +22,9 @@ public class GroupPermissions extends BaseHasUuid {
   public void setOperations(Map<SecurityGroup, Set<SecurityAction>> operations) {
     this.operations = operations;
   }
+
+  @Override
+  public String toString() {
+    return operations.toString();
+  }
 }
