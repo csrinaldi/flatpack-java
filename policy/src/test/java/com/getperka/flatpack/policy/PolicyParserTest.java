@@ -18,6 +18,8 @@ import org.parboiled.parserunners.TracingParseRunner;
 import org.parboiled.support.Filters;
 import org.parboiled.support.ParsingResult;
 
+import com.getperka.flatpack.policy.pst.PolicyFile;
+
 public class PolicyParserTest {
   private PolicyParser parser;
 

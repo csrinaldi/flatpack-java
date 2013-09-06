@@ -1,4 +1,4 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.pst;
 
 import java.util.List;
 
@@ -7,6 +7,7 @@ import com.getperka.flatpack.ext.Property;
 public class Allow extends PolicyNode implements HasInheritFrom<Property> {
   private List<AclRule> aclRules = list();
   private Ident<Property> inheritFrom;
+  private boolean only;
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -26,6 +27,10 @@ public class Allow extends PolicyNode implements HasInheritFrom<Property> {
     return inheritFrom;
   }
 
+  public boolean isOnly() {
+    return only;
+  }
+
   public void setAclRules(List<AclRule> aclRules) {
     this.aclRules = aclRules;
   }
@@ -33,5 +38,9 @@ public class Allow extends PolicyNode implements HasInheritFrom<Property> {
   @Override
   public void setInheritFrom(Ident<Property> inheritFrom) {
     this.inheritFrom = inheritFrom;
+  }
+
+  public void setOnly(boolean only) {
+    this.only = only;
   }
 }

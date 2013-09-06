@@ -1,6 +1,7 @@
 package com.getperka.flatpack.ext;
 
-import java.util.Collections;
+import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ import com.getperka.flatpack.security.CrudOperation;
  */
 public class GroupPermissions extends BaseHasUuid {
 
-  private Map<SecurityGroup, Set<SecurityAction>> operations = Collections.emptyMap();
+  private Map<SecurityGroup, Set<SecurityAction>> operations = mapForIteration();
 
   public Map<SecurityGroup, Set<SecurityAction>> getOperations() {
     return operations;

@@ -1,6 +1,8 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.pst;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -13,6 +15,7 @@ import java.util.List;
  */
 public class Ident<R> extends PolicyNode {
   private final List<Ident<?>> compoundName;
+  private final int hashCode;
   private R referent;
   private final Class<R> referentType;
   private final String simpleName;
@@ -22,15 +25,19 @@ public class Ident<R> extends PolicyNode {
   }
 
   public Ident(Class<R> type, List<Ident<?>> compoundName) {
-    this.compoundName = compoundName;
+    this.compoundName = Collections.unmodifiableList(new ArrayList<Ident<?>>(compoundName));
     this.simpleName = null;
     this.referentType = type;
+
+    this.hashCode = this.referentType.hashCode() * 3 + this.compoundName.hashCode() * 5;
   }
 
   public Ident(Class<R> type, String simpleName) {
     this.compoundName = null;
     this.simpleName = simpleName;
     this.referentType = type;
+
+    this.hashCode = type.hashCode() * 3 + simpleName.hashCode() * 7;
   }
 
   @Override
@@ -52,6 +59,27 @@ public class Ident<R> extends PolicyNode {
     }
     throw new ClassCastException("Ident of type " + referentType.getName() + " cannot be cast to "
       + clazz.getName());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof Ident)) {
+      return false;
+    }
+    Ident<?> other = (Ident<?>) o;
+    if (!referentType.equals(other.referentType)) {
+      return false;
+    }
+    if (simpleName != null) {
+      return simpleName.equals(other.simpleName);
+    }
+    if (compoundName != null) {
+      return compoundName.equals(other.compoundName);
+    }
+    throw new UnsupportedOperationException();
   }
 
   /**
@@ -77,6 +105,11 @@ public class Ident<R> extends PolicyNode {
       throw new IllegalStateException("Not a simple identifier: " + this);
     }
     return simpleName;
+  }
+
+  @Override
+  public int hashCode() {
+    return hashCode;
   }
 
   public boolean isCompound() {

@@ -1,4 +1,4 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.pst;
 
 public interface HasName<R> {
   Ident<R> getName();

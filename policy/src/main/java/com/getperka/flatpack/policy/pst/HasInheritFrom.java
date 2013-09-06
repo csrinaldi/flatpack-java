@@ -1,4 +1,4 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.pst;
 
 public interface HasInheritFrom<R> {
   Ident<R> getInheritFrom();

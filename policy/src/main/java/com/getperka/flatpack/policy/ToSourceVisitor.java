@@ -2,6 +2,19 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
+import com.getperka.flatpack.policy.pst.AclRule;
+import com.getperka.flatpack.policy.pst.Allow;
+import com.getperka.flatpack.policy.pst.Group;
+import com.getperka.flatpack.policy.pst.GroupDefinition;
+import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PolicyFile;
+import com.getperka.flatpack.policy.pst.PolicyNode;
+import com.getperka.flatpack.policy.pst.PolicyVisitor;
+import com.getperka.flatpack.policy.pst.PropertyList;
+import com.getperka.flatpack.policy.pst.PropertyPolicy;
+import com.getperka.flatpack.policy.pst.TypePolicy;
+import com.getperka.flatpack.policy.pst.Verb;
+
 public class ToSourceVisitor extends PolicyVisitor {
   private int indent;
   private boolean needsIndent = true;
@@ -30,6 +43,10 @@ public class ToSourceVisitor extends PolicyVisitor {
   @Override
   public boolean visit(AclRule x) {
     traverse(x.getGroupName());
+    if (x.getSecurityActions().isEmpty()) {
+      print(" none");
+      return false;
+    }
     print(" to ");
     traverse(x.getSecurityActions(), ", ");
     return false;
@@ -38,6 +55,9 @@ public class ToSourceVisitor extends PolicyVisitor {
   @Override
   public boolean visit(Allow x) {
     print("allow ");
+    if (x.isOnly()) {
+      print("only ");
+    }
     if (x.getInheritFrom() != null) {
       print("inherit ");
       traverse(x.getInheritFrom());

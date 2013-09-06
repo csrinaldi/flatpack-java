@@ -2,6 +2,9 @@ package com.getperka.flatpack.policy;
 
 import java.util.List;
 
+import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PolicyNode;
+
 /**
  * Elides most subnodes to produce output suitable for use in a debugger.
  */
@@ -29,7 +32,7 @@ public class ToStringVisitor extends ToSourceVisitor {
   protected void traverse(PolicyNode x) {
     // Always print single idents, since they make the summary usable
     if (x instanceof Ident) {
-      super.traverse(x);
+      print(x.toSource());
     } else {
       print(" ... ");
     }

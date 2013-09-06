@@ -1,12 +1,9 @@
 package com.getperka.flatpack.policy;
 
-import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -24,20 +21,113 @@ import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.util.FlatPackCollections;
+import com.getperka.flatpack.policy.pst.AclRule;
+import com.getperka.flatpack.policy.pst.Allow;
+import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PolicyFile;
+import com.getperka.flatpack.policy.pst.PolicyVisitor;
+import com.getperka.flatpack.policy.pst.PropertyList;
+import com.getperka.flatpack.policy.pst.PropertyPolicy;
+import com.getperka.flatpack.policy.pst.TypePolicy;
+import com.getperka.flatpack.policy.visitors.IdentChecker;
+import com.getperka.flatpack.policy.visitors.IdentResolver;
 
 class StaticPolicyImpl implements SecurityPolicy {
-  @Inject
-  Provider<IdentChecker> checkers;
-  @Inject
-  Provider<IdentResolver> resolvers;
-  @Inject
-  SecurityGroups securityGroups;
+  private static class PermissionsExtractor extends PolicyVisitor {
+    private final Class<? extends HasUuid> entity;
+    private final Property property;
+    private final GroupPermissions toReturn;
 
+    private PermissionsExtractor(GroupPermissions toReturn, Class<? extends HasUuid> entity) {
+      this(toReturn, entity, null);
+    }
+
+    private PermissionsExtractor(GroupPermissions toReturn, Class<? extends HasUuid> entity,
+        Property property) {
+      this.entity = entity;
+      this.property = property;
+      this.toReturn = toReturn;
+    }
+
+    /**
+     * Populates {@link #toReturn} with the actions in the rule.
+     */
+    @Override
+    public boolean visit(AclRule x) {
+      Set<SecurityAction> set = setForIteration();
+      for (Ident<SecurityAction> ident : x.getSecurityActions()) {
+        set.add(ident.getReferent());
+      }
+      SecurityGroup group = x.getGroupName().getReferent();
+      toReturn.getOperations().put(group, set);
+      return false;
+    }
+
+    /**
+     * Supports the "only" construct by clearing whatever permissions have already been accumulated.
+     */
+    @Override
+    public boolean visit(Allow x) {
+      if (x.isOnly()) {
+        toReturn.getOperations().clear();
+      }
+      return true;
+    }
+
+    /**
+     * Simplify iteration.
+     */
+    @Override
+    public boolean visit(PolicyFile x) {
+      traverse(x.getAllows());
+      traverse(x.getTypePolicies());
+      return false;
+    }
+
+    /**
+     * Determines whether or not to descend into a {@link PropertyPolicy} if {@link #property} is
+     * non-null.
+     */
+    @Override
+    public boolean visit(PropertyPolicy x) {
+      boolean toReturn = false;
+      outer: for (PropertyList list : x.getPropertyLists()) {
+        for (Ident<Property> ident : list.getPropertyNames()) {
+          if (property.equals(ident.getReferent())) {
+            toReturn = true;
+            break outer;
+          }
+        }
+      }
+      return toReturn;
+    }
+
+    /**
+     * Determines whether or not to descend into a {@link TypePolicy} is {@link #entity} is
+     * non-null. Also simplifies iteration if {@link #property} is null.
+     */
+    @Override
+    public boolean visit(TypePolicy x) {
+      if (entity == null || !x.getName().getReferent().equals(entity)) {
+        return false;
+      }
+      traverse(x.getAllows());
+      if (property != null) {
+        traverse(x.getPolicies());
+      }
+      return false;
+    }
+  }
+
+  @Inject
+  private Provider<IdentChecker> checkers;
   private PolicyFile policy;
-
   @Inject
-  TypeContext typeContext;
+  private Provider<IdentResolver> resolvers;
+  @Inject
+  private SecurityGroups securityGroups;
+  @Inject
+  private TypeContext typeContext;
 
   /**
    * Requires injection.
@@ -51,109 +141,19 @@ class StaticPolicyImpl implements SecurityPolicy {
 
   @Override
   public GroupPermissions getPermissions(final Class<? extends HasUuid> entity) {
-    final AtomicReference<GroupPermissions> toReturn = new AtomicReference<GroupPermissions>();
-
-    policy.accept(new PolicyVisitor() {
-      private GroupPermissions p;
-
-      @Override
-      public void endVisit(TypePolicy x) {
-        if (p != null) {
-          p.setOperations(Collections.unmodifiableMap(p.getOperations()));
-          toReturn.set(p);
-          p = null;
-        }
-      }
-
-      @Override
-      public boolean visit(AclRule x) {
-        // XXX Globals?
-        if (p != null) {
-          extract(x, p);
-        }
-        return false;
-      }
-
-      @Override
-      public boolean visit(TypePolicy x) {
-        if (!x.getName().getReferent().equals(entity)) {
-          return false;
-        }
-        Map<SecurityGroup, Set<SecurityAction>> map = mapForIteration();
-        p = new GroupPermissions();
-        p.setOperations(map);
-        return true;
-      }
-    });
-
-    return toReturn.get();
+    GroupPermissions toReturn = new GroupPermissions();
+    policy.accept(new PermissionsExtractor(toReturn, entity));
+    toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
+    return toReturn;
   }
 
   @Override
   public GroupPermissions getPermissions(final Property property) {
-    final Class<? extends HasUuid> entity = typeContext.getClass(property.getEnclosingTypeName());
-    if (entity == null) {
-      return null;
-    }
-
-    final AtomicReference<GroupPermissions> globalDefault = new AtomicReference<GroupPermissions>();
-    final AtomicReference<GroupPermissions> typeDefault = new AtomicReference<GroupPermissions>();
-    final AtomicReference<GroupPermissions> explicit = new AtomicReference<GroupPermissions>();
-    policy.accept(new PolicyLocationVisitor() {
-
-      /**
-       * For each AclRule, see if it's a global default, type default, or explicit property block.
-       */
-      @Override
-      public boolean visit(AclRule x) {
-        GroupPermissions extracted = new GroupPermissions();
-        PropertyPolicy propertyPolicy = currentLocation(PropertyPolicy.class);
-        TypePolicy typePolicy = currentLocation(TypePolicy.class);
-        if (propertyPolicy != null) {
-          boolean found = false;
-          for (PropertyList list : propertyPolicy.getPropertyLists()) {
-            for (Ident<Property> ident : list.getPropertyNames()) {
-              if (ident.getReferent().equals(property)) {
-                found = true;
-                break;
-              }
-            }
-          }
-          if (!found) {
-            return false;
-          }
-
-          explicit.set(extracted);
-          extract(x, extracted);
-        } else if (typePolicy != null) {
-          typeDefault.set(extracted);
-          extract(x, extracted);
-        } else {
-          globalDefault.set(extracted);
-          extract(x, extracted);
-        }
-        return false;
-      }
-
-      /**
-       * Ignore any TypePolicies unrelated to the property's enclosing type.
-       */
-      @Override
-      public boolean visit(TypePolicy x) {
-        return x.getName().getReferent().equals(entity);
-      }
-    });
-
-    if (explicit.get() != null) {
-      return explicit.get();
-    }
-    if (typeDefault.get() != null) {
-      return typeDefault.get();
-    }
-    if (globalDefault.get() != null) {
-      return globalDefault.get();
-    }
-    return null;
+    GroupPermissions toReturn = new GroupPermissions();
+    policy.accept(new PermissionsExtractor(toReturn,
+        typeContext.getClass(property.getEnclosingTypeName()), property));
+    toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
+    return toReturn;
   }
 
   public void parse(String contents) {
@@ -164,7 +164,6 @@ class StaticPolicyImpl implements SecurityPolicy {
     }
 
     policy = (PolicyFile) result.resultValue;
-    System.out.println(policy.toString());
 
     IdentResolver resolver = resolvers.get();
     resolver.exec(policy);
@@ -177,18 +176,6 @@ class StaticPolicyImpl implements SecurityPolicy {
     if (!checker.getErrors().isEmpty()) {
       throw new IllegalArgumentException(checker.getErrors().toString());
     }
-  }
-
-  private void extract(AclRule x, GroupPermissions p) {
-    Set<SecurityAction> set = setForIteration();
-    for (Ident<SecurityAction> ident : x.getSecurityActions()) {
-      set.add(ident.getReferent());
-    }
-    SecurityGroup group = x.getGroupName().getReferent();
-    // XXX ugly, need temporary mutable state?
-    if (p.getOperations().isEmpty()) {
-      p.setOperations(FlatPackCollections.<SecurityGroup, Set<SecurityAction>> mapForIteration());
-    }
-    p.getOperations().put(group, set);
+    System.out.println("EVALUATED:\n" + policy.toSource() + "\n");
   }
 }

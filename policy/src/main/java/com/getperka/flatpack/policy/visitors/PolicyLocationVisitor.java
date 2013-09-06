@@ -1,10 +1,13 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.visitors;
 
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+
+import com.getperka.flatpack.policy.pst.PolicyNode;
+import com.getperka.flatpack.policy.pst.PolicyVisitor;
 
 /**
  * A utility class for policy visitors that maintains the current location of the visitor to improve

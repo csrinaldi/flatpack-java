@@ -1,6 +1,7 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.pst;
 
 import java.util.List;
+
 
 public class PolicyVisitor {
   public void endVisit(AclRule x) {}

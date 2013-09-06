@@ -1,4 +1,4 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.pst;
 
 import java.util.List;
 
@@ -23,8 +23,10 @@ public class GroupDefinition extends PolicyNode implements HasName<SecurityGroup
 
       // Either prepend a new path segment to a compound name, or turn a simple name into a compound
       if (old.isCompound()) {
-        path = new Ident<PropertyPath>(PropertyPath.class, old.getCompoundName());
-        path.getCompoundName().add(0, prefixIdent);
+        List<Ident<?>> newName = list();
+        newName.add(prefixIdent);
+        newName.addAll(old.getCompoundName());
+        path = new Ident<PropertyPath>(PropertyPath.class, newName);
       } else {
         path = new Ident<PropertyPath>(PropertyPath.class, prefixIdent,
             new Ident<Property>(Property.class, old.getSimpleName()));

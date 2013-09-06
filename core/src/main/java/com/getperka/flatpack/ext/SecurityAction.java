@@ -39,6 +39,28 @@ public class SecurityAction extends BaseHasUuid {
     return "*".equals(type);
   }
 
+  /**
+   * Returns {@code true} if a principal who possesses the current SecurityAction would also be
+   * allowed to perform {@code desiredAction}.
+   */
+  public boolean permit(SecurityAction desiredAction) {
+    if (desiredAction == null) {
+      return false;
+    }
+    if (this.equals(desiredAction)) {
+      return true;
+    }
+    // Allow-all action
+    if ("*".equals(type)) {
+      return true;
+    }
+    // Allow all actions of a specific type
+    if (type.equals(desiredAction.type) && "*".equals(action)) {
+      return true;
+    }
+    return false;
+  }
+
   public void setAction(String name) {
     this.action = name;
   }

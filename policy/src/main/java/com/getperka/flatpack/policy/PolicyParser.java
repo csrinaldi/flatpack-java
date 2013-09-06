@@ -19,6 +19,19 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
 import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.policy.pst.AclRule;
+import com.getperka.flatpack.policy.pst.Allow;
+import com.getperka.flatpack.policy.pst.Group;
+import com.getperka.flatpack.policy.pst.GroupDefinition;
+import com.getperka.flatpack.policy.pst.HasInheritFrom;
+import com.getperka.flatpack.policy.pst.HasName;
+import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PolicyFile;
+import com.getperka.flatpack.policy.pst.PolicyNode;
+import com.getperka.flatpack.policy.pst.PropertyList;
+import com.getperka.flatpack.policy.pst.PropertyPolicy;
+import com.getperka.flatpack.policy.pst.TypePolicy;
+import com.getperka.flatpack.policy.pst.Verb;
 
 /**
  * The grammar definition for the policy file.
@@ -82,14 +95,23 @@ class PolicyParser extends BaseParser<Object> {
    * An individual ACL rule:
    * 
    * <pre>
+   * groupName none
+   * 
    * groupName to verbName.actionName
    * </pre>
    */
   Rule AclRule() {
     return Sequence(
         WildcardOrIdent(SecurityGroup.class),
-        "to",
-        OneOrListOf(VerbActionOrWildcard(), Ident.class, ","),
+        FirstOf(
+            // Special syntax for a zero-length list
+            Sequence("none", ACTION(push(new ArrayList<Ident<SecurityAction>>()))),
+            // Or require at least one
+            Sequence(
+                "to",
+                OneOrListOf(VerbActionOrWildcard(), Ident.class, ",")
+            )
+        ),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
@@ -107,7 +129,7 @@ class PolicyParser extends BaseParser<Object> {
    * version.
    * 
    * <pre>
-   * allow [ inherit somePropertyName ] {
+   * allow [ only ] [ inherit somePropertyName ] {
    *   aclRule;
    *   ...;
    *   aclRule;
@@ -120,8 +142,10 @@ class PolicyParser extends BaseParser<Object> {
    */
   Rule Allow() {
     final Var<Allow> var = new Var<Allow>(new Allow());
+    final Var<Boolean> only = new Var<Boolean>(false);
     return Sequence(
         "allow",
+        Optional("only", ACTION(only.set(true))),
         MaybeInherit(Property.class, var),
         ZeroOneOrBlock(AclRule(), AclRule.class),
         new Action<Object>() {
@@ -130,6 +154,7 @@ class PolicyParser extends BaseParser<Object> {
           public boolean run(Context<Object> ctx) {
             Allow x = var.get();
             x.setAclRules((List<AclRule>) pop());
+            x.setOnly(only.get());
             push(x);
             return true;
           }
@@ -368,10 +393,10 @@ class PolicyParser extends BaseParser<Object> {
   }
 
   /**
-   * An named, inheritable block that contains {@link Allow} and {@link PropertyList} nodes.
+   * An named block that contains {@link Allow} and {@link PropertyList} nodes.
    * 
    * <pre>
-   * policy name [ , inherit someProperty ] {
+   * policy name {
    *   property a, b, c;
    *   allow {
    *     ...
@@ -384,7 +409,6 @@ class PolicyParser extends BaseParser<Object> {
     return Sequence(
         "policy",
         NodeName(PropertyPolicy.class, x),
-        MaybeInherit(PropertyPolicy.class, x),
         "{",
         ZeroOrMore(FirstOf(
             Sequence(

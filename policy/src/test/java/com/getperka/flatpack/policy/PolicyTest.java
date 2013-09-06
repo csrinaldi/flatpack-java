@@ -3,10 +3,12 @@ package com.getperka.flatpack.policy;
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -18,13 +20,20 @@ import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.TypeSource;
 import com.getperka.flatpack.ext.GroupPermissions;
+import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.policy.domain.Clerk;
 import com.getperka.flatpack.policy.domain.IntegratorUser;
 import com.getperka.flatpack.policy.domain.IsPrincipalMapper;
 import com.getperka.flatpack.policy.domain.Merchant;
 import com.getperka.flatpack.policy.domain.MerchantLocation;
 import com.getperka.flatpack.policy.domain.MerchantUser;
+import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PolicyFile;
+import com.getperka.flatpack.policy.pst.PolicyNode;
+import com.getperka.flatpack.policy.pst.PolicyVisitor;
 
 public class PolicyTest {
 
@@ -65,26 +74,70 @@ public class PolicyTest {
         }
       });
 
-      doTest(policyFile.toSource());
+      String source = policyFile.toSource();
+      System.out.println("\nRun " + i + "\n" + source);
+      doTest(source);
     }
+  }
+
+  void checkPermissions(GroupPermissions p, String groupName, String... actionNames) {
+    Set<SecurityAction> expected = setForIteration();
+    for (String name : actionNames) {
+      String[] parts = name.split("\\.");
+      assertEquals(2, parts.length);
+      expected.add(new SecurityAction(parts[0], parts[1]));
+    }
+    for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : p.getOperations().entrySet()) {
+      if (groupName.equals(entry.getKey().getName())) {
+        assertEquals(expected, entry.getValue());
+        return;
+      }
+    }
+    fail("Did not find SecurityGroup named " + groupName + " in " + p);
   }
 
   /**
    * Examination of the actual structure of the parsed data. The tests performed here must not
-   * assume any relative ordering of rules, since this methed will be called with shuffled input.
+   * assume any relative ordering of rules, since this method will be called with shuffled input.
    */
   void doTest(String contents) {
     FlatPack fp = flatpack(contents);
     GroupPermissions p = fp.getTypeContext().getGroupPermissions(Merchant.class);
     assertNotNull(p);
-    assertEquals(p.getOperations().toString(), 3, p.getOperations().size());
-    assertNotNull(getGroup(p, "clerk"));
-    assertNotNull(getGroup(p, "merchantUser"));
-    assertNotNull(getGroup(p, "integratorUser"));
 
-    // flatpack.getTypeContext().extractProperties(Merchant.class);
-    // GroupPermissions p = securityPolicy.getPermissions(Merchant.class);
-    // System.out.println(p);
+    // Check various type-level permissions
+    checkMerchantPermissions(p);
+
+    // Check property-level permissions, especially type- and global-overrides
+    Property name = getProperty(fp.getTypeContext(), Merchant.class, "name");
+    p = name.getGroupPermissions();
+    assertNotNull(p);
+    // Just replacing a previous declaration
+    assertEquals(5, p.getOperations().size());
+    checkPermissions(p, "*", "crudOperation.read");
+
+    // Test the "allow only" construct
+    Property note = getProperty(fp.getTypeContext(), Merchant.class, "note");
+    p = note.getGroupPermissions();
+    assertNotNull(p);
+    assertEquals(1, p.getOperations().size());
+    checkPermissions(p, "internalUser", "*.*");
+
+    // Verify that unreferenced properties inherit the type's allow
+    Property other = getProperty(fp.getTypeContext(), Merchant.class, "other");
+    p = other.getGroupPermissions();
+    assertNotNull(p);
+    checkMerchantPermissions(p);
+  }
+
+  private void checkMerchantPermissions(GroupPermissions p) {
+    assertEquals(p.getOperations().toString(), 5, p.getOperations().size());
+    checkPermissions(p, "*");
+    checkPermissions(p, "merchantUser", "crudOperation.update");
+    checkPermissions(p, "integratorUser", "crudOperation.create", "crudOperation.read",
+        "crudOperation.update", "crudOperation.delete");
+    checkPermissions(p, "clerk", "crudOperation.read");
+    checkPermissions(p, "internalUser", "*.*");
   }
 
   private FlatPack flatpack(String contents) {
@@ -113,6 +166,15 @@ public class PolicyTest {
     for (SecurityGroup g : permissions.getOperations().keySet()) {
       if (name.equals(g.getName())) {
         return g;
+      }
+    }
+    return null;
+  }
+
+  private Property getProperty(TypeContext ctx, Class<?> clazz, String propertyName) {
+    for (Property p : ctx.extractProperties(clazz)) {
+      if (p.getName().equals(propertyName)) {
+        return p;
       }
     }
     return null;

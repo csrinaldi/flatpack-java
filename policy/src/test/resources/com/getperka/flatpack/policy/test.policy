@@ -21,7 +21,8 @@ type merchant {
     clerk to read;
     integratorUser to create, read, update, delete;
     merchantUser to update;
-    * to read;
+    // Allow global inherit to be overridden
+    * none;
   }
     
 
@@ -32,13 +33,14 @@ type merchant {
      * policy to prevent overloaded behaviors.
      */
     property name, headline;
-    // Don't need curly braces for singleton rulesets
+    // Re-override type-level allow rule, also don't need curly braces for singleton rulesets
     allow * to read; 
   }
   
   policy internalOnly {
     property note, foo, bar;
-    allow internalUser to *;
+    // The "only" modifier prevents any inheritance
+    allow only internalUser to *;
   }
 }
 
@@ -53,9 +55,10 @@ type merchantLocation {
 
   allow inherit merchant {
     clerk to read, validatorActions.*;
-    merchantUser to *;
+    merchantUser to crudOperation.*, validatorActions.redeemCoupon;
   }
   
+  // Test same-type inheritance
   allow inherit templateLocation;
 
   policy thingsToForget {
