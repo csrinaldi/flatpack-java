@@ -5,7 +5,6 @@ import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -109,11 +108,9 @@ public class PrincipalSecurity implements Security {
       return true;
     }
 
-    for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : permissions.getOperations()
-        .entrySet()) {
-      if (isMember(entity, entry.getKey(), principal)) {
-        // Don't simply return contains() since there may be other grops to test
-        if (entry.getValue().contains(op)) {
+    for (SecurityGroup group : permissions.getOperations().keySet()) {
+      if (isMember(entity, group, principal)) {
+        if (permissions.contains(group, op)) {
           return true;
         }
       }

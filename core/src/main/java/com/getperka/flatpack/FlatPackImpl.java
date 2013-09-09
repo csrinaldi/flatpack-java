@@ -69,6 +69,7 @@ class FlatPackImpl extends FlatPack implements HasInjector {
     return unpacker;
   }
 
+  @Override
   public Visitors getVisitors() {
     return visitors;
   }

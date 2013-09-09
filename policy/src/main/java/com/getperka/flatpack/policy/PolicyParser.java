@@ -265,6 +265,7 @@ class PolicyParser extends BaseParser<Object> {
    * A lazy, by-name reference to another object. The syntax for these identifiers uses the same
    * rules as Java identifiers.
    */
+  @Cached
   <R> Rule Ident(Class<R> referentType) {
     StringVar x = new StringVar();
     return Sequence(
@@ -452,9 +453,21 @@ class PolicyParser extends BaseParser<Object> {
   /**
    * A reference to an action. This may be a single {@link Ident} or a wildcard, possibly qualified
    * by a verb name.
+   * 
+   * <pre>
+   * * 
+   * *.*
+   * Foo.bar
+   * Foo.*
+   * bar
+   * </pre>
    */
   Rule VerbActionOrWildcard() {
     return FirstOf(
+        Sequence(
+            WILDCARD,
+            Optional(".", WILDCARD),
+            ACTION(push(new Ident<SecurityAction>(SecurityAction.class, "*")))),
         Sequence(
             Ident(Verb.class),
             ".",
@@ -462,7 +475,9 @@ class PolicyParser extends BaseParser<Object> {
             ACTION(swap()
               && push(new Ident<SecurityAction>(SecurityAction.class, popIdent(Verb.class),
                   popIdent(SecurityAction.class))))),
-        WildcardOrIdent(SecurityAction.class));
+        Ident(SecurityAction.class)
+
+    );
   }
 
   /**

@@ -247,6 +247,10 @@ public class IdentResolver extends PolicyLocationVisitor {
     error("Could not find property " + x + " in type " + typePolicy.getName());
   }
 
+  /**
+   * Convert a simple or compound name into a {@link PropertyPath}, using the currently-enclosing
+   * {@link TypePolicy} as the basis for resolving property names.
+   */
   void resolvePropertyPath(Ident<PropertyPath> x) {
     TypePolicy typePolicy = currentLocation(TypePolicy.class);
     if (typePolicy == null) {
@@ -295,8 +299,15 @@ public class IdentResolver extends PolicyLocationVisitor {
 
     // Otherwise, it must be a verb reference
     if (x.isCompound()) {
-      // Foo.bar
+      // *.*, Foo.*, or Foo.bar
       Ident<Verb> verbIdent = x.getCompoundName().get(0).cast(Verb.class);
+
+      if (verbIdent.isWildcard()) {
+        // Parser shouldn't allow *.foo, so we can ignore the second part
+        x.setReferent(new SecurityAction("*", "*"));
+        return;
+      }
+
       Verb verb = scope().get(verbIdent);
       if (verb == null) {
         error("Unknown verb: " + verbIdent.getSimpleName());
@@ -306,11 +317,12 @@ public class IdentResolver extends PolicyLocationVisitor {
 
       Ident<SecurityAction> actionIdent = x.getCompoundName().get(1).cast(SecurityAction.class);
       if (actionIdent.isWildcard()) {
+        // Foo.*
         SecurityAction action = new SecurityAction(verbIdent.getSimpleName(), "*");
         actionIdent.setReferent(action);
         x.setReferent(action);
       } else {
-        // Find matching verb declaration
+        // Find matching verb declaration, e.g. Foo.bar
         for (Ident<SecurityAction> action : verb.getActions()) {
           if (action.equals(x.getCompoundName().get(1))) {
             actionIdent.setReferent(action.getReferent());
@@ -323,6 +335,7 @@ public class IdentResolver extends PolicyLocationVisitor {
         return;
       }
     } else if (x.isWildcard()) {
+      // Interpret "*" as "*.*"
       x.setReferent(new SecurityAction("*", "*"));
     } else {
       // read
@@ -350,8 +363,6 @@ public class IdentResolver extends PolicyLocationVisitor {
 
       x.setReferent(ensureReferent(match));
     }
-
-    return;
   }
 
   void resolveSecurityGroup(Ident<SecurityGroup> x) {
@@ -392,8 +403,6 @@ public class IdentResolver extends PolicyLocationVisitor {
       globalDef.setName(x);
       scope().put(globalDef);
     }
-
-    return;
   }
 
   private PropertyPath createPropertyPath(Class<?> resolveFrom, List<String> propertyNames) {
