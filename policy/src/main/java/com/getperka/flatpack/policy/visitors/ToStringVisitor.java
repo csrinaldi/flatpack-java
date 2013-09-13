@@ -1,4 +1,4 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.visitors;
 
 import java.util.List;
 

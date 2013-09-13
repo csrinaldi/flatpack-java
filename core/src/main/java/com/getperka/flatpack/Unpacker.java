@@ -252,8 +252,10 @@ public class Unpacker {
             while (!JsonToken.END_ARRAY.equals(reader.peek())) {
               JsonObject chunk = jsonParser.parse(reader).getAsJsonObject();
               HasUuid entity = codex.allocate(chunk, context);
-              toReturn.addExtraEntity(entity);
-              entityData.put(entity, chunk.getAsJsonObject());
+              if (entity != null) {
+                toReturn.addExtraEntity(entity);
+                entityData.put(entity, chunk.getAsJsonObject());
+              }
             }
             reader.endArray();
           } finally {

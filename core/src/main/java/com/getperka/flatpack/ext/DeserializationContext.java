@@ -73,10 +73,11 @@ public class DeserializationContext extends BaseContext {
    */
   public boolean checkAccess(HasUuid object) {
     // Allow newly-instantiated objects
-    if (wasResolved(object) && security.may(getPrincipal(), object, CREATE_ACTION)) {
+    SecurityTarget target = SecurityTarget.of(object);
+    if (!wasResolved(object) && security.may(getPrincipal(), target, CREATE_ACTION)) {
       return true;
     }
-    if (security.may(getPrincipal(), object, UPDATE_ACTION)) {
+    if (security.may(getPrincipal(), target, UPDATE_ACTION)) {
       return true;
     }
     addWarning(object, "User %s does not have permission to edit this %s", getPrincipal(),

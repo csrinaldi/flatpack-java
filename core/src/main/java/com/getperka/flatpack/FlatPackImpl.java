@@ -27,6 +27,7 @@ import javax.inject.Singleton;
 
 import com.getperka.flatpack.codexes.ValueCodex;
 import com.getperka.flatpack.ext.Codex;
+import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
 import com.google.inject.Injector;
@@ -40,6 +41,8 @@ class FlatPackImpl extends FlatPack implements HasInjector {
   private Injector injector;
   @Inject
   private Packer packer;
+  @Inject
+  private SecurityPolicy securityPolicy;
   @Inject
   private TypeContext types;
   @Inject
@@ -57,6 +60,11 @@ class FlatPackImpl extends FlatPack implements HasInjector {
   @Override
   public Packer getPacker() {
     return packer;
+  }
+
+  @Override
+  public SecurityPolicy getSecurityPolicy() {
+    return securityPolicy;
   }
 
   @Override

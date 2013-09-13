@@ -44,6 +44,7 @@ import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
@@ -197,7 +198,8 @@ public class PackWriter extends FlatPackVisitor {
       return false;
     }
     // Check access
-    if (!security.may(context.getPrincipal(), stack.peek().entity, prop, READ_ACTION)) {
+    if (!security.may(context.getPrincipal(),
+        SecurityTarget.of(stack.peek().entity, prop), READ_ACTION)) {
       return false;
     }
     // Ignore OneToMany type properties unless specifically requested
@@ -220,7 +222,7 @@ public class PackWriter extends FlatPackVisitor {
   @Override
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
-    if (!security.may(context.getPrincipal(), entity, READ_ACTION)) {
+    if (!security.may(context.getPrincipal(), SecurityTarget.of(entity), READ_ACTION)) {
       stack.push(null);
       return false;
     }

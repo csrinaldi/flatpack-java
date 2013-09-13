@@ -65,7 +65,6 @@ import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
-import com.getperka.flatpack.security.AclGroup;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
@@ -345,7 +344,7 @@ public class ApiDescriber {
           interestingRoles.add(group.getName());
         }
         // Ignore the property if it's not a @PermitAll and it is disjoint from the filter roles
-        if (Collections.disjoint(interestingRoles, Collections.singleton(AclGroup.ALL)) &&
+        if (Collections.disjoint(interestingRoles, Collections.singleton("*")) &&
           Collections.disjoint(interestingRoles, limitRoles)) {
           it.remove();
           continue;

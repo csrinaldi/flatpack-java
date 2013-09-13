@@ -42,7 +42,7 @@ public interface PrincipalMapper {
   List<Principal> getPrincipals(HasUuid entity);
 
   /**
-   * Allows entity access restrictions to be bypassed for super-users or specific entities.
+   * Allows entity access restrictions to be bypassed for super-users or specific targets.
    */
-  boolean isAccessEnforced(Principal principal, HasUuid entity);
+  boolean isAccessEnforced(Principal principal, SecurityTarget target);
 }

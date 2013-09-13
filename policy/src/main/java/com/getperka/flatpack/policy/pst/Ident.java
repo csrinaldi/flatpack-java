@@ -53,8 +53,7 @@ public class Ident<R> extends PolicyNode {
    */
   @SuppressWarnings("unchecked")
   public <T> Ident<T> cast(Class<T> clazz) {
-    // Widening cast, just return the current ident
-    if (clazz.isAssignableFrom(referentType)) {
+    if (referentType.isAssignableFrom(clazz)) {
       return (Ident<T>) this;
     }
     throw new ClassCastException("Ident of type " + referentType.getName() + " cannot be cast to "

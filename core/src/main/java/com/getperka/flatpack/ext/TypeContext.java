@@ -22,6 +22,7 @@ package com.getperka.flatpack.ext;
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.sortedMapForIteration;
 import static com.getperka.flatpack.util.FlatPackTypes.decapitalize;
 import static com.getperka.flatpack.util.FlatPackTypes.erase;
@@ -37,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
@@ -165,6 +167,7 @@ public class TypeContext {
   @Inject
   private SecurityPolicy securityPolicy;
   private boolean isExtracting;
+  private Set<Class<?>> needsSecurity = setForIteration();
 
   @Inject
   protected TypeContext() {}
@@ -205,6 +208,7 @@ public class TypeContext {
       topCall = true;
       isExtracting = true;
     }
+    needsSecurity.add(clazz);
 
     toReturn = listForAny();
 
@@ -285,18 +289,20 @@ public class TypeContext {
     /*
      * Wire up security information. Because properties can refer to one another via group
      * inheritance it is necessary to perform this calculation after the properties have been fully
-     * constructed.
+     * constructed. It's also necessary to allow for the security policy to have caused other types
+     * to be extracted, hence the isExtracting swizzle.
      */
     if (topCall) {
-      for (Property p : toReturn) {
-        GroupPermissions groupPermissions = securityPolicy.getPermissions(p);
-        if (groupPermissions == null) {
-          groupPermissions = securityPolicy.getPermissions(clazz.asSubclass(HasUuid.class));
+      while (!needsSecurity.isEmpty()) {
+        List<Class<?>> toSecure = listForAny();
+        toSecure.addAll(needsSecurity);
+        needsSecurity.clear();
+        for (Class<?> extracted : toSecure) {
+          for (Property p : properties.get(extracted)) {
+            GroupPermissions groupPermissions = securityPolicy.getPermissions(SecurityTarget.of(p));
+            p.setGroupPermissions(groupPermissions);
+          }
         }
-        if (groupPermissions == null) {
-          groupPermissions = securityPolicy.getDefaultPermissions();
-        }
-        p.setGroupPermissions(groupPermissions);
       }
       isExtracting = false;
     }
@@ -347,12 +353,6 @@ public class TypeContext {
     return Collections.unmodifiableCollection(classes.values());
   }
 
-  public GroupPermissions getGroupPermissions(Class<? extends HasUuid> clazz) {
-    // XXX initialization order problem, must have Properties before the policy can be set up
-    extractProperties(clazz);
-    return securityPolicy.getPermissions(clazz);
-  }
-
   /**
    * Returns the "type" name used for an entity type in the {@code data} section of the payload.
    */
@@ -387,6 +387,11 @@ public class TypeContext {
         classes.put(payloadName, clazz.asSubclass(HasUuid.class));
         logger.debug("Flatpack map: {} -> {}", clazz.getCanonicalName(), payloadName);
       }
+    }
+
+    // Preemptively extract the properties
+    for (Class<? extends HasUuid> clazz : classes.values()) {
+      extractProperties(clazz);
     }
   }
 

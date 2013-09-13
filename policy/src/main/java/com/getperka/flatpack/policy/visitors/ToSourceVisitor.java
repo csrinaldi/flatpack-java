@@ -1,4 +1,4 @@
-package com.getperka.flatpack.policy;
+package com.getperka.flatpack.policy.visitors;
 
 import java.util.List;
 
@@ -15,6 +15,9 @@ import com.getperka.flatpack.policy.pst.PropertyPolicy;
 import com.getperka.flatpack.policy.pst.TypePolicy;
 import com.getperka.flatpack.policy.pst.Verb;
 
+/**
+ * Generates an exquivalent policy source file from policy nodes.
+ */
 public class ToSourceVisitor extends PolicyVisitor {
   private int indent;
   private boolean needsIndent = true;

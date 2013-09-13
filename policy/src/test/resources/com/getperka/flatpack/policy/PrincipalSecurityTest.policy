@@ -1,0 +1,20 @@
+verb crudOperation = create, read, update, delete;
+
+type person {
+  group inherit boss {
+    boss = boss;
+    peer = peers;
+  }
+  allow {
+    this to *;
+    * to read;
+  }
+  policy bosses {
+    property boss;
+    allow {
+      boss to *;
+      boss.peer to *;
+      global to *;
+    }
+  }
+}

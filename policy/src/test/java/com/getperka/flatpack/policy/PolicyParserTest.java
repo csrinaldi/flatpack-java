@@ -35,7 +35,6 @@ public class PolicyParserTest {
 
     // Test print-parse-print to make sure nothing is getting used
     String string = p.toSource();
-    System.out.println(string);
     PolicyFile p2 = (PolicyFile) testRule(parser.PolicyFile(), string);
     assertEquals(string, p2.toSource());
   }

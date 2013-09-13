@@ -3,8 +3,8 @@ package com.getperka.flatpack.policy.pst;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.getperka.flatpack.policy.ToSourceVisitor;
-import com.getperka.flatpack.policy.ToStringVisitor;
+import com.getperka.flatpack.policy.visitors.ToSourceVisitor;
+import com.getperka.flatpack.policy.visitors.ToStringVisitor;
 
 public abstract class PolicyNode {
   /**

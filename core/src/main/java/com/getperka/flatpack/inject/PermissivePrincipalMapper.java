@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.SecurityTarget;
 
 /**
  * A trivial implementation of {@link PrincipalMapper} that allows access to all objects.
@@ -44,7 +45,7 @@ class PermissivePrincipalMapper implements PrincipalMapper {
   }
 
   @Override
-  public boolean isAccessEnforced(Principal principal, HasUuid entity) {
+  public boolean isAccessEnforced(Principal principal, SecurityTarget target) {
     return false;
   }
 }

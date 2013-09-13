@@ -17,6 +17,7 @@ import javax.inject.Provider;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.Configuration;
@@ -27,13 +28,14 @@ import com.getperka.flatpack.ext.DeclaredSecurityGroups;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityGroups;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
 import com.getperka.flatpack.inject.PackScope;
 import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.Security;
 
-public class PrincipalSecurityTest {
+public class PrincipalSecurityTest extends PolicyTestBase {
 
   static class MyPrincipal implements Principal {
     private final Person person;
@@ -84,7 +86,7 @@ public class PrincipalSecurityTest {
     }
 
     @Override
-    public boolean isAccessEnforced(Principal principal, HasUuid entity) {
+    public boolean isAccessEnforced(Principal principal, SecurityTarget target) {
       return true;
     }
   }
@@ -162,14 +164,17 @@ public class PrincipalSecurityTest {
 
   @Before
   public void before() {
+    String policy = loadTestPolicyContents("PrincipalSecurityTest.policy");
+    assertNotNull(policy);
     FlatPack flatpack = FlatPack.create(new Configuration()
-        .withPrincipalMapper(new MyPrincipalMapper())
         .addTypeSource(new TypeSource() {
           @Override
           public Set<Class<?>> getTypes() {
             return Collections.<Class<?>> singleton(Person.class);
           }
-        }));
+        })
+        .withPrincipalMapper(new MyPrincipalMapper())
+        .withSecurityPolicy(new StaticPolicy(policy)));
     ((HasInjector) flatpack).getInjector().injectMembers(this);
 
     for (Property prop : typeContext.extractProperties(Person.class)) {
@@ -179,7 +184,7 @@ public class PrincipalSecurityTest {
     packScope.enter();
   }
 
-  // @Test
+  @Test
   public void testBoss() {
     Person b = new Person();
 

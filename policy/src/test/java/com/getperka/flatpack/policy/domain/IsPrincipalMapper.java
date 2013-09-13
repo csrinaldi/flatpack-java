@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.SecurityTarget;
 
 public class IsPrincipalMapper implements PrincipalMapper {
   private static class FakePrincipal extends BaseHasUuid implements Principal {
@@ -36,7 +37,7 @@ public class IsPrincipalMapper implements PrincipalMapper {
   }
 
   @Override
-  public boolean isAccessEnforced(Principal principal, HasUuid entity) {
+  public boolean isAccessEnforced(Principal principal, SecurityTarget target) {
     return true;
   }
 }

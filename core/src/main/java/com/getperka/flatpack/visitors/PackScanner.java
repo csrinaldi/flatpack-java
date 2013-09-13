@@ -30,10 +30,10 @@ import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.Security;
 
 /**
@@ -67,7 +67,8 @@ public class PackScanner extends FlatPackVisitor {
   @Override
   public boolean visit(Property property, VisitorContext<Property> ctx) {
     context.pushPath("." + property.getName());
-    if (!security.may(context.getPrincipal(), stack.peek(), property, READ_ACTION)) {
+    if (!security.may(context.getPrincipal(),
+        SecurityTarget.of(stack.peek(), property), READ_ACTION)) {
       return false;
     }
     if (property.isEmbedded()) {
@@ -83,7 +84,7 @@ public class PackScanner extends FlatPackVisitor {
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
     stack.push(entity);
-    if (!security.may(context.getPrincipal(), entity, CrudOperation.READ_ACTION)) {
+    if (!security.may(context.getPrincipal(), SecurityTarget.of(entity), READ_ACTION)) {
       return false;
     }
     return context.add(entity);

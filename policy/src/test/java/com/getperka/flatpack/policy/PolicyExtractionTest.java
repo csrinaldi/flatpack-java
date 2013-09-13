@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -13,34 +12,28 @@ import java.util.Random;
 import java.util.Set;
 
 import org.junit.Test;
-import org.parboiled.common.FileUtils;
-import org.parboiled.parserunners.BasicParseRunner;
 
-import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
-import com.getperka.flatpack.TypeSource;
 import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.policy.domain.Clerk;
-import com.getperka.flatpack.policy.domain.IntegratorUser;
-import com.getperka.flatpack.policy.domain.IsPrincipalMapper;
 import com.getperka.flatpack.policy.domain.Merchant;
-import com.getperka.flatpack.policy.domain.MerchantLocation;
-import com.getperka.flatpack.policy.domain.MerchantUser;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.PolicyVisitor;
 
-public class PolicyTest {
+/**
+ * Verify that a parsed policy file is correctly transformed into the appropriate in-memory objects.
+ */
+public class PolicyExtractionTest extends PolicyTestBase {
 
   @Test
   public void test() {
-    String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
-    doTest(contents);
+    doTest(loadTestPolicyContents());
   }
 
   /**
@@ -49,9 +42,7 @@ public class PolicyTest {
    */
   @Test
   public void testShuffle() {
-    String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
-    BasicParseRunner<Object> runner = new BasicParseRunner<Object>(PolicyParser.get().PolicyFile());
-    PolicyFile policyFile = (PolicyFile) runner.run(contents).resultValue;
+    PolicyFile policyFile = loadTestPolicy();
 
     final Random r = new Random(0);
     for (int i = 0; i < 10; i++) {
@@ -74,9 +65,7 @@ public class PolicyTest {
         }
       });
 
-      String source = policyFile.toSource();
-      System.out.println("\nRun " + i + "\n" + source);
-      doTest(source);
+      doTest(policyFile.toSource());
     }
   }
 
@@ -102,7 +91,7 @@ public class PolicyTest {
    */
   void doTest(String contents) {
     FlatPack fp = flatpack(contents);
-    GroupPermissions p = fp.getTypeContext().getGroupPermissions(Merchant.class);
+    GroupPermissions p = fp.getSecurityPolicy().getPermissions(SecurityTarget.of(Merchant.class));
     assertNotNull(p);
 
     // Check various type-level permissions
@@ -138,37 +127,6 @@ public class PolicyTest {
         "crudOperation.update", "crudOperation.delete");
     checkPermissions(p, "clerk", "crudOperation.read");
     checkPermissions(p, "internalUser", "*.*");
-  }
-
-  private FlatPack flatpack(String contents) {
-    StaticPolicy securityPolicy = new StaticPolicy(contents);
-    FlatPack flatpack = FlatPack.create(
-        new Configuration()
-            .addTypeSource(new TypeSource() {
-              @Override
-              public Set<Class<?>> getTypes() {
-                Set<Class<?>> toReturn = setForIteration();
-                toReturn.addAll(Arrays.<Class<?>> asList(
-                    Clerk.class, IntegratorUser.class, Merchant.class,
-                    MerchantLocation.class, MerchantUser.class));
-                return toReturn;
-              }
-            })
-            .withPrincipalMapper(new IsPrincipalMapper())
-            .withSecurityPolicy(securityPolicy));
-    return flatpack;
-  }
-
-  /**
-   * Extract a SecurityGroup with the specified name from the GroupPermissions object.
-   */
-  private SecurityGroup getGroup(GroupPermissions permissions, String name) {
-    for (SecurityGroup g : permissions.getOperations().keySet()) {
-      if (name.equals(g.getName())) {
-        return g;
-      }
-    }
-    return null;
   }
 
   private Property getProperty(TypeContext ctx, Class<?> clazz, String propertyName) {

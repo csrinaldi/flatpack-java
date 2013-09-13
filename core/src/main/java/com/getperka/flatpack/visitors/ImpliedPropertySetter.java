@@ -31,6 +31,7 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.security.Security;
 import com.getperka.flatpack.util.FlatPackCollections;
 
@@ -88,7 +89,7 @@ class ImpliedPropertySetter implements Callable<Void> {
     } else if (target instanceof Collection) {
       for (Object element : (Collection<?>) target) {
         if (context.checkAccess((HasUuid) element) &&
-          security.may(context.getPrincipal(), (HasUuid) element, UPDATE_ACTION)) {
+          security.may(context.getPrincipal(), SecurityTarget.of((HasUuid) element), UPDATE_ACTION)) {
           toSet.getSetter().invoke(element, value);
         }
       }

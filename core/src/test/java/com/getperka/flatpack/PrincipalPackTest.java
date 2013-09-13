@@ -35,6 +35,7 @@ import com.getperka.flatpack.domain.Person;
 import com.getperka.flatpack.domain.TestTypeSource;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -89,7 +90,7 @@ public class PrincipalPackTest extends FlatPackTest {
      * No super-users.
      */
     @Override
-    public boolean isAccessEnforced(Principal principal, HasUuid entity) {
+    public boolean isAccessEnforced(Principal principal, SecurityTarget target) {
       return true;
     }
   }

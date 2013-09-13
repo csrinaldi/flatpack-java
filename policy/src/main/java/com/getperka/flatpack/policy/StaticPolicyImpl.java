@@ -20,6 +20,7 @@ import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.SecurityPolicy;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.policy.pst.AclRule;
 import com.getperka.flatpack.policy.pst.Allow;
@@ -32,21 +33,30 @@ import com.getperka.flatpack.policy.pst.TypePolicy;
 import com.getperka.flatpack.policy.visitors.IdentChecker;
 import com.getperka.flatpack.policy.visitors.IdentResolver;
 
+/**
+ * Inner implementation of the static policy. This class does not provide any memoization of results
+ * to avoid lifecycle requirements; caching is handled by the {@link StaticPolicy} implementation.
+ */
 class StaticPolicyImpl implements SecurityPolicy {
-  private static class PermissionsExtractor extends PolicyVisitor {
+  class PermissionsExtractor extends PolicyVisitor {
     private final Class<? extends HasUuid> entity;
     private final Property property;
     private final GroupPermissions toReturn;
 
-    private PermissionsExtractor(GroupPermissions toReturn, Class<? extends HasUuid> entity) {
-      this(toReturn, entity, null);
-    }
-
-    private PermissionsExtractor(GroupPermissions toReturn, Class<? extends HasUuid> entity,
-        Property property) {
-      this.entity = entity;
-      this.property = property;
+    public PermissionsExtractor(GroupPermissions toReturn, SecurityTarget target) {
       this.toReturn = toReturn;
+      switch (target.getKind()) {
+        case PROPERTY:
+          property = target.getProperty();
+          entity = typeContext.getClass(property.getEnclosingTypeName());
+          break;
+        case TYPE:
+          property = null;
+          entity = target.getEntityType();
+          break;
+        default:
+          throw new UnsupportedOperationException(target.getKind().name());
+      }
     }
 
     /**
@@ -135,23 +145,9 @@ class StaticPolicyImpl implements SecurityPolicy {
   StaticPolicyImpl() {}
 
   @Override
-  public GroupPermissions getDefaultPermissions() {
-    return securityGroups.getPermissionsNone();
-  }
-
-  @Override
-  public GroupPermissions getPermissions(final Class<? extends HasUuid> entity) {
+  public GroupPermissions getPermissions(SecurityTarget target) {
     GroupPermissions toReturn = new GroupPermissions();
-    policy.accept(new PermissionsExtractor(toReturn, entity));
-    toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
-    return toReturn;
-  }
-
-  @Override
-  public GroupPermissions getPermissions(final Property property) {
-    GroupPermissions toReturn = new GroupPermissions();
-    policy.accept(new PermissionsExtractor(toReturn,
-        typeContext.getClass(property.getEnclosingTypeName()), property));
+    policy.accept(new PermissionsExtractor(toReturn, target));
     toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
     return toReturn;
   }

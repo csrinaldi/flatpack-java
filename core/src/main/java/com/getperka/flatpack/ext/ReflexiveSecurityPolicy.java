@@ -8,10 +8,11 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
-import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.security.CrudOperation;
 
+@Singleton
 public class ReflexiveSecurityPolicy implements SecurityPolicy {
 
   @Inject
@@ -21,17 +22,7 @@ public class ReflexiveSecurityPolicy implements SecurityPolicy {
   protected ReflexiveSecurityPolicy() {}
 
   @Override
-  public GroupPermissions getDefaultPermissions() {
-    return securityGroups.getPermissionsAll();
-  }
-
-  @Override
-  public GroupPermissions getPermissions(Class<? extends HasUuid> entity) {
-    return reflexivePermissions;
-  }
-
-  @Override
-  public GroupPermissions getPermissions(Property property) {
+  public GroupPermissions getPermissions(SecurityTarget target) {
     return reflexivePermissions;
   }
 

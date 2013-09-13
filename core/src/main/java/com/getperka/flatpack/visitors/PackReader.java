@@ -19,9 +19,12 @@ package com.getperka.flatpack.visitors;
  * limitations under the License.
  * #L%
  */
+import static com.getperka.flatpack.security.CrudOperation.CREATE_ACTION;
+import static com.getperka.flatpack.security.CrudOperation.DELETE_ACTION;
 import static com.getperka.flatpack.security.CrudOperation.UPDATE_ACTION;
 
 import java.lang.reflect.Method;
+import java.security.Principal;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -34,6 +37,7 @@ import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
@@ -118,8 +122,22 @@ public class PackReader extends FlatPackVisitor {
           return;
         }
 
+        HasUuid entity = stack.peek().entity;
+        Principal principal = context.getPrincipal();
+
         // Verify the new value may be set
-        if (!security.may(context.getPrincipal(), stack.peek().entity, UPDATE_ACTION)) {
+        SecurityTarget target = SecurityTarget.of(entity);
+        boolean wasResolved = context.wasResolved(entity);
+        boolean mayCreate = security.may(principal, target, CREATE_ACTION);
+        boolean mayDelete = security.may(principal, target, DELETE_ACTION);
+        boolean mayUpdate = security.may(principal, target, UPDATE_ACTION);
+        if (value == null && mayDelete) {
+          // OK
+        } else if (wasResolved && mayUpdate) {
+          // OK
+        } else if (!wasResolved && (mayCreate || mayUpdate)) {
+          // OK
+        } else {
           return;
         }
 
@@ -128,21 +146,21 @@ public class PackReader extends FlatPackVisitor {
         if (impliedPropery != null && value != null) {
           // Ensure that any linked property is also mutable
           if (!checkAccess(value, context)) {
-            context.addWarning(stack.peek().entity,
+            context.addWarning(entity,
                 "Ignoring property %s because the inverse relationship (%s) may not be set",
                 prop.getName(), impliedPropery.getName());
             return;
           }
           ImpliedPropertySetter setter = impliedPropertySetters.get();
-          setter.setLater(impliedPropery, value, stack.peek().entity);
+          setter.setLater(impliedPropery, value, entity);
           context.addPostWork(setter);
         }
 
         // Set the value
-        setProperty(prop, stack.peek().entity, value);
+        setProperty(prop, entity, value);
 
         // Record the value as having been set
-        context.addModified(stack.peek().entity, prop);
+        context.addModified(entity, prop);
       } catch (Exception e) {
         context.fail(e);
       } finally {
