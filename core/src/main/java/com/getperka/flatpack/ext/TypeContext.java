@@ -49,6 +49,7 @@ import javax.inject.Singleton;
 import org.slf4j.Logger;
 
 import com.getperka.flatpack.Configuration;
+import com.getperka.flatpack.EntityMetadata;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.JsonTypeName;
@@ -192,6 +193,18 @@ public class TypeContext {
     // No properties on Object.class. Play nicely in case of null value.
     if (clazz == null || Object.class.equals(clazz)) {
       return Collections.emptyList();
+    }
+
+    // Sanity check
+    if (!HasUuid.class.isAssignableFrom(clazz)) {
+      throw new IllegalArgumentException(clazz.getName() + " is not assignable to "
+        + HasUuid.class.getName());
+    }
+
+    // Possibly learn about a new type
+    String payloadName = getPayloadName(clazz);
+    if (!classes.containsKey(payloadName)) {
+      classes.put(payloadName, clazz.asSubclass(HasUuid.class));
     }
 
     // Cache check
@@ -389,8 +402,14 @@ public class TypeContext {
       }
     }
 
-    // Preemptively extract the properties
-    for (Class<? extends HasUuid> clazz : classes.values()) {
+    // Used internally, should always be mapped
+    classes.put(getPayloadName(EntityMetadata.class), EntityMetadata.class);
+
+    /*
+     * Preemptively extract the properties, avoiding a ConcurrentModificationException if
+     * extractProperties learns about classes not included in the seed set.
+     */
+    for (Class<? extends HasUuid> clazz : listForAny(classes.values())) {
       extractProperties(clazz);
     }
   }

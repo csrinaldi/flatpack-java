@@ -1,14 +1,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>flatpack-search</artifactId>
-  <name>Classpath Search TypeSource</name>
+  <artifactId>flatpack-thirdparty</artifactId>
+  <name>FlatPack Third-Party Dependencies</name>
+  <description>FlatPack has dependencies on libraries which depend on various incompatible versions of ASM. This module provides relocated versions of those classes.</description>
 
   <parent>
     <groupId>com.getperka.flatpack</groupId>
     <artifactId>flatpack-parent</artifactId>
     <version>2.20.2-SNAPSHOT</version>
   </parent>
+
   <scm>
     <connection>scm:git:git@git.getperka.com:flatpack.git</connection>
     <url>scm:git:git@git.getperka.com:flatpack.git</url>
@@ -16,53 +18,31 @@
     <tag>HEAD</tag>
   </scm>
   <dependencies>
+    <!-- PEG parser support -->
     <dependency>
-      <groupId>com.getperka.flatpack</groupId>
-      <artifactId>flatpack-core</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.getperka.cli</groupId>
-      <artifactId>cli</artifactId>
-      <!-- Managed in parent pom -->
+      <groupId>org.parboiled</groupId>
+      <artifactId>parboiled-java</artifactId>
+      <version>1.1.6</version>
+      <scope>runtime</scope>
     </dependency>
   </dependencies>
   <build>
     <plugins>
       <!-- Because major versions of ASM do not maintain binary compatibility, 
-        we'll pack the minimum amount of stuff necessary to make the classpath-search 
-        code actually run into our output jar and then relocate the classes to prevent 
+        we'll pack the minimum amount of stuff necessary to make the parsing code 
+        actually run into our output jar and then relocate the classes to prevent 
         binary conflicts. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>2.1</version>
         <configuration>
-          <artifactSet>
-            <includes>
-              <include>com.getperka.cli:cli</include>
-              <include>asm:*</include>
-            </includes>
-          </artifactSet>
-          <filters>
-            <filter>
-              <artifact>com.getperka.cli:cli</artifact>
-              <includes>
-                <include>com/getperka/cli/classpath/**</include>
-              </includes>
-            </filter>
-          </filters>
           <createDependencyReducedPom>true</createDependencyReducedPom>
-          <minimizeJar>true</minimizeJar>
           <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
           <relocations>
             <relocation>
-              <pattern>com.getperka.cli</pattern>
-              <shadedPattern>com.getperka.flatpack.search.thirdparty.cli</shadedPattern>
-            </relocation>
-            <relocation>
               <pattern>org.objectweb.asm</pattern>
-              <shadedPattern>com.getperka.flatpack.search.thirdparty.asm3</shadedPattern>
+              <shadedPattern>com.getperka.flatpack.thirdparty.asm4</shadedPattern>
             </relocation>
           </relocations>
         </configuration>

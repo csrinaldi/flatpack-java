@@ -212,6 +212,7 @@ public class IdentResolver extends PolicyLocationVisitor {
   @Override
   public boolean visit(TypePolicy x) {
     currentScope.push(currentScope.peek().newScope());
+    ensureReferent(x);
     traverse(x.getVerbs());
     traverse(x.getGroups());
     traverse(x.getAllows());
@@ -464,7 +465,7 @@ public class IdentResolver extends PolicyLocationVisitor {
     }
     traverse(x);
     if (x.getReferent() == null) {
-      throw new IllegalStateException("Could not resolve referent for ident " + x);
+      unresolved.add(x);
     }
     return x.getReferent();
   }

@@ -46,10 +46,12 @@ class StaticPolicyImpl implements SecurityPolicy {
     public PermissionsExtractor(GroupPermissions toReturn, SecurityTarget target) {
       this.toReturn = toReturn;
       switch (target.getKind()) {
+        case ENTITY_PROPERTY:
         case PROPERTY:
           property = target.getProperty();
           entity = typeContext.getClass(property.getEnclosingTypeName());
           break;
+        case ENTITY:
         case TYPE:
           property = null;
           entity = target.getEntityType();

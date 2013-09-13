@@ -53,6 +53,7 @@
     <module>jersey</module>
     <module>policy</module>
     <module>search</module>
+    <module>thirdparty</module>
   </modules>
 
 

@@ -92,8 +92,8 @@ public class PackWriter extends FlatPackVisitor {
 
   @Override
   public <Q extends HasUuid> void endVisit(Q entity, EntityCodex<Q> codex, VisitorContext<Q> ctx) {
-    stack.pop();
-    if (stack.isEmpty()) {
+    boolean wasEmitted = stack.pop().entity != null;
+    if (wasEmitted && stack.isEmpty()) {
       try {
         context.getWriter().endObject();
       } catch (IOException e) {
@@ -222,11 +222,13 @@ public class PackWriter extends FlatPackVisitor {
   @Override
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
+    PackWriter.State state = new State();
+
     if (!security.may(context.getPrincipal(), SecurityTarget.of(entity), READ_ACTION)) {
-      stack.push(null);
+      stack.push(state);
       return false;
     }
-    PackWriter.State state = new State();
+    // Null entity used as a hint in endVisit
     state.entity = entity;
 
     if (entity instanceof PersistenceAware) {

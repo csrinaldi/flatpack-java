@@ -2,6 +2,7 @@ verb crudOperation = create, read, update, delete;
 
 allow {
   ADMIN to *;
+  NOBODY none;
 }
 
 type product {
@@ -14,5 +15,20 @@ type product {
     allow only {
       ADMIN to *;
     }
+  }
+}
+
+type baseHasUuid {
+  policy uuid {
+    property uuid;
+    allow only {
+      * to read, create;
+    }
+  }
+}
+
+type entityMetadata {
+  allow {
+    * to read;
   }
 }

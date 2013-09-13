@@ -121,14 +121,14 @@ public class PrincipalSecurity implements Security {
     for (SecurityGroup group : permissions.getOperations().keySet()) {
       if (isMember(entity, group, principal)) {
         if (permissions.contains(group, op)) {
-          logger.info("Allow principal {} to {} on {} via {}",
-              principal, op, entity.getUuid(), group.getName());
+          logger.info("Allow principal {} to {} on {} {} via {}",
+              principal, op, entity.getClass().getName(), entity.getUuid(), group.getName());
           return true;
         }
       }
     }
-    logger.info("Deny principal {} to {} on {}",
-        principal, op, entity.getUuid());
+    logger.info("Deny principal {} to {} on {} {}",
+        principal, op, entity.getClass().getName(), entity.getUuid());
     return false;
   }
 

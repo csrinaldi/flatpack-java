@@ -75,10 +75,24 @@ public class FlatPackCollections {
   }
 
   /**
+   * Returns the default List implementation to use.
+   */
+  public static <T> List<T> listForAny(Collection<? extends T> copyFrom) {
+    return new ArrayList<T>(copyFrom);
+  }
+
+  /**
    * Returns a Map with stable iteration order.
    */
   public static <K, V> Map<K, V> mapForIteration() {
     return new LinkedHashMap<K, V>();
+  }
+
+  /**
+   * Returns a Map with stable iteration order.
+   */
+  public static <K, V> Map<K, V> mapForIteration(Map<? extends K, ? extends V> copyFrom) {
+    return new LinkedHashMap<K, V>(copyFrom);
   }
 
   /**
@@ -106,10 +120,41 @@ public class FlatPackCollections {
   }
 
   /**
+   * Returns a Map whose {@link Iterable} methods throw {@link UnsupportedOperationException}.
+   */
+  @SuppressWarnings("serial")
+  public static <K, V> Map<K, V> mapForLookup(Map<? extends K, ? extends V> copyFrom) {
+    return new HashMap<K, V>(copyFrom) {
+
+      @Override
+      public Set<Entry<K, V>> entrySet() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Set<K> keySet() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Collection<V> values() {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  /**
    * Returns a Set guaranteed to have stable iteration order.
    */
   public static <T> Set<T> setForIteration() {
     return new LinkedHashSet<T>();
+  }
+
+  /**
+   * Returns a Set guaranteed to have stable iteration order.
+   */
+  public static <T> Set<T> setForIteration(Collection<? extends T> copyFrom) {
+    return new LinkedHashSet<T>(copyFrom);
   }
 
   /**
@@ -125,8 +170,26 @@ public class FlatPackCollections {
     };
   }
 
+  /**
+   * Returns a Set that cannot be iterated over.
+   */
+  @SuppressWarnings("serial")
+  public static <T> Set<T> setForLookup(Collection<? extends T> copyFrom) {
+    return new HashSet<T>(copyFrom) {
+      @Override
+      public Iterator<T> iterator() {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
   public static <K extends Comparable<K>, V> SortedMap<K, V> sortedMapForIteration() {
     return new TreeMap<K, V>();
+  }
+
+  public static <K extends Comparable<K>, V> SortedMap<K, V> sortedMapForIteration(
+      Map<? extends K, ? extends V> copyFrom) {
+    return new TreeMap<K, V>(copyFrom);
   }
 
   private FlatPackCollections() {}
