@@ -12,23 +12,32 @@ public class GroupDefinition extends PolicyNode implements HasName<SecurityGroup
 
   public GroupDefinition() {}
 
-  public GroupDefinition(GroupDefinition copyFrom, Property prefix) {
-    this.name = copyFrom.name;
+  /**
+   * Create an inherited group definition.
+   */
+  public GroupDefinition(GroupDefinition copyFrom, Ident<Property> prefix) {
+    // Prefix the inherited name
+    List<Ident<?>> newNameParts = list();
+    newNameParts.add(prefix);
+    if (copyFrom.name.isSimple()) {
+      newNameParts.add(copyFrom.name);
+    } else {
+      newNameParts.addAll(copyFrom.name.getCompoundName());
+    }
+    name = new Ident<SecurityGroup>(SecurityGroup.class, newNameParts);
 
     // Prepend the new Property onto the copied property paths
-    Ident<Property> prefixIdent = new Ident<Property>(Property.class, prefix.getName());
-    prefixIdent.setReferent(prefix);
     for (Ident<PropertyPath> old : copyFrom.paths) {
       Ident<PropertyPath> path;
 
       // Either prepend a new path segment to a compound name, or turn a simple name into a compound
       if (old.isCompound()) {
         List<Ident<?>> newName = list();
-        newName.add(prefixIdent);
+        newName.add(prefix);
         newName.addAll(old.getCompoundName());
         path = new Ident<PropertyPath>(PropertyPath.class, newName);
       } else {
-        path = new Ident<PropertyPath>(PropertyPath.class, prefixIdent,
+        path = new Ident<PropertyPath>(PropertyPath.class, prefix,
             new Ident<Property>(Property.class, old.getSimpleName()));
       }
 

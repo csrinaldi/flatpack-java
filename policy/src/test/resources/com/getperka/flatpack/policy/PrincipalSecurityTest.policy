@@ -1,5 +1,9 @@
 verb crudOperation = create, read, update, delete;
 
+allow {
+  global none;
+}
+
 type person {
   group inherit boss {
     boss = boss;
@@ -12,7 +16,9 @@ type person {
   policy bosses {
     property boss;
     allow {
+      // Look at using local override
       boss to *;
+      // As well as the inherited-through group
       boss.peer to *;
       global to *;
     }

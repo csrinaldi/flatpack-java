@@ -1,9 +1,7 @@
 package com.getperka.flatpack.policy;
 
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
 
 import java.security.Principal;
 import java.util.Collections;
@@ -24,10 +22,10 @@ import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.TypeSource;
-import com.getperka.flatpack.ext.DeclaredSecurityGroups;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityGroups;
+import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
@@ -35,6 +33,9 @@ import com.getperka.flatpack.inject.PackScope;
 import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.Security;
 
+/**
+ * Test data-driven access policies.
+ */
 public class PrincipalSecurityTest extends PolicyTestBase {
 
   static class MyPrincipal implements Principal {
@@ -145,14 +146,16 @@ public class PrincipalSecurityTest extends PolicyTestBase {
   }
 
   @Inject
-  SecurityGroups groups;
+  private SecurityGroups groups;
   @Inject
-  Provider<Security> securities;
+  private Provider<Security> securities;
   @Inject
-  PackScope packScope;
+  private SecurityPolicy securityPolicy;
   @Inject
-  TypeContext typeContext;
+  private PackScope packScope;
   private Map<String, Property> personProps = mapForLookup();
+  @Inject
+  private TypeContext typeContext;
 
   private static final CrudOperation[] ALL_OPS = {
       CrudOperation.CREATE, CrudOperation.DELETE, CrudOperation.READ, CrudOperation.UPDATE };
@@ -197,7 +200,7 @@ public class PrincipalSecurityTest extends PolicyTestBase {
     checkMayNot(b, personProps.get("boss"), ALL_OPS);
   }
 
-  // @Test
+  @Test
   public void testBossPeers() {
     Person bPeer = new Person();
 
@@ -217,43 +220,24 @@ public class PrincipalSecurityTest extends PolicyTestBase {
     check(new MyPrincipal(pPeer), p, personProps.get("boss"), false, ALL_OPS);
   }
 
-  // @Test
+  @Test
   public void testGlobalGroup() {
     Person p = new Person();
     p.setGlobalGroups(Collections.singletonList("global"));
 
     // Verify that it can edit its own boss property
     checkMay(p, personProps.get("boss"), ALL_OPS);
+    checkMayNot(new Person(), personProps.get("boss"), ALL_OPS);
   }
 
-  // @Test
-  public void testGroups() {
-    DeclaredSecurityGroups declared = null; // groups.getSecurityGroups(Person.class);
-    declared.getDeclared();
-    assertEquals(declared.getDeclared().keySet().toString(), 2, declared.getDeclared().size());
-    assertNotNull(declared.getDeclared().get("boss"));
-    assertNotNull(declared.getDeclared().get("peer"));
-
-    // assertTrue(personProps.get("boss").isInheritGroups());
-    assertEquals(declared.getInherited().keySet().toString(), 1, declared.getInherited().size());
-    assertEquals("boss", declared.getInherited().keySet().iterator().next().getName());
-    assertSame(declared, declared.getInherited().values().iterator().next());
-
-    // Test use of AclDef / AclRef
-    // Map<SecurityGroup, Set<CrudOperation>> map =
-    // personProps.get("peers").getGroupPermissions().getOperations();
-    // assertEquals(1, map.size());
-    // assertEquals("defined", map.keySet().iterator().next().getName());
-  }
-
-  // @Test
+  @Test
   public void testNobody() {
     Person p = new Person();
     check(new MyPrincipal(new Person()), p, null, true, CrudOperation.READ);
     check(new MyPrincipal(new Person()), p, null, false, CrudOperation.UPDATE);
   }
 
-  // @Test
+  @Test
   public void testSelf() {
     Person p = new Person();
     checkMay(p, ALL_OPS);

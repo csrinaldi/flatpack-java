@@ -71,4 +71,8 @@ class NodeScope {
   public void put(HasName<?> named) {
     namedThings.put(named.getName(), named);
   }
+
+  public <T> void put(Ident<T> name, HasName<T> named) {
+    namedThings.put(name, named);
+  }
 }

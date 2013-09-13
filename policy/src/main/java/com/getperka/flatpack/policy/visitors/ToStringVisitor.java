@@ -11,6 +11,16 @@ import com.getperka.flatpack.policy.pst.PolicyNode;
 public class ToStringVisitor extends ToSourceVisitor {
 
   @Override
+  public boolean visit(Ident<?> x) {
+    // Always print compound names
+    if (x.isCompound()) {
+      super.traverse(x.getCompoundName(), ".");
+      return false;
+    }
+    return super.visit(x);
+  }
+
+  @Override
   protected void nl() {}
 
   @Override

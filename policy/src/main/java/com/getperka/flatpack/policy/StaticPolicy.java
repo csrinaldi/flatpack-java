@@ -1,5 +1,7 @@
 package com.getperka.flatpack.policy;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,6 +14,9 @@ import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 
+/**
+ * A {@link SecurityPolicy} implementation that uses policy rules defined in an external file.
+ */
 public class StaticPolicy implements SecurityPolicy {
   private final Map<SecurityTarget, GroupPermissions> cache =
       new ConcurrentHashMap<SecurityTarget, GroupPermissions>();
@@ -23,6 +28,15 @@ public class StaticPolicy implements SecurityPolicy {
   private SecurityGroups securityGroups;
   @Inject
   private TypeContext typeContext;
+
+  public StaticPolicy(Reader contents) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    char[] chars = new char[4096];
+    for (int read = contents.read(chars); read != -1; read = contents.read(chars)) {
+      sb.append(chars, 0, read);
+    }
+    this.contents = sb.toString();
+  }
 
   public StaticPolicy(String contents) {
     this.contents = contents;

@@ -64,6 +64,17 @@ public class IdentChecker extends PolicyLocationVisitor {
     return errors;
   }
 
+  /**
+   * Don't descend into complex Idents if a referent has already been established.
+   */
+  @Override
+  public boolean visit(Ident<?> x) {
+    if (x.isCompound() && x.getReferent() != null) {
+      return false;
+    }
+    return true;
+  }
+
   private void error(String message) {
     errors.add(summarizeLocation() + " " + message);
   }

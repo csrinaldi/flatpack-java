@@ -98,11 +98,27 @@ class PolicyParser extends BaseParser<Object> {
    * groupName none
    * 
    * groupName to verbName.actionName
+   * 
+   * inheritedProperty.groupName to ...
    * </pre>
    */
   Rule AclRule() {
     return Sequence(
-        WildcardOrIdent(SecurityGroup.class),
+        FirstOf(
+            Sequence(
+                Ident(Property.class),
+                ".",
+                Ident(SecurityGroup.class),
+                new Action<Object>() {
+                  @Override
+                  public boolean run(Context<Object> ctx) {
+                    Ident<SecurityGroup> group = popIdent(SecurityGroup.class);
+                    Ident<Property> property = popIdent(Property.class);
+                    push(new Ident<SecurityGroup>(SecurityGroup.class, property, group));
+                    return true;
+                  }
+                }),
+            WildcardOrIdent(SecurityGroup.class)),
         FirstOf(
             // Special syntax for a zero-length list
             Sequence("none", ACTION(push(new ArrayList<Ident<SecurityAction>>()))),

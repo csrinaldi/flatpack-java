@@ -19,6 +19,9 @@
  */
 package com.getperka.flatpack.demo.server;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -29,8 +32,10 @@ import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.PersistenceMapper;
 import com.getperka.flatpack.ext.EntityResolver;
+import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.jersey.FlatPackProvider;
 import com.getperka.flatpack.jersey.FlatPackResolver;
+import com.getperka.flatpack.policy.StaticPolicy;
 import com.getperka.flatpack.search.SearchTypeSource;
 
 /**
@@ -75,6 +80,14 @@ public class DemoApplication extends Application {
 
   @Override
   public Set<Object> getSingletons() {
+    SecurityPolicy securityPolicy;
+    try {
+      securityPolicy = new StaticPolicy(
+          new InputStreamReader(getClass().getResourceAsStream("DemoServer.policy"),
+              Charset.forName("UTF8")));
+    } catch (IOException e) {
+      throw new RuntimeException("Could not load security policy file", e);
+    }
     Set<Object> toReturn = new LinkedHashSet<Object>();
     // Create the FlatPack configuration. This object adapts FlatPack behaviors to the local system.
     Configuration configuration = new Configuration()
@@ -96,6 +109,7 @@ public class DemoApplication extends Application {
          * scans the classpath for HasUuid subtypes.
          */
         .addTypeSource(new SearchTypeSource("com.getperka.flatpack.demo.server"))
+        .withSecurityPolicy(securityPolicy)
         .withPrettyPrint(true)
         /*
          * A PrincipalMapper is optional and, if present, enables the use principal-based property

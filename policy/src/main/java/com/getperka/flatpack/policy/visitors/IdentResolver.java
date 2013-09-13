@@ -118,32 +118,46 @@ public class IdentResolver extends PolicyLocationVisitor {
    */
   @Override
   public boolean visit(Group x) {
-    if (x.getInheritFrom() == null) {
+    Ident<Property> inheritFrom = x.getInheritFrom();
+    if (inheritFrom == null) {
       return true;
     }
-    Property p = ensureReferent(x.getInheritFrom());
+    Property p = ensureReferent(inheritFrom);
     TypePolicy policy = findTypePolicy(p);
     if (policy == null) {
       // Skip for the second pass
-      unresolved.add(x.getInheritFrom());
+      unresolved.add(inheritFrom);
       return false;
     }
 
     // Prevent loops
     x.setInheritFrom(null);
 
-    // Copy the inherited groups, but prepend the via-Property to the GroupDefinitions
-    Map<String, GroupDefinition> allDefs = mapForIteration();
+    /*
+     * Set up inherited groups. This map is used to allow simple names to refer to the inherit
+     * groups, unless the group name is overridden by a local declaration.
+     */
+    Map<Ident<SecurityGroup>, GroupDefinition> uniqueNames = mapForIteration();
     for (Group group : policy.getGroups()) {
+      // Make a copy of the GroupDefinition that prepends the property being inherited from
       for (GroupDefinition def : group.getDefinitions()) {
-        allDefs.put(def.getName().getSimpleName(), new GroupDefinition(def, p));
+        GroupDefinition inherited = new GroupDefinition(def, inheritFrom);
+        uniqueNames.put(inherited.getName(), inherited);
+
+        GroupDefinition aliased = new GroupDefinition(def, inheritFrom);
+        aliased.setName(def.getName());
+        uniqueNames.put(aliased.getName(), aliased);
       }
     }
+
+    // Allow local definitions to override the inherited ones
     for (GroupDefinition def : x.getDefinitions()) {
-      allDefs.put(def.getName().getSimpleName(), def);
+      uniqueNames.put(def.getName(), def);
     }
+
     x.getDefinitions().clear();
-    x.getDefinitions().addAll(allDefs.values());
+    x.getDefinitions().addAll(uniqueNames.values());
+
     return true;
   }
 
@@ -233,7 +247,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       error("Cannot refer to property outside of a type");
       return;
     }
-    Class<?> clazz = ensureReferent(typePolicy.getName());
+    Class<?> clazz = ensureReferent(typePolicy);
     if (clazz == null) {
       // Error already reported
       return;
@@ -258,7 +272,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       return;
     }
     // Ensure the type name has been resolved
-    Class<?> currentType = ensureReferent(typePolicy.getName());
+    Class<?> currentType = ensureReferent(typePolicy);
     if (currentType == null) {
       // Should already be reported
       return;
@@ -381,8 +395,8 @@ public class IdentResolver extends PolicyLocationVisitor {
     if (groupDefinition != null) {
       // Ensure that all the PropertyPaths are set up
       List<PropertyPath> paths = ensureReferent(groupDefinition.getPaths());
-      SecurityGroup group = securityGroups.getGroup(ensureReferent(typePolicy.getName()),
-          groupDefinition.getName().getSimpleName(), "<DESCRIPTION>", paths);
+      SecurityGroup group = securityGroups.getGroup(ensureReferent(typePolicy),
+          groupDefinition.getName().toString(), "<DESCRIPTION>", paths);
       x.setReferent(group);
       return;
     }
@@ -390,7 +404,7 @@ public class IdentResolver extends PolicyLocationVisitor {
     // Find an already-declared group
     GroupDefinition group = scope().get(GroupDefinition.class, x);
     if (group != null) {
-      x.setReferent(ensureReferent(group.getName()));
+      x.setReferent(ensureReferent(group));
       return;
     }
 
@@ -429,6 +443,13 @@ public class IdentResolver extends PolicyLocationVisitor {
       return null;
     }
     return new PropertyPath(path);
+  }
+
+  /**
+   * Resolves the {@link HasName#getName() name} of the given object.
+   */
+  private <T> T ensureReferent(HasName<T> named) {
+    return ensureReferent(named.getName());
   }
 
   /**

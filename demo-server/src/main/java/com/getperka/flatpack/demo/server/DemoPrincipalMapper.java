@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.ext.SecurityTarget;
 
 public class DemoPrincipalMapper implements PrincipalMapper {
   @Override
@@ -48,7 +49,7 @@ public class DemoPrincipalMapper implements PrincipalMapper {
    * mutable for a period of time and then sealed.
    */
   @Override
-  public boolean isAccessEnforced(Principal principal, HasUuid entity) {
+  public boolean isAccessEnforced(Principal principal, SecurityTarget target) {
     return !Roles.ADMIN.equals(((DummyPrincipal) principal).getRole());
   }
 }

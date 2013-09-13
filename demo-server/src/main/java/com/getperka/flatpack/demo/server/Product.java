@@ -26,18 +26,11 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
 import com.getperka.flatpack.BaseHasUuid;
-import com.getperka.flatpack.security.Acl;
-import com.getperka.flatpack.security.AclRef;
-import com.getperka.flatpack.security.Acls;
 
 /**
  * A simple entity type. All properties are globally-readable, however the setters are restricted to
  * just the admin role.
  */
-@Acls({
-    @Acl(groups = Roles.ADMIN)
-})
-@AclRef("readOnly")
 public class Product extends BaseHasUuid {
   private String name;
   private String notes;
@@ -49,7 +42,6 @@ public class Product extends BaseHasUuid {
     return name;
   }
 
-  @Acl(groups = Roles.ADMIN)
   public String getNotes() {
     return notes;
   }

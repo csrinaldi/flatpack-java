@@ -1,0 +1,18 @@
+verb crudOperation = create, read, update, delete;
+
+allow {
+  ADMIN to *;
+}
+
+type product {
+  allow {
+    NOBODY to read;
+  }
+  
+  policy adminOnly {
+    property notes;
+    allow only {
+      ADMIN to *;
+    }
+  }
+}
