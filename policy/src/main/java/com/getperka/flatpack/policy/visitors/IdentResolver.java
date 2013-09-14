@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.visitors;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -274,7 +275,12 @@ public class IdentResolver extends PolicyLocationVisitor {
     }
     for (Property p : typeContext.extractProperties(clazz)) {
       if (p.getName().equals(x.getSimpleName())) {
-        x.setReferent(p);
+        if (p.getEnclosingTypeName().equals(typePolicy.getName().getSimpleName())) {
+          x.setReferent(p);
+        } else {
+          error("Type " + typePolicy.getName() + " does not define property " + p.getName());
+        }
+
         return;
       }
     }

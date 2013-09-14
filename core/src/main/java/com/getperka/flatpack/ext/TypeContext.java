@@ -404,14 +404,14 @@ public class TypeContext {
 
     // Used internally, should always be mapped
     classes.put(getPayloadName(EntityMetadata.class), EntityMetadata.class);
-
-    /*
-     * Preemptively extract the properties, avoiding a ConcurrentModificationException if
-     * extractProperties learns about classes not included in the seed set.
-     */
-    for (Class<? extends HasUuid> clazz : listForAny(classes.values())) {
-      extractProperties(clazz);
-    }
+    //
+    // /*
+    // * Preemptively extract the properties, avoiding a ConcurrentModificationException if
+    // * extractProperties learns about classes not included in the seed set.
+    // */
+    // for (Class<? extends HasUuid> clazz : listForAny(classes.values())) {
+    // extractProperties(clazz);
+    // }
   }
 
   /**

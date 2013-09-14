@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -39,6 +40,7 @@ import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.policy.domain.ExtendsMerchant;
 import com.getperka.flatpack.policy.domain.Merchant;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PolicyFile;
@@ -109,15 +111,20 @@ public class PolicyExtractionTest extends PolicyTestBase {
    * assume any relative ordering of rules, since this method will be called with shuffled input.
    */
   void doTest(String contents) {
+    doTest(contents, Merchant.class);
+    doTest(contents, ExtendsMerchant.class);
+  }
+
+  void doTest(String contents, Class<? extends Merchant> clazz) {
     FlatPack fp = flatpack(contents);
-    GroupPermissions p = fp.getSecurityPolicy().getPermissions(SecurityTarget.of(Merchant.class));
+    GroupPermissions p = fp.getSecurityPolicy().getPermissions(SecurityTarget.of(clazz));
     assertNotNull(p);
 
     // Check various type-level permissions
     checkMerchantPermissions(p);
 
     // Check property-level permissions, especially type- and global-overrides
-    Property name = getProperty(fp.getTypeContext(), Merchant.class, "name");
+    Property name = getProperty(fp.getTypeContext(), clazz, "name");
     p = name.getGroupPermissions();
     assertNotNull(p);
     // Just replacing a previous declaration
@@ -125,14 +132,14 @@ public class PolicyExtractionTest extends PolicyTestBase {
     checkPermissions(p, "*", "crudOperation.read");
 
     // Test the "allow only" construct
-    Property note = getProperty(fp.getTypeContext(), Merchant.class, "note");
+    Property note = getProperty(fp.getTypeContext(), clazz, "note");
     p = note.getGroupPermissions();
     assertNotNull(p);
     assertEquals(1, p.getOperations().size());
     checkPermissions(p, "internalUser", "*.*");
 
     // Verify that unreferenced properties inherit the type's allow
-    Property other = getProperty(fp.getTypeContext(), Merchant.class, "other");
+    Property other = getProperty(fp.getTypeContext(), clazz, "other");
     p = other.getGroupPermissions();
     assertNotNull(p);
     checkMerchantPermissions(p);

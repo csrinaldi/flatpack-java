@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -21,6 +22,7 @@ package com.getperka.flatpack.ext;
 
 import static com.getperka.flatpack.ext.SecurityTarget.Kind.ENTITY;
 import static com.getperka.flatpack.ext.SecurityTarget.Kind.ENTITY_PROPERTY;
+import static com.getperka.flatpack.ext.SecurityTarget.Kind.GLOBAL;
 import static com.getperka.flatpack.ext.SecurityTarget.Kind.PROPERTY;
 import static com.getperka.flatpack.ext.SecurityTarget.Kind.TYPE;
 
@@ -32,21 +34,32 @@ import com.getperka.flatpack.HasUuid;
 public class SecurityTarget {
   public enum Kind {
     /**
-     * A {@link HasUuid} type.
-     */
-    TYPE,
-    /**
-     * A {@link Property}.
-     */
-    PROPERTY,
-    /**
      * A specific entity.
      */
     ENTITY,
     /**
      * A property of a specific entity.
      */
-    ENTITY_PROPERTY
+    ENTITY_PROPERTY,
+    /**
+     * A non-specific target for any global permissions.
+     */
+    GLOBAL,
+    /**
+     * A {@link Property}.
+     */
+    PROPERTY,
+    /**
+     * A {@link HasUuid} type.
+     */
+    TYPE
+  }
+
+  private static final SecurityTarget GLOBAL_TARGET =
+      new SecurityTarget(GLOBAL, null, null, null);
+
+  public static SecurityTarget global() {
+    return GLOBAL_TARGET;
   }
 
   public static SecurityTarget of(Class<? extends HasUuid> entityType) {

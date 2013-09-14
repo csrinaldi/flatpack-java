@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -21,7 +22,6 @@ package com.getperka.flatpack.policy;
 
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 
-import java.util.Collections;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -31,6 +31,7 @@ import org.parboiled.Rule;
 import org.parboiled.errors.ErrorUtils;
 import org.parboiled.parserunners.ReportingParseRunner;
 import org.parboiled.support.ParsingResult;
+import org.slf4j.Logger;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.GroupPermissions;
@@ -38,9 +39,9 @@ import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
-import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.policy.pst.AclRule;
 import com.getperka.flatpack.policy.pst.Allow;
 import com.getperka.flatpack.policy.pst.Ident;
@@ -56,7 +57,7 @@ import com.getperka.flatpack.policy.visitors.IdentResolver;
  * Inner implementation of the static policy. This class does not provide any memoization of results
  * to avoid lifecycle requirements; caching is handled by the {@link StaticPolicy} implementation.
  */
-class StaticPolicyImpl implements SecurityPolicy {
+class StaticPolicyImpl {
   class PermissionsExtractor extends PolicyVisitor {
     private final Class<? extends HasUuid> entity;
     private final Property property;
@@ -65,6 +66,10 @@ class StaticPolicyImpl implements SecurityPolicy {
     public PermissionsExtractor(GroupPermissions toReturn, SecurityTarget target) {
       this.toReturn = toReturn;
       switch (target.getKind()) {
+        case GLOBAL:
+          entity = null;
+          property = null;
+          break;
         case ENTITY_PROPERTY:
         case PROPERTY:
           property = target.getProperty();
@@ -106,12 +111,15 @@ class StaticPolicyImpl implements SecurityPolicy {
     }
 
     /**
-     * Simplify iteration.
+     * Iterate over types when {@link #entity} is non-null, otherwise, just scan the global allows.
      */
     @Override
     public boolean visit(PolicyFile x) {
-      traverse(x.getAllows());
-      traverse(x.getTypePolicies());
+      if (entity == null) {
+        traverse(x.getAllows());
+      } else {
+        traverse(x.getTypePolicies());
+      }
       return false;
     }
 
@@ -139,7 +147,7 @@ class StaticPolicyImpl implements SecurityPolicy {
      */
     @Override
     public boolean visit(TypePolicy x) {
-      if (entity == null || !x.getName().getReferent().equals(entity)) {
+      if (entity == null || !entity.equals(x.getName().getReferent())) {
         return false;
       }
       traverse(x.getAllows());
@@ -152,6 +160,9 @@ class StaticPolicyImpl implements SecurityPolicy {
 
   @Inject
   private Provider<IdentChecker> checkers;
+  @FlatPackLogger
+  @Inject
+  private Logger logger;
   private PolicyFile policy;
   @Inject
   private Provider<IdentResolver> resolvers;
@@ -165,12 +176,8 @@ class StaticPolicyImpl implements SecurityPolicy {
    */
   StaticPolicyImpl() {}
 
-  @Override
-  public GroupPermissions getPermissions(SecurityTarget target) {
-    GroupPermissions toReturn = new GroupPermissions();
-    policy.accept(new PermissionsExtractor(toReturn, target));
-    toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
-    return toReturn;
+  public void extractPermissions(GroupPermissions accumulator, SecurityTarget target) {
+    policy.accept(new PermissionsExtractor(accumulator, target));
   }
 
   public void parse(String contents) {
@@ -193,6 +200,9 @@ class StaticPolicyImpl implements SecurityPolicy {
     if (!checker.getErrors().isEmpty()) {
       throw new IllegalArgumentException(checker.getErrors().toString());
     }
-    System.out.println("EVALUATED:\n" + policy.toSource() + "\n");
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Evaluated security policy:\n{}", policy.toSource());
+    }
   }
 }
