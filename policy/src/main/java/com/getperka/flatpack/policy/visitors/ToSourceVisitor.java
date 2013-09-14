@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.visitors;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -26,7 +27,7 @@ import com.getperka.flatpack.policy.pst.Allow;
 import com.getperka.flatpack.policy.pst.Group;
 import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.Ident;
-import com.getperka.flatpack.policy.pst.PolicyFile;
+import com.getperka.flatpack.policy.pst.PackagePolicy;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.PolicyVisitor;
 import com.getperka.flatpack.policy.pst.PropertyList;
@@ -122,10 +123,17 @@ public class ToSourceVisitor extends PolicyVisitor {
   }
 
   @Override
-  public boolean visit(PolicyFile x) {
-    traverse(x.getVerbs());
+  public boolean visit(PackagePolicy x) {
+    print("package ");
+    traverse(x.getName());
+    println(" {");
+    indent();
     traverse(x.getAllows());
+    traverse(x.getPackagePolicies());
     traverse(x.getTypePolicies());
+    traverse(x.getVerbs());
+    outdent();
+    println("}");
     return false;
   }
 

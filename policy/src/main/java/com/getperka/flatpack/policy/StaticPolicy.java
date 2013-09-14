@@ -66,6 +66,10 @@ public class StaticPolicy implements SecurityPolicy {
     this.contents = contents;
   }
 
+  /**
+   * Computes all permissions for the target, including those inherited from supertype and global
+   * decorations.
+   */
   @Override
   public GroupPermissions getPermissions(SecurityTarget target) {
     GroupPermissions toReturn = cache.get(target);

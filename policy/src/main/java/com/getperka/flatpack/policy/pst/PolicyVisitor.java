@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -21,7 +22,6 @@ package com.getperka.flatpack.policy.pst;
 
 import java.util.List;
 
-
 public class PolicyVisitor {
   public void endVisit(AclRule x) {}
 
@@ -32,6 +32,8 @@ public class PolicyVisitor {
   public void endVisit(GroupDefinition x) {}
 
   public void endVisit(Ident<?> x) {}
+
+  public void endVisit(PackagePolicy x) {}
 
   public void endVisit(PolicyFile x) {}
 
@@ -60,6 +62,10 @@ public class PolicyVisitor {
   }
 
   public boolean visit(Ident<?> x) {
+    return defaultVisit();
+  }
+
+  public boolean visit(PackagePolicy x) {
     return defaultVisit();
   }
 

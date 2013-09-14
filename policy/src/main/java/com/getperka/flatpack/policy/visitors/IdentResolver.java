@@ -52,6 +52,8 @@ import com.getperka.flatpack.policy.pst.Group;
 import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.HasName;
 import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PackagePolicy;
+import com.getperka.flatpack.policy.pst.PolicyBlock;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.TypePolicy;
@@ -77,6 +79,11 @@ public class IdentResolver extends PolicyLocationVisitor {
   IdentResolver() {}
 
   @Override
+  public void endVisit(PackagePolicy x) {
+    currentScope.pop();
+  }
+
+  @Override
   public void endVisit(PolicyFile x) {
     currentScope.pop();
   }
@@ -99,7 +106,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       }
     }
     for (Ident<?> ident : unresolved) {
-      errors.add("Unresolved identifier " + ident + " on line " + x.getLineNumber());
+      errors.add("Unresolved identifier " + ident + " on line " + ident.getLineNumber());
     }
   }
 
@@ -218,11 +225,19 @@ public class IdentResolver extends PolicyLocationVisitor {
    * Explicit iteration order to simplify resolver logic.
    */
   @Override
+  public boolean visit(PackagePolicy x) {
+    currentScope.push(scope().child(x.getName()));
+    traverseBlock(x);
+    return false;
+  }
+
+  /**
+   * Explicit iteration order to simplify resolver logic.
+   */
+  @Override
   public boolean visit(PolicyFile x) {
     currentScope.push(rootScope);
-    traverse(x.getVerbs());
-    traverse(x.getAllows());
-    traverse(x.getTypePolicies());
+    traverseBlock(x);
     return false;
   }
 
@@ -231,7 +246,7 @@ public class IdentResolver extends PolicyLocationVisitor {
    */
   @Override
   public boolean visit(TypePolicy x) {
-    currentScope.push(currentScope.peek().newScope());
+    currentScope.push(scope().child(x.getName()));
     ensureReferent(x);
     traverse(x.getVerbs());
     traverse(x.getGroups());
@@ -537,5 +552,12 @@ public class IdentResolver extends PolicyLocationVisitor {
 
   private NodeScope scope() {
     return currentScope.peek();
+  }
+
+  private void traverseBlock(PolicyBlock x) {
+    traverse(x.getVerbs());
+    traverse(x.getAllows());
+    traverse(x.getPackagePolicies());
+    traverse(x.getTypePolicies());
   }
 }

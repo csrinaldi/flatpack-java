@@ -86,7 +86,12 @@ public class PolicyExtractionTest extends PolicyTestBase {
         }
       });
 
-      doTest(policyFile.toSource());
+      try {
+        doTest(policyFile.toSource());
+      } catch (IllegalArgumentException e) {
+        System.err.println(i + " Failing source:\n" + policyFile.toSource());
+        throw e;
+      }
     }
   }
 

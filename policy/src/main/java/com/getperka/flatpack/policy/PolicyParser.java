@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -45,6 +46,8 @@ import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.HasInheritFrom;
 import com.getperka.flatpack.policy.pst.HasName;
 import com.getperka.flatpack.policy.pst.Ident;
+import com.getperka.flatpack.policy.pst.PackagePolicy;
+import com.getperka.flatpack.policy.pst.PolicyBlock;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.PropertyList;
@@ -78,14 +81,8 @@ class PolicyParser extends BaseParser<Object> {
   public Rule PolicyFile() {
     Var<PolicyFile> x = new Var<PolicyFile>(new PolicyFile());
     return Sequence(
-        WS(),
-        ZeroOrMore(FirstOf(
-            Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
-            Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop()))),
-            Sequence(TypePolicy(), ACTION(x.get().getTypePolicies().add((TypePolicy) pop())))
-        )),
-        EOI,
-        ACTION(push(x.get())));
+        PolicyBlock(x),
+        EOI);
   }
 
   /**
@@ -379,6 +376,33 @@ class PolicyParser extends BaseParser<Object> {
             r,
             ACTION(popToList(clazz, var))),
         ACTION(clazz == null || push(var.get())));
+  }
+
+  Rule PackagePolicy() {
+    Var<PackagePolicy> x = new Var<PackagePolicy>(new PackagePolicy());
+    return Sequence(
+        "package",
+        NodeName(PackagePolicy.class, x),
+        "{",
+        PolicyBlock(x),
+        "}");
+  }
+
+  /**
+   * Main contents blocks.
+   */
+  @Cached
+  Rule PolicyBlock(Var<? extends PolicyBlock> x) {
+    return Sequence(
+        WS(),
+        ZeroOrMore(FirstOf(
+            Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
+            Sequence(PackagePolicy(), ACTION(x.get().getPackagePolicies()
+                .add((PackagePolicy) pop()))),
+            Sequence(TypePolicy(), ACTION(x.get().getTypePolicies().add((TypePolicy) pop()))),
+            Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop())))
+        )),
+        ACTION(push(x.get())));
   }
 
   <T> Ident<T> popIdent(Class<T> clazz) {

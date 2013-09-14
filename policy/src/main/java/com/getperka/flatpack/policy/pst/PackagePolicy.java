@@ -1,5 +1,4 @@
 package com.getperka.flatpack.policy.pst;
-
 /*
  * #%L
  * FlatPack Security Policy
@@ -20,15 +19,31 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
-public class PolicyFile extends PolicyBlock {
+/**
+ * Allows types and associated declarations to be grouped together.
+ */
+public class PackagePolicy extends PolicyBlock implements HasName<PackagePolicy> {
+  private Ident<PackagePolicy> name;
+
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
       v.traverse(getAllows());
       v.traverse(getPackagePolicies());
+      v.traverse(getName());
       v.traverse(getTypePolicies());
       v.traverse(getVerbs());
     }
     v.endVisit(this);
+  }
+
+  @Override
+  public Ident<PackagePolicy> getName() {
+    return name;
+  }
+
+  @Override
+  public void setName(Ident<PackagePolicy> name) {
+    this.name = name;
   }
 }

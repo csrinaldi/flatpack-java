@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.visitors;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -21,6 +22,7 @@ package com.getperka.flatpack.policy.visitors;
 
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
+import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ import com.getperka.flatpack.policy.pst.PolicyNode;
  * A simple hierarchical scope for resolving identifiers.
  */
 class NodeScope {
+  private final Map<Ident<?>, NodeScope> childScopes = mapForLookup();
   private final Map<Ident<?>, HasName<?>> namedThings = mapForIteration();
   private final NodeScope parent;
 
@@ -42,6 +45,18 @@ class NodeScope {
 
   private NodeScope(NodeScope parent) {
     this.parent = parent;
+  }
+
+  /**
+   * Find or create a new child scope identified by the given name.
+   */
+  public NodeScope child(Ident<?> ident) {
+    NodeScope toReturn = childScopes.get(ident);
+    if (toReturn == null) {
+      toReturn = new NodeScope(this);
+      childScopes.put(ident, toReturn);
+    }
+    return toReturn;
   }
 
   /**
@@ -81,10 +96,6 @@ class NodeScope {
    */
   public <T extends HasName<T>> T get(Ident<T> name) {
     return get(name.getReferentType(), name);
-  }
-
-  public NodeScope newScope() {
-    return new NodeScope(this);
   }
 
   public void put(HasName<?> named) {

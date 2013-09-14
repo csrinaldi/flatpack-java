@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.visitors;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -73,15 +74,14 @@ public class PolicyLocationVisitor extends PolicyVisitor {
 
   @Override
   protected final void traverse(PolicyNode x) {
-    if (x != null) {
-      location.push(x);
+    if (x == null) {
+      return;
     }
+    location.push(x);
     try {
       doTraverse(x);
     } finally {
-      if (x != null) {
-        location.pop();
-      }
+      location.pop();
     }
   }
 }

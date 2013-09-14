@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -52,7 +53,7 @@ public class PolicyParserTest {
     String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
     PolicyFile p = (PolicyFile) testRule(parser.PolicyFile(), contents);
 
-    // Test print-parse-print to make sure nothing is getting used
+    // Test print-parse-print to make sure nothing is getting lost
     String string = p.toSource();
     PolicyFile p2 = (PolicyFile) testRule(parser.PolicyFile(), string);
     assertEquals(string, p2.toSource());

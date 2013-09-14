@@ -79,6 +79,7 @@ public class SecurityTarget {
   }
 
   private final HasUuid entity;
+
   private final Class<? extends HasUuid> entityType;
   private final int hashCode;
   private final Kind kind;
@@ -129,5 +130,29 @@ public class SecurityTarget {
   @Override
   public int hashCode() {
     return hashCode;
+  }
+
+  @Override
+  public String toString() {
+    String toReturn = kind.name() + " ";
+    switch (kind) {
+      case ENTITY:
+        toReturn += entityType.getName() + " " + entity.getUuid();
+        break;
+      case ENTITY_PROPERTY:
+        toReturn += entityType.getName() + " " + entity.getUuid() + " " + property.getName();
+        break;
+      case GLOBAL:
+        break;
+      case PROPERTY:
+        toReturn += property;
+        break;
+      case TYPE:
+        toReturn += entityType.getName();
+        break;
+      default:
+        toReturn += "Unknown kind";
+    }
+    return toReturn;
   }
 }
