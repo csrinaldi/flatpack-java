@@ -27,6 +27,7 @@ import java.util.UUID;
 import javax.annotation.security.PermitAll;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
 
 /**
@@ -34,6 +35,7 @@ import com.getperka.flatpack.ext.Property;
  */
 public class EntityDescription extends BaseHasUuid {
   private String docString;
+  private GroupPermissions groupPermissions;
   private boolean persistent;
   private List<Property> properties;
   private EntityDescription supertype;
@@ -49,6 +51,10 @@ public class EntityDescription extends BaseHasUuid {
   @PermitAll
   public String getDocString() {
     return docString;
+  }
+
+  public GroupPermissions getGroupPermissions() {
+    return groupPermissions;
   }
 
   @PermitAll
@@ -77,6 +83,10 @@ public class EntityDescription extends BaseHasUuid {
 
   public void setDocString(String docString) {
     this.docString = docString;
+  }
+
+  public void setGroupPermissions(GroupPermissions groupPermissions) {
+    this.groupPermissions = groupPermissions;
   }
 
   public void setPersistent(boolean persistent) {

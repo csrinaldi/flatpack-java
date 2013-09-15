@@ -18,7 +18,7 @@ allow {
  */
 package arbitraryName {
   // Check package-level definitions
-  allow {
+  allow only {
     * to read;
   }
 

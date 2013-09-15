@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.security.DenyAll;
 import javax.annotation.security.PermitAll;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
@@ -107,10 +108,10 @@ public class TypeContext {
     if (name.startsWith("get") && name.length() > 3 ||
       name.startsWith("is") && name.length() > 2 && isBoolean(m.getReturnType())) {
 
-      if (m.isAnnotationPresent(PermitAll.class)) {
-        return true;
+      if (m.isAnnotationPresent(DenyAll.class)) {
+        return false;
       }
-      if (m.isAnnotationPresent(RolesAllowed.class)) {
+      if (m.isAnnotationPresent(PermitAll.class)) {
         return true;
       }
       if (hasAnnotationWithSimpleName(m, "Transient")) {
@@ -133,10 +134,10 @@ public class TypeContext {
     if (!m.getName().startsWith("set")) {
       return false;
     }
-    if (m.isAnnotationPresent(PermitAll.class)) {
-      return true;
+    if (m.isAnnotationPresent(DenyAll.class)) {
+      return false;
     }
-    if (m.isAnnotationPresent(RolesAllowed.class)) {
+    if (m.isAnnotationPresent(PermitAll.class)) {
       return true;
     }
     return !Modifier.isPrivate(m.getModifiers());

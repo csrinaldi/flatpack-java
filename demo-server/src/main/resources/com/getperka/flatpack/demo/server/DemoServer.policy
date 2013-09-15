@@ -2,35 +2,25 @@ verb crudOperation = create, read, update, delete;
 
 allow {
   ADMIN to *;
-  NOBODY none;
+  * to read;
 }
 
-type product {
-  allow {
-    NOBODY to read;
+package thingsToProtect {
+  allow only {
+    ADMIN to *;
+    NOBODY none;
   }
   
-  policy adminOnly {
-    property notes;
-    allow only {
-      ADMIN to *;
+  type product {
+    allow {
+      NOBODY to read;
+    }
+    
+    policy adminOnly {
+      property notes;
+      allow only {
+        ADMIN to *;
+      }
     }
   }
 }
-
-type baseHasUuid {
-  policy uuid {
-    property uuid;
-    allow only {
-      * to read, create;
-    }
-  }
-}
-
-type entityMetadata {
-  allow {
-    * to read;
-  }
-}
-
-package XXX {}

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -25,11 +26,10 @@ import java.util.Map;
 import java.util.Set;
 
 import com.getperka.flatpack.BaseHasUuid;
-import com.getperka.flatpack.security.CrudOperation;
 
 /**
  * Associates some number of {@link SecurityGroup SecurityGroups} with their respective
- * {@link CrudOperation} permissions.
+ * {@link SecurityAction} permissions.
  */
 public class GroupPermissions extends BaseHasUuid {
 

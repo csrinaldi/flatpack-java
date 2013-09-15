@@ -62,6 +62,8 @@ import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.dto.TypeDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.ext.SecurityPolicy;
+import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
@@ -87,11 +89,13 @@ public class ApiDescriber {
   private Set<String> limitRoles;
   private final Map<String, Class<? extends HasUuid>> payloadNamesToClasses = mapForLookup();
   private final Map<Property, EntityDescription> propertiesToEntities = mapForLookup();
+  private final SecurityPolicy securityPolicy;
   private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
 
   public ApiDescriber(FlatPack flatpack, Collection<Method> apiMethods) {
     this.apiMethods = apiMethods;
     ctx = flatpack.getTypeContext();
+    securityPolicy = flatpack.getSecurityPolicy();
   }
 
   /**
@@ -321,6 +325,9 @@ public class ApiDescriber {
     if (HasUuid.class.isAssignableFrom(clazz.getSuperclass())) {
       entity.setSupertype(describeEntity(clazz.getSuperclass().asSubclass(HasUuid.class)));
     }
+
+    // Set the permissions
+    entity.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(clazz)));
 
     // Attach the docstring
     Map<String, String> strings = getDocStrings(clazz);
