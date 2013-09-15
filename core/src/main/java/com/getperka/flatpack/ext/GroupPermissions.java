@@ -67,6 +67,9 @@ public class GroupPermissions extends BaseHasUuid {
     this.operations = operations;
   }
 
+  /**
+   * For debugging use only.
+   */
   @Override
   public String toString() {
     return operations.toString();

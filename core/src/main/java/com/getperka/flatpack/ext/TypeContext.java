@@ -40,9 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.security.DenyAll;
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -94,11 +91,9 @@ public class TypeContext {
    * <ul>
    * <li>public Foo getFoo()</li>
    * <li>public boolean isFoo()</li>
-   * <li>{@code @PermitAll} &lt;any modifier&gt; Foo getFoo()</li>
-   * <li>{@code @RolesAllowed} &lt;any modifier&gt; Foo getFoo()</li>
    * </ul>
-   * Ignores any method declared annotated with {@link Transient} unless {@link PermitAll} or
-   * {@link RolesAllowed} is present.
+   * Ignores any method declared annotated with {@link NoPack} or an annotation whose simple name is
+   * {@code Transient}.
    */
   private static boolean isGetter(Method m) {
     if (m.getParameterTypes().length != 0) {
@@ -108,11 +103,8 @@ public class TypeContext {
     if (name.startsWith("get") && name.length() > 3 ||
       name.startsWith("is") && name.length() > 2 && isBoolean(m.getReturnType())) {
 
-      if (m.isAnnotationPresent(DenyAll.class)) {
+      if (m.isAnnotationPresent(NoPack.class)) {
         return false;
-      }
-      if (m.isAnnotationPresent(PermitAll.class)) {
-        return true;
       }
       if (hasAnnotationWithSimpleName(m, "Transient")) {
         return false;
@@ -134,11 +126,8 @@ public class TypeContext {
     if (!m.getName().startsWith("set")) {
       return false;
     }
-    if (m.isAnnotationPresent(DenyAll.class)) {
+    if (m.isAnnotationPresent(NoPack.class)) {
       return false;
-    }
-    if (m.isAnnotationPresent(PermitAll.class)) {
-      return true;
     }
     return !Modifier.isPrivate(m.getModifiers());
   }

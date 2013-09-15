@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.ext.Type;
@@ -34,7 +32,6 @@ import com.getperka.flatpack.ext.Type;
 /**
  * Describes an {@code HTTP} request endpoint.
  */
-@PermitAll
 public class EndpointDescription extends BaseHasUuid {
   private String docString;
   private Type entity;

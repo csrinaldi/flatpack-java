@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.security.DenyAll;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
@@ -41,6 +41,7 @@ import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.TypeSource;
+import com.getperka.flatpack.ext.NoPack;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityGroups;
@@ -111,29 +112,17 @@ public class PrincipalSecurityTest extends PolicyTestBase {
     }
   }
 
-  // @AclGroups({
-  // @AclGroup(name = "boss", path = "boss"),
-  // @AclGroup(name = "peer", path = "peers")
-  // })
-  // @Acls({
-  // @Acl(groups = AclGroup.ALL, ops = CrudOperation.READ),
-  // @Acl(groups = AclGroup.THIS)
-  // })
   static class Person extends BaseHasUuid {
     private Person boss;
     private List<String> globalGroups;
     private String name;
     private List<Person> peers;
 
-    // @Acls({
-    // @Acl(groups = { "boss", "boss.peer", "global" }),
-    // })
-    // @InheritGroups
     public Person getBoss() {
       return boss;
     }
 
-    @DenyAll
+    @NoPack
     public List<String> getGlobalGroups() {
       return globalGroups;
     }
@@ -142,7 +131,6 @@ public class PrincipalSecurityTest extends PolicyTestBase {
       return name;
     }
 
-    // @AclRef("definedRef")
     public List<Person> getPeers() {
       return peers;
     }
@@ -151,6 +139,7 @@ public class PrincipalSecurityTest extends PolicyTestBase {
       this.boss = boss;
     }
 
+    @NoPack
     public void setGlobalGroups(List<String> globalGroups) {
       this.globalGroups = globalGroups;
     }

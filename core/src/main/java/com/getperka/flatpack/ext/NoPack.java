@@ -1,8 +1,9 @@
+package com.getperka.flatpack.ext;
 /*
  * #%L
  * FlatPack serialization code
  * %%
- * Copyright (C) 2012 Perka Inc.
+ * Copyright (C) 2012 - 2013 Perka Inc.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +18,17 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.domain;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import com.getperka.flatpack.SparseCollection;
-
-public class Manager extends Person {
-  private List<Employee> employees = new ArrayList<Employee>();
-
-  Manager() {}
-
-  @SparseCollection("manager")
-  public List<Employee> getEmployees() {
-    return employees;
-  }
-
-  public void setEmployees(List<Employee> employees) {
-    this.employees = employees;
-  }
-}
+/**
+ * Applied to getters and setters to make FlatPack ignore them.
+ */
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface NoPack {}

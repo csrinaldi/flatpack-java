@@ -27,8 +27,6 @@ import java.lang.reflect.Method;
 import java.util.Comparator;
 import java.util.UUID;
 
-import javax.annotation.security.DenyAll;
-import javax.annotation.security.PermitAll;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.BaseHasUuid;
@@ -157,12 +155,11 @@ public class Property extends BaseHasUuid {
   @Inject
   private Property() {}
 
-  @DenyAll
+  @NoPack
   public Codex<?> getCodex() {
     return codex;
   }
 
-  @PermitAll
   public String getDocString() {
     return docString;
   }
@@ -170,7 +167,7 @@ public class Property extends BaseHasUuid {
   /**
    * The payload name of the type that defines the property.
    */
-  @PermitAll
+
   public String getEnclosingTypeName() {
     return enclosingTypeName;
   }
@@ -179,7 +176,7 @@ public class Property extends BaseHasUuid {
    * Returns the getter method for this Property. The returned method will have a non-{@code void}
    * return type and no parameters.
    */
-  @DenyAll
+  @NoPack
   public Method getGetter() {
     return getter;
   }
@@ -195,7 +192,6 @@ public class Property extends BaseHasUuid {
    * When a new value is assigned to the current property in some instance, the implied property of
    * the new value should also be updated with the current instance.
    */
-  @PermitAll
   public Property getImpliedProperty() {
     return implied;
   }
@@ -204,7 +200,6 @@ public class Property extends BaseHasUuid {
    * Returns the json payload name of the Property, which may differ from the bean name if a
    * {@link JsonProperty} annotation has been applied to the getter.
    */
-  @PermitAll
   public String getName() {
     return name;
   }
@@ -213,7 +208,7 @@ public class Property extends BaseHasUuid {
    * Returns the optional setter for the property. The returned method will have a single parameter
    * and a {@code void} return type.
    */
-  @DenyAll
+  @NoPack
   public Method getSetter() {
     return setter;
   }
@@ -221,7 +216,6 @@ public class Property extends BaseHasUuid {
   /**
    * A simplified description of the property's type.
    */
-  @PermitAll
   public Type getType() {
     return type;
   }
@@ -229,7 +223,6 @@ public class Property extends BaseHasUuid {
   /**
    * Returns {@code true} if the Property should be included only during a deep traversal.
    */
-  @PermitAll
   public boolean isDeepTraversalOnly() {
     return deepTraversalOnly;
   }
@@ -238,7 +231,6 @@ public class Property extends BaseHasUuid {
    * Returns {@code true} if an entity Property's properties should be emitted into the owning
    * entity's properties.
    */
-  @PermitAll
   public boolean isEmbedded() {
     return embedded;
   }
@@ -247,7 +239,6 @@ public class Property extends BaseHasUuid {
    * If {@code true}, non-null properties that contain the property type's default value will not be
    * serialized. For example, integer properties whose values are {@code 0} will not be serialized.
    */
-  @PermitAll
   public boolean isSuppressDefaultValue() {
     return suppressDefaultValue;
   }

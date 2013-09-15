@@ -350,7 +350,7 @@ public class ApiDescriber {
         for (SecurityGroup group : prop.getGroupPermissions().getOperations().keySet()) {
           interestingRoles.add(group.getName());
         }
-        // Ignore the property if it's not a @PermitAll and it is disjoint from the filter roles
+        // Ignore the property if it's not a PermitAll and it is disjoint from the filter roles
         if (Collections.disjoint(interestingRoles, Collections.singleton("*")) &&
           Collections.disjoint(interestingRoles, limitRoles)) {
           it.remove();

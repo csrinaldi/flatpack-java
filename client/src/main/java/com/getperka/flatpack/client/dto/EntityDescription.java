@@ -24,8 +24,6 @@ import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
@@ -48,7 +46,6 @@ public class EntityDescription extends BaseHasUuid {
 
   EntityDescription() {}
 
-  @PermitAll
   public String getDocString() {
     return docString;
   }
@@ -57,17 +54,14 @@ public class EntityDescription extends BaseHasUuid {
     return groupPermissions;
   }
 
-  @PermitAll
   public List<Property> getProperties() {
     return properties;
   }
 
-  @PermitAll
   public EntityDescription getSupertype() {
     return supertype;
   }
 
-  @PermitAll
   public String getTypeName() {
     return typeName;
   }
@@ -76,7 +70,6 @@ public class EntityDescription extends BaseHasUuid {
    * Indicates that instance of the the type may be persisted by the server. This hint can be used
    * to reduce payload sizes by transmitting only mutated properties.
    */
-  @PermitAll
   public boolean isPersistent() {
     return persistent;
   }

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.client.dto;
+
 /*
  * #%L
  * FlatPack Client
@@ -23,15 +24,12 @@ import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.ext.Type;
 
 /**
  * Associates a {@link Type} with a documentation string.
  */
-@PermitAll
 public class TypeDescription extends BaseHasUuid {
   private String docString;
   private Type type;

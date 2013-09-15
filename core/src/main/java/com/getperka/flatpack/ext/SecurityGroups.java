@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -26,8 +27,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.annotation.security.DenyAll;
-import javax.annotation.security.PermitAll;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -135,8 +134,6 @@ public class SecurityGroups {
 
   /**
    * Allows all requests.
-   * 
-   * @see PermitAll
    */
   public GroupPermissions getPermissionsAll() {
     return permissionsPermitAll;
@@ -144,8 +141,6 @@ public class SecurityGroups {
 
   /**
    * Denies all requests.
-   * 
-   * @see DenyAll
    */
   public GroupPermissions getPermissionsNone() {
     return permissionsDenyAll;

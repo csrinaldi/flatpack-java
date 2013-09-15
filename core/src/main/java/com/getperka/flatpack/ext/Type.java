@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.BaseHasUuid;
@@ -94,37 +93,30 @@ public class Type extends BaseHasUuid {
   @Inject
   private Type() {}
 
-  @PermitAll
   public List<String> getEnumValues() {
     return enumValues;
   }
 
-  @PermitAll
   public JsonKind getJsonKind() {
     return jsonKind;
   }
 
-  @PermitAll
   public Type getListElement() {
     return listElement;
   }
 
-  @PermitAll
   public Type getMapKey() {
     return mapKey;
   }
 
-  @PermitAll
   public Type getMapValue() {
     return mapValue;
   }
 
-  @PermitAll
   public String getName() {
     return name;
   }
 
-  @PermitAll
   public TypeHint getTypeHint() {
     return hint;
   }

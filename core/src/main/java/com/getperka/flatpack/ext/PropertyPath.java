@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.BaseHasUuid;
 
 /**
@@ -61,7 +59,6 @@ public class PropertyPath extends BaseHasUuid {
   /**
    * Return an unmodifiable view of the properties that comprise the path.
    */
-  @PermitAll
   public List<Property> getPath() {
     return path;
   }

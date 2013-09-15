@@ -44,9 +44,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stringtemplate.v4.AttributeRenderer;
@@ -121,7 +118,7 @@ public class JavaDialect implements Dialect {
       Embedded.class, FlatPack.class, FlatPackCollections.class, FlatPackEntity.class,
       FlatPackRequest.class, FlatPackRequestBase.class, FlatPackTypes.class, HashSet.class,
       HttpURLConnection.class, IOException.class, JsonTypeName.class,
-      PermitAll.class, PersistenceAware.class, PostUnpack.class, Request.class, RolesAllowed.class,
+      PersistenceAware.class, PostUnpack.class, Request.class,
       Set.class, SparseCollection.class, SuppressDefaultValue.class, TypeReference.class,
       TypeSource.class);
 

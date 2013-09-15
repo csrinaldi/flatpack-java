@@ -24,8 +24,6 @@ import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.BaseHasUuid;
 
 /**
@@ -37,22 +35,18 @@ public class ApiDescription extends BaseHasUuid {
   private List<EndpointDescription> endpoints;
   private List<EntityDescription> entities;
 
-  @PermitAll
   public String getApiName() {
     return apiName;
   }
 
-  @PermitAll
   public String getApiVersion() {
     return apiVersion;
   }
 
-  @PermitAll
   public List<EndpointDescription> getEndpoints() {
     return endpoints;
   }
 
-  @PermitAll
   public List<EntityDescription> getEntities() {
     return entities;
   }
