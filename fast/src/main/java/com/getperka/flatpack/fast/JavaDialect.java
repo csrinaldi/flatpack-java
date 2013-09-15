@@ -71,13 +71,13 @@ import com.getperka.flatpack.client.FlatPackRequest;
 import com.getperka.flatpack.client.Request;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.impl.ApiBase;
 import com.getperka.flatpack.client.impl.BasePersistenceAware;
 import com.getperka.flatpack.client.impl.ConnectionRequestBase;
 import com.getperka.flatpack.client.impl.FlatPackRequestBase;
 import com.getperka.flatpack.collections.DirtyFlag;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.util.FlatPackCollections;
@@ -222,7 +222,7 @@ public class JavaDialect implements Dialect {
       if ("uuid".equals(prop.getName())) {
         // Crop the UUID property
         it.remove();
-      } else if (!prop.getEnclosingTypeName().equals(typeName)) {
+      } else if (!prop.getEnclosingType().equals(entity)) {
         // Remove properties not declared in the current type
         it.remove();
       }

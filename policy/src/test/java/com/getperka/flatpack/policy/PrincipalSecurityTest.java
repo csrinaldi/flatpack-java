@@ -188,7 +188,7 @@ public class PrincipalSecurityTest extends PolicyTestBase {
         .withSecurityPolicy(new StaticPolicy(policy)));
     ((HasInjector) flatpack).getInjector().injectMembers(this);
 
-    for (Property prop : typeContext.extractProperties(Person.class)) {
+    for (Property prop : typeContext.describe(Person.class).getProperties()) {
       personProps.put(prop.getName(), prop);
     }
 

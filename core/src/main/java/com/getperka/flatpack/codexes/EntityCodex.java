@@ -111,7 +111,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
       if (visitor.visit(entity, this, context)) {
         // Traverse all properties
         PropertyWalker walker = new PropertyWalker(entity);
-        for (Property prop : typeContext.extractProperties(clazz)) {
+        for (Property prop : typeContext.describe(clazz).getProperties()) {
           context.walkImmutable(walker).accept(visitor, prop);
         }
       }
@@ -145,7 +145,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   public Type describe() {
     return new Type.Builder()
         .withJsonKind(JsonKind.STRING)
-        .withName(typeContext.getPayloadName(clazz))
+        .withName(typeContext.describe(clazz).getTypeName())
         .build();
   }
 

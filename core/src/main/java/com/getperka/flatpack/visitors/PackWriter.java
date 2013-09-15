@@ -115,7 +115,7 @@ public class PackWriter extends FlatPackVisitor {
       json.beginObject();
       for (Map.Entry<Class<? extends HasUuid>, List<HasUuid>> entry : collate(
           context.getEntities()).entrySet()) {
-        json.name(typeContext.getPayloadName(entry.getKey()));
+        json.name(typeContext.describe(entry.getKey()).getTypeName());
         json.beginArray();
         for (HasUuid value : entry.getValue()) {
           if (persistenceMapper.isPersisted(value)) {

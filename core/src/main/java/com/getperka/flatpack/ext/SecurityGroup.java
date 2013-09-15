@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -23,15 +24,17 @@ import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * A definition for an ACL security group.
  */
 public class SecurityGroup extends BaseHasUuid {
   private String description;
-  private boolean implicitSecurityGroup;
+  private boolean globalSecurityGroup;
   private List<PropertyPath> paths = Collections.emptyList();
   private String name;
 
@@ -70,8 +73,8 @@ public class SecurityGroup extends BaseHasUuid {
     return paths;
   }
 
-  public boolean isImplicitSecurityGroup() {
-    return implicitSecurityGroup;
+  public boolean isGlobalSecurityGroup() {
+    return globalSecurityGroup;
   }
 
   /**
@@ -82,12 +85,22 @@ public class SecurityGroup extends BaseHasUuid {
     return name + " " + paths;
   }
 
+  @Override
+  protected UUID defaultUuid() {
+    return new UuidDigest()
+        .add(description)
+        .add(String.valueOf(globalSecurityGroup))
+        .add(paths)
+        .add(name)
+        .digest();
+  }
+
   void setDescription(String description) {
     this.description = description;
   }
 
-  void setImplicitSecurityGroup(boolean implicitSecurityGroup) {
-    this.implicitSecurityGroup = implicitSecurityGroup;
+  void setGlobalSecurityGroup(boolean implicitSecurityGroup) {
+    this.globalSecurityGroup = implicitSecurityGroup;
   }
 
   void setName(String name) {

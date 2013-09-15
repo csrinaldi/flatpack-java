@@ -120,7 +120,7 @@ public class SecurityGroups {
   public SecurityGroup getGroupGlobal(String name) {
     SecurityGroup toReturn = getGroup(getClass(), name, "Global group " + name,
         Collections.<PropertyPath> emptyList());
-    toReturn.setImplicitSecurityGroup(true);
+    toReturn.setGlobalSecurityGroup(true);
     return toReturn;
   }
 

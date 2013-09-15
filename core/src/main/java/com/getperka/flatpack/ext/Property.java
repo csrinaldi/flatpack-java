@@ -30,6 +30,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.SuppressDefaultValue;
 
@@ -90,9 +91,10 @@ public class Property extends BaseHasUuid {
       getter.setAccessible(true);
       prop.getter = getter;
 
-      if (prop.enclosingTypeName == null) {
-        Class<?> enclosingType = getter.getDeclaringClass();
-        prop.enclosingTypeName = typeContext.getPayloadName(enclosingType);
+      if (prop.enclosingType == null) {
+        Class<? extends HasUuid> enclosingType =
+            getter.getDeclaringClass().asSubclass(HasUuid.class);
+        prop.enclosingType = typeContext.describe(enclosingType);
       }
 
       return this;
@@ -112,9 +114,10 @@ public class Property extends BaseHasUuid {
       setter.setAccessible(true);
       prop.setter = setter;
 
-      if (prop.enclosingTypeName == null) {
-        Class<?> enclosingType = setter.getDeclaringClass();
-        prop.enclosingTypeName = typeContext.getPayloadName(enclosingType);
+      if (prop.enclosingType == null) {
+        Class<? extends HasUuid> enclosingType =
+            setter.getDeclaringClass().asSubclass(HasUuid.class);
+        prop.enclosingType = typeContext.describe(enclosingType);
       }
       return this;
     }
@@ -142,7 +145,7 @@ public class Property extends BaseHasUuid {
    * endpoint to lazily add the doc strings.
    */
   private String docString;
-  private String enclosingTypeName;
+  private EntityDescription enclosingType;
   private boolean embedded;
   private Method getter;
   private GroupPermissions groupPermissions;
@@ -165,11 +168,10 @@ public class Property extends BaseHasUuid {
   }
 
   /**
-   * The payload name of the type that defines the property.
+   * The {@link EntityDescription} that defines the property.
    */
-
-  public String getEnclosingTypeName() {
-    return enclosingTypeName;
+  public EntityDescription getEnclosingType() {
+    return enclosingType;
   }
 
   /**
@@ -256,15 +258,16 @@ public class Property extends BaseHasUuid {
    */
   @Override
   public String toString() {
-    return getEnclosingTypeName() + "." + getName() + " ::= " + getType();
+    return getEnclosingType().getTypeName() + "." + getName() + " ::= " + getType();
   }
 
   @Override
   protected UUID defaultUuid() {
-    if (getEnclosingTypeName() == null || getName() == null) {
+    if (getEnclosingType() == null || getName() == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getEnclosingTypeName() + "." + getName()).getBytes(UTF8));
+    return UUID.nameUUIDFromBytes((getEnclosingType().getTypeName() + "." + getName())
+        .getBytes(UTF8));
   }
 
   void setDeepTraversalOnly(boolean deepTraversalOnly) {
@@ -275,8 +278,8 @@ public class Property extends BaseHasUuid {
     this.embedded = embedded;
   }
 
-  void setEnclosingTypeName(String enclosingTypeName) {
-    this.enclosingTypeName = enclosingTypeName;
+  void setEnclosingType(EntityDescription enclosingType) {
+    this.enclosingType = enclosingType;
   }
 
   void setImplied(Property implied) {

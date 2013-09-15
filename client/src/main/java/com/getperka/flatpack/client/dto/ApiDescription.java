@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.ext.EntityDescription;
 
 /**
  * A description of the entities contained within an API.

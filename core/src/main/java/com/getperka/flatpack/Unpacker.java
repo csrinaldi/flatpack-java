@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.inject.IgnoreUnresolvableTypes;
@@ -230,22 +231,22 @@ public class Unpacker {
         while (JsonToken.NAME.equals(reader.peek())) {
           // Turn "fooEntity" into the actual FooEntity class
           String simpleName = reader.nextName();
-          Class<? extends HasUuid> clazz = typeContext.getClass(simpleName);
-          if (clazz == null) {
+          EntityDescription desc = typeContext.getEntityDescription(simpleName);
+          if (desc == null) {
             if (ignoreUnresolvableTypes) {
               reader.skipValue();
               continue;
             } else {
               throw new UnsupportedOperationException("Cannot resolve type " + simpleName);
             }
-          } else if (Modifier.isAbstract(clazz.getModifiers())) {
+          } else if (Modifier.isAbstract(desc.getEntityType().getModifiers())) {
             throw new UnsupportedOperationException("A subclass of " + simpleName
               + " must be used instead");
           }
           context.pushPath("allocating " + simpleName);
           try {
             // Find the Codex for the requested entity type
-            EntityCodex<?> codex = (EntityCodex<?>) typeContext.getCodex(clazz);
+            EntityCodex<?> codex = (EntityCodex<?>) typeContext.getCodex(desc.getEntityType());
 
             // Take the n-many property objects and stash them for later decoding
             reader.beginArray();

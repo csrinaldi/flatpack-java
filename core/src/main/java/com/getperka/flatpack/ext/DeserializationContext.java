@@ -81,7 +81,7 @@ public class DeserializationContext extends BaseContext {
       return true;
     }
     addWarning(object, "User %s does not have permission to edit this %s", getPrincipal(),
-        typeContext.getPayloadName(object.getClass()));
+        typeContext.describe(object.getClass()).getTypeName());
     return false;
   }
 

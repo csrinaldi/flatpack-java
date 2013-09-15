@@ -38,6 +38,7 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
 import com.getperka.flatpack.ext.SecurityAction;
@@ -119,14 +120,15 @@ public class IdentResolver extends PolicyLocationVisitor {
    */
   @Override
   public boolean visit(Allow x) {
-    if (x.getInheritFrom() == null) {
+    Ident<Property> inheritFrom = x.getInheritFrom();
+    if (inheritFrom == null) {
       return true;
     }
-    Property p = ensureReferent(x.getInheritFrom());
-    TypePolicy policy = findTypePolicy(p);
-    if (policy == null) {
+    Property p = ensureReferent(inheritFrom);
+    TypePolicy policy = p == null ? null : findTypePolicy(p);
+    if (p == null || policy == null) {
       // Skip for the second pass
-      unresolved.add(x.getInheritFrom());
+      unresolved.add(inheritFrom);
       return false;
     }
 
@@ -150,8 +152,8 @@ public class IdentResolver extends PolicyLocationVisitor {
       return true;
     }
     Property p = ensureReferent(inheritFrom);
-    TypePolicy policy = findTypePolicy(p);
-    if (policy == null) {
+    TypePolicy policy = p == null ? null : findTypePolicy(p);
+    if (p == null || policy == null) {
       // Skip for the second pass
       unresolved.add(inheritFrom);
       return false;
@@ -270,11 +272,12 @@ public class IdentResolver extends PolicyLocationVisitor {
    * Map a type name reference onto a real {@link Class} object via the {@link TypeContext}.
    */
   void resolveClass(Ident<Class<? extends HasUuid>> x) {
-    Class<? extends HasUuid> clazz = typeContext.getClass(x.getSimpleName());
-    if (clazz == null) {
+    EntityDescription desc = typeContext.getEntityDescription(x.getSimpleName());
+    if (desc == null) {
       error("Unknown type " + x.getSimpleName());
+      return;
     }
-    x.setReferent(clazz);
+    x.setReferent(desc.getEntityType());
   }
 
   void resolveProperty(Ident<Property> x) {
@@ -283,14 +286,14 @@ public class IdentResolver extends PolicyLocationVisitor {
       error("Cannot refer to property outside of a type");
       return;
     }
-    Class<?> clazz = ensureReferent(typePolicy);
+    Class<? extends HasUuid> clazz = ensureReferent(typePolicy);
     if (clazz == null) {
       // Error already reported
       return;
     }
-    for (Property p : typeContext.extractProperties(clazz)) {
+    for (Property p : typeContext.describe(clazz).getProperties()) {
       if (p.getName().equals(x.getSimpleName())) {
-        if (p.getEnclosingTypeName().equals(typePolicy.getName().getSimpleName())) {
+        if (p.getEnclosingType().getTypeName().equals(typePolicy.getName().getSimpleName())) {
           x.setReferent(p);
         } else {
           error("Type " + typePolicy.getName() + " does not define property " + p.getName());
@@ -313,7 +316,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       return;
     }
     // Ensure the type name has been resolved
-    Class<?> currentType = ensureReferent(typePolicy);
+    Class<? extends HasUuid> currentType = ensureReferent(typePolicy);
     if (currentType == null) {
       // Should already be reported
       return;
@@ -436,7 +439,12 @@ public class IdentResolver extends PolicyLocationVisitor {
     if (groupDefinition != null) {
       // Ensure that all the PropertyPaths are set up
       List<PropertyPath> paths = ensureReferent(groupDefinition.getPaths());
-      SecurityGroup group = securityGroups.getGroup(ensureReferent(typePolicy),
+      Class<? extends HasUuid> type = ensureReferent(typePolicy);
+      if (type == null) {
+        unresolved.add(typePolicy.getName());
+        return;
+      }
+      SecurityGroup group = securityGroups.getGroup(type,
           groupDefinition.getName().toString(), "<DESCRIPTION>", paths);
       x.setReferent(group);
       return;
@@ -460,12 +468,13 @@ public class IdentResolver extends PolicyLocationVisitor {
     }
   }
 
-  private PropertyPath createPropertyPath(Class<?> resolveFrom, List<String> propertyNames) {
+  private PropertyPath createPropertyPath(Class<? extends HasUuid> resolveFrom,
+      List<String> propertyNames) {
     List<Property> path = listForAny();
     String lookFor = null;
     it: for (Iterator<String> it = propertyNames.iterator(); it.hasNext();) {
       lookFor = it.next();
-      for (Property p : typeContext.extractProperties(resolveFrom)) {
+      for (Property p : typeContext.describe(resolveFrom).getProperties()) {
         if (lookFor.equals(p.getName())) {
           path.add(p);
 
@@ -473,7 +482,7 @@ public class IdentResolver extends PolicyLocationVisitor {
           if (nextType == null) {
             break it;
           }
-          resolveFrom = typeContext.getClass(nextType);
+          resolveFrom = typeContext.getEntityDescription(nextType).getEntityType();
           continue it;
         }
       }

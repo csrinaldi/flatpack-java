@@ -76,10 +76,6 @@ public class StaticPolicy implements SecurityPolicy {
     if (toReturn != null) {
       return toReturn;
     }
-    // Initialization order
-    if (target.getEntityType() != null) {
-      typeContext.extractProperties(target.getEntityType());
-    }
 
     List<SecurityTarget> targets = listForAny();
     computeTargets(target, targets);
@@ -115,8 +111,8 @@ public class StaticPolicy implements SecurityPolicy {
         // Just add the global target
         break;
       case PROPERTY: {
-        Class<? extends HasUuid> enclosing = typeContext.getClass(
-            target.getProperty().getEnclosingTypeName());
+        Class<? extends HasUuid> enclosing =
+            target.getProperty().getEnclosingType().getEntityType();
         computeTargets(SecurityTarget.of(enclosing), accumulator);
         break;
       }

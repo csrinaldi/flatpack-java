@@ -21,8 +21,10 @@ package com.getperka.flatpack.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -65,6 +67,22 @@ public class FlatPackCollections {
       return (T) new DirtyCollection<Object>((Collection<Object>) obj, flag);
     }
     return obj;
+  }
+
+  /**
+   * Returns a Set based on object identity.
+   */
+  public static <T> Set<T> identitySetForIteration() {
+    return Collections.newSetFromMap(new IdentityHashMap<T, Boolean>());
+  }
+
+  /**
+   * Returns a Set based on object identity.
+   */
+  public static <T> Set<T> identitySetForIteration(Collection<? extends T> copyFrom) {
+    Set<T> toReturn = identitySetForIteration();
+    toReturn.addAll(copyFrom);
+    return toReturn;
   }
 
   /**

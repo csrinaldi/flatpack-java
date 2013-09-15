@@ -22,7 +22,6 @@ package com.getperka.flatpack.client.dto;
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
@@ -42,7 +41,6 @@ public class EndpointDescription extends BaseHasUuid {
   private List<ParameterDescription> queryParameters;
   private String returnDocString;
   private Type returnType;
-  private Set<String> roleNames;
   private TraversalMode traversalMode;
 
   public EndpointDescription(String method, String path) {
@@ -121,14 +119,6 @@ public class EndpointDescription extends BaseHasUuid {
   }
 
   /**
-   * Return the role names that are allowed to access the endpoint. A {@code null} value means that
-   * all roles are allowed, while a zero-length value means that no roles are allowed.
-   */
-  public Set<String> getRoleNames() {
-    return roleNames;
-  }
-
-  /**
    * The default traversal mode for data returned from the endpoint.
    */
   public TraversalMode getTraversalMode() {
@@ -169,10 +159,6 @@ public class EndpointDescription extends BaseHasUuid {
 
   public void setReturnType(Type returnType) {
     this.returnType = returnType;
-  }
-
-  public void setRoleNames(Set<String> roleNames) {
-    this.roleNames = roleNames;
   }
 
   public void setTraversalMode(TraversalMode traversalMode) {

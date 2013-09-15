@@ -1,4 +1,5 @@
 package com.getperka.flatpack.fast;
+
 /*
  * #%L
  * FlatPack Automatic Source Tool
@@ -54,8 +55,8 @@ import com.getperka.cli.flags.Flag;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
@@ -74,6 +75,7 @@ public class JavaScriptDialect implements Dialect {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
 
+  private EntityDescription baseHasUuid;
   private List<String> entityRequires;
 
   @Override
@@ -97,14 +99,14 @@ public class JavaScriptDialect implements Dialect {
           it.remove();
         }
         // and properties not declared in the current type
-        else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
+        else if (!prop.getEnclosingType().equals(entity)) {
           it.remove();
         }
       }
       requires.add(packageName + "." + upcase(entity.getTypeName()));
     }
     // Ensure that the "real" implementations are used
-    allEntities.remove("baseHasUuid");
+    baseHasUuid = allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
     entityRequires = new ArrayList<String>(requires);
     Collections.sort(entityRequires);
@@ -183,17 +185,6 @@ public class JavaScriptDialect implements Dialect {
   private boolean hasCustomRequestBuilderClass(EndpointDescription end) {
     return (end.getQueryParameters() != null && !end.getQueryParameters().isEmpty()) ||
       (end.getReturnType() != null && end.getReturnType().getUuid() != null);
-  }
-
-  private boolean isRequiredImport(String type) {
-    return type != null
-      && !type.equalsIgnoreCase("object")
-      && !type.equalsIgnoreCase("number")
-      && !type.equalsIgnoreCase("string")
-      && !type.equalsIgnoreCase("boolean")
-      && !type.equalsIgnoreCase("null")
-      && !type.equalsIgnoreCase("undefined")
-      && !type.startsWith("Backbone");
   }
 
   /**
@@ -334,7 +325,10 @@ public class JavaScriptDialect implements Dialect {
 
             else if ("supertype".equals(propertyName)) {
               EntityDescription supertype = entity.getSupertype();
-              return supertype == null ? new EntityDescription("baseHasUuid", null) : supertype;
+              if (supertype == null) {
+                supertype = baseHasUuid;
+              }
+              return supertype;
             }
 
             else if ("properties".equals(propertyName)) {

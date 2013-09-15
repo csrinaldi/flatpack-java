@@ -34,11 +34,11 @@ import java.util.Set;
 import org.junit.Test;
 
 import com.getperka.flatpack.FlatPack;
+import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.policy.domain.ExtendsMerchant;
 import com.getperka.flatpack.policy.domain.Merchant;
@@ -122,7 +122,7 @@ public class PolicyExtractionTest extends PolicyTestBase {
 
   void doTest(String contents, Class<? extends Merchant> clazz) {
     FlatPack fp = flatpack(contents);
-    GroupPermissions p = fp.getSecurityPolicy().getPermissions(SecurityTarget.of(clazz));
+    GroupPermissions p = fp.getTypeContext().describe(clazz).getGroupPermissions();
     assertNotNull(p);
 
     // Check various type-level permissions
@@ -160,8 +160,8 @@ public class PolicyExtractionTest extends PolicyTestBase {
     checkPermissions(p, "internalUser", "*.*");
   }
 
-  private Property getProperty(TypeContext ctx, Class<?> clazz, String propertyName) {
-    for (Property p : ctx.extractProperties(clazz)) {
+  private Property getProperty(TypeContext ctx, Class<? extends HasUuid> clazz, String propertyName) {
+    for (Property p : ctx.describe(clazz).getProperties()) {
       if (p.getName().equals(propertyName)) {
         return p;
       }

@@ -34,7 +34,7 @@ import org.junit.Test;
 import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.client.dto.ApiDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.search.SearchTypeSource;
 
 public class ApiDescriberTest {

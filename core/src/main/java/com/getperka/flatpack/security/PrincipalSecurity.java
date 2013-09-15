@@ -167,7 +167,7 @@ public class PrincipalSecurity implements Security {
       return false;
     }
 
-    if (group.isImplicitSecurityGroup()) {
+    if (group.isGlobalSecurityGroup()) {
       List<String> global = principalMapper.getGlobalSecurityGroups(principal);
       if (global != null && global.contains(group.getName())) {
         memberCache.put(key, true);

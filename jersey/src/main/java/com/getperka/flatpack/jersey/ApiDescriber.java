@@ -19,9 +19,9 @@
  */
 package com.getperka.flatpack.jersey;
 
-import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
+import static com.getperka.flatpack.util.FlatPackCollections.setForLookup;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,10 +32,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,7 +42,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -54,20 +51,17 @@ import javax.ws.rs.core.UriBuilder;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.FlatPackEntity;
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.TypeReference;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.dto.TypeDescription;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.ext.SecurityPolicy;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
-import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
 
@@ -78,24 +72,18 @@ public class ApiDescriber {
   private static final Pattern linkPattern =
       Pattern.compile("[{]@link[\\s]+([^\\s}]+)([^}]*)?[}]");
 
-  private final Set<String> allRoles = Collections.singleton("*");
   private final Collection<Method> apiMethods;
   private final Map<Package, Map<String, String>> docStringsByPackage = mapForLookup();
-  private final Map<String, String> classesToPayloadNames = mapForLookup();
   private final TypeContext ctx;
-  private final Map<Class<? extends HasUuid>, EntityDescription> descriptions = mapForIteration();
+  private final Set<Class<? extends HasUuid>> described = setForLookup();
   private Set<Class<? extends HasUuid>> entitiesToExtract = setForIteration();
   private Set<Class<? extends HasUuid>> ignoreSubtypesOf = Collections.emptySet();
   private Set<String> limitRoles;
-  private final Map<String, Class<? extends HasUuid>> payloadNamesToClasses = mapForLookup();
   private final Map<Property, EntityDescription> propertiesToEntities = mapForLookup();
-  private final SecurityPolicy securityPolicy;
-  private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
 
   public ApiDescriber(FlatPack flatpack, Collection<Method> apiMethods) {
     this.apiMethods = apiMethods;
     ctx = flatpack.getTypeContext();
-    securityPolicy = flatpack.getSecurityPolicy();
   }
 
   /**
@@ -106,24 +94,6 @@ public class ApiDescriber {
 
     List<EntityDescription> entities = new ArrayList<EntityDescription>();
     description.setEntities(entities);
-
-    // Create a map of simple class names to payload names for resolving @link tags
-    for (Class<? extends HasUuid> clazz : ctx.getEntityTypes()) {
-      classesToPayloadNames.put(clazz.getCanonicalName(), ctx.getPayloadName(clazz));
-      payloadNamesToClasses.put(ctx.getPayloadName(clazz), clazz);
-
-      // Popuplate the typeHiererchy map
-      for (Class<?> superclass = clazz.getSuperclass(); superclass != null
-        && HasUuid.class.isAssignableFrom(superclass); superclass = superclass.getSuperclass()) {
-        Class<? extends HasUuid> superUuid = superclass.asSubclass(HasUuid.class);
-        Set<Class<? extends HasUuid>> set = typeHierarchy.get(superUuid);
-        if (set == null) {
-          set = setForIteration();
-          typeHierarchy.put(superUuid, set);
-        }
-        set.add(clazz);
-      }
-    }
 
     // Extract API endpoints
     Set<EndpointDescription> endpoints = new LinkedHashSet<EndpointDescription>();
@@ -144,20 +114,6 @@ public class ApiDescriber {
         entities.add(describeEntity(clazz));
       }
     } while (!entitiesToExtract.isEmpty());
-
-    // Re-link any otherwise-inaccessible implied properties
-    for (EntityDescription entity : entities) {
-      for (Property prop : entity.getProperties()) {
-        Property impliedProperty = prop.getImpliedProperty();
-        if (impliedProperty == null) {
-          continue;
-        }
-        EntityDescription impliedEntity = propertiesToEntities.get(impliedProperty);
-        if (!impliedEntity.getProperties().contains(impliedProperty)) {
-          impliedEntity.getProperties().add(impliedProperty);
-        }
-      }
-    }
 
     return description;
   }
@@ -288,7 +244,8 @@ public class ApiDescriber {
     // If the returned entity type is described, extract the information
     FlatPackResponse responseAnnotation = method.getAnnotation(FlatPackResponse.class);
     if (responseAnnotation != null) {
-      Type returnType = reference(FlatPackTypes.createType(responseAnnotation.value()));
+      java.lang.reflect.Type reflectType = FlatPackTypes.createType(responseAnnotation.value());
+      Type returnType = reference(reflectType);
       desc.setReturnDocString(
           responseAnnotation.description().isEmpty() ? null : responseAnnotation.description());
       desc.setReturnType(returnType);
@@ -302,61 +259,36 @@ public class ApiDescriber {
         extraTypeDescriptions.add(typeDescription);
       }
       desc.setExtraReturnData(extraTypeDescriptions.isEmpty() ? null : extraTypeDescriptions);
+    } else if (HasUuid.class.isAssignableFrom(method.getReturnType())) {
+      Type returnType = reference(method.getReturnType());
+      desc.setReturnType(returnType);
+      desc.setTraversalMode(TraversalMode.SIMPLE);
     }
 
     String docString = getDocStrings(declaringClass).get(methodKey);
     desc.setDocString(replaceLinks(docString));
     desc.setPathParameters(pathParams.isEmpty() ? null : pathParams);
-    desc.setRoleNames(extractRoles(method));
     desc.setQueryParameters(queryParams.isEmpty() ? null : queryParams);
     return desc;
   }
 
   private EntityDescription describeEntity(Class<? extends HasUuid> clazz) throws IOException {
-    if (descriptions.containsKey(clazz)) {
-      return descriptions.get(clazz);
+    EntityDescription toReturn = ctx.describe(clazz);
+    if (!described.add(clazz)) {
+      return toReturn;
     }
-    // Use a mutable property list to support filtering below
-    EntityDescription entity = new EntityDescription(ctx.getPayloadName(clazz),
-        new ArrayList<Property>(ctx.extractProperties(clazz)));
-    descriptions.put(clazz, entity);
-
-    // Link the supertype
-    if (HasUuid.class.isAssignableFrom(clazz.getSuperclass())) {
-      entity.setSupertype(describeEntity(clazz.getSuperclass().asSubclass(HasUuid.class)));
-    }
-
-    // Set the permissions
-    entity.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(clazz)));
 
     // Attach the docstring
     Map<String, String> strings = getDocStrings(clazz);
     String docString = strings.get(clazz.getName());
     if (docString != null) {
-      entity.setDocString(replaceLinks(docString));
+      toReturn.setDocString(replaceLinks(docString));
     }
 
-    // Determine persistence semantics
-    entity.setPersistent(ctx.canPersist(clazz));
-
     // Iterate over the properties
-    for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
+    for (Iterator<Property> it = toReturn.getProperties().iterator(); it.hasNext();) {
       Property prop = it.next();
-      propertiesToEntities.put(prop, entity);
-
-      // Filter by roles
-      if (limitRoles != null) {
-        Set<String> interestingRoles = new HashSet<String>();
-        for (SecurityGroup group : prop.getGroupPermissions().getOperations().keySet()) {
-          interestingRoles.add(group.getName());
-        }
-        // Ignore the property if it's not a PermitAll and it is disjoint from the filter roles
-        if (Collections.disjoint(interestingRoles, Collections.singleton("*")) &&
-          Collections.disjoint(interestingRoles, limitRoles)) {
-          it.remove();
-          continue;
-        }
-      }
+      propertiesToEntities.put(prop, toReturn);
 
       // Record a reference to (possibly) an entity type
       reference(prop.getType());
@@ -374,17 +306,7 @@ public class ApiDescriber {
         prop.setDocString(replaceLinks(strings.get(memberName)));
       }
     }
-    return entity;
-  }
-
-  private Set<String> extractRoles(Method method) {
-    RolesAllowed annotation = method.getAnnotation(RolesAllowed.class);
-    if (annotation == null) {
-      return allRoles;
-    }
-    Set<String> toReturn = FlatPackCollections.setForIteration();
-    toReturn.addAll(Arrays.asList(annotation.value()));
-    return Collections.unmodifiableSet(toReturn);
+    return toReturn;
   }
 
   /**
@@ -410,19 +332,8 @@ public class ApiDescriber {
   }
 
   private void reference(Class<? extends HasUuid> clazz) {
-    if (clazz != null && !descriptions.containsKey(clazz)) {
+    if (clazz != null && !described.contains(clazz)) {
       entitiesToExtract.add(clazz);
-
-      if (ignoreSubtypesOf.contains(clazz)) {
-        return;
-      }
-
-      Set<Class<? extends HasUuid>> subtypes = typeHierarchy.get(clazz);
-      if (subtypes != null) {
-        for (Class<? extends HasUuid> subtype : subtypes) {
-          reference(subtype);
-        }
-      }
     }
   }
 
@@ -437,6 +348,10 @@ public class ApiDescriber {
     if (referencedEntityType != null) {
       t = referencedEntityType;
     }
+    // Ensure that the TypeContext has processed the type
+    if (t instanceof Class<?> && HasUuid.class.isAssignableFrom((Class<?>) t)) {
+      ctx.describe(((Class<?>) t).asSubclass(HasUuid.class));
+    }
     Type type = ctx.getCodex(t).describe();
     reference(type);
     return type;
@@ -446,8 +361,9 @@ public class ApiDescriber {
    * Traverse a type, looking for references to entities. This should be a visitor.
    */
   private void reference(Type type) {
-    if (type.getName() != null) {
-      Class<? extends HasUuid> clazz = payloadNamesToClasses.get(type.getName());
+    if (type.getName() != null && type.getEnumValues() == null) {
+      EntityDescription description = ctx.getEntityDescription(type.getName());
+      Class<? extends HasUuid> clazz = description.getEntityType();
       reference(clazz);
     }
     if (type.getListElement() != null) {
@@ -476,8 +392,8 @@ public class ApiDescriber {
     while (m.find()) {
       String name = m.group(1);
       // TODO: Support field references, API method references
-      String payloadName = classesToPayloadNames.get(name);
-      if (payloadName == null) {
+      EntityDescription referenced = ctx.getEntityDescription(name);
+      if (referenced == null) {
         // Just append the original text
         if (m.group(2) != null) {
           m.appendReplacement(sb, m.group(2));
@@ -489,6 +405,7 @@ public class ApiDescriber {
          * This is colluding with the viewer app, but it's much simpler than re-implementing another
          * {@link} replacement in the viewer.
          */
+        String payloadName = referenced.getTypeName();
         String displayString = m.group(2) == null ? payloadName : m.group(2);
         m.appendReplacement(sb, "<entityReference payloadName='" + payloadName + "'>"
           + displayString + "</entityReference>");

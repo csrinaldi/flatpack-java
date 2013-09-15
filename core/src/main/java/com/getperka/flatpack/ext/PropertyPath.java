@@ -25,8 +25,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Represents a sequence of simple property evaluations.
@@ -83,6 +85,11 @@ public class PropertyPath extends BaseHasUuid {
       sb.append(p.getName());
     }
     return sb.toString();
+  }
+
+  @Override
+  protected UUID defaultUuid() {
+    return new UuidDigest().add(path).digest();
   }
 
   private boolean evaluate(Object target, List<Property> properties, Receiver receiver) {

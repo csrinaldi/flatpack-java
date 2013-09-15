@@ -40,7 +40,6 @@ import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.SecurityTarget;
-import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.policy.pst.AclRule;
 import com.getperka.flatpack.policy.pst.Allow;
@@ -60,7 +59,7 @@ import com.getperka.flatpack.policy.visitors.PolicyLocationVisitor;
  * to avoid lifecycle requirements; caching is handled by the {@link StaticPolicy} implementation.
  */
 class StaticPolicyImpl {
-  class PermissionsExtractor extends PolicyLocationVisitor {
+  static class PermissionsExtractor extends PolicyLocationVisitor {
     private final Class<? extends HasUuid> entity;
     private final Property property;
     private final GroupPermissions toReturn;
@@ -75,7 +74,7 @@ class StaticPolicyImpl {
         case ENTITY_PROPERTY:
         case PROPERTY:
           property = target.getProperty();
-          entity = typeContext.getClass(property.getEnclosingTypeName());
+          entity = property.getEnclosingType().getEntityType();
           break;
         case ENTITY:
         case TYPE:
@@ -188,8 +187,6 @@ class StaticPolicyImpl {
   private Provider<IdentResolver> resolvers;
   @Inject
   private SecurityGroups securityGroups;
-  @Inject
-  private TypeContext typeContext;
 
   /**
    * Requires injection.

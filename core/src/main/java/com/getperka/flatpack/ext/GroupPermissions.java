@@ -24,8 +24,10 @@ import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Associates some number of {@link SecurityGroup SecurityGroups} with their respective
@@ -73,5 +75,17 @@ public class GroupPermissions extends BaseHasUuid {
   @Override
   public String toString() {
     return operations.toString();
+  }
+
+  @Override
+  protected UUID defaultUuid() {
+    UuidDigest digest = new UuidDigest();
+    for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : operations.entrySet()) {
+      digest.add(entry.getKey());
+      for (SecurityAction value : entry.getValue()) {
+        digest.add(value);
+      }
+    }
+    return digest.digest();
   }
 }

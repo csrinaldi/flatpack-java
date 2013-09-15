@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.client.dto;
+package com.getperka.flatpack.ext;
 
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
@@ -25,29 +25,29 @@ import java.util.List;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
-import com.getperka.flatpack.ext.GroupPermissions;
-import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.HasUuid;
 
 /**
  * A description of an entity type.
  */
 public class EntityDescription extends BaseHasUuid {
   private String docString;
+  private Class<? extends HasUuid> entityType;
   private GroupPermissions groupPermissions;
   private boolean persistent;
   private List<Property> properties;
   private EntityDescription supertype;
   private String typeName;
 
-  public EntityDescription(String typeName, List<Property> properties) {
-    this.typeName = typeName;
-    this.properties = properties;
-  }
-
   EntityDescription() {}
 
   public String getDocString() {
     return docString;
+  }
+
+  @NoPack
+  public Class<? extends HasUuid> getEntityType() {
+    return entityType;
   }
 
   public GroupPermissions getGroupPermissions() {
@@ -82,27 +82,32 @@ public class EntityDescription extends BaseHasUuid {
     this.groupPermissions = groupPermissions;
   }
 
-  public void setPersistent(boolean persistent) {
-    this.persistent = persistent;
-  }
-
-  public void setProperties(List<Property> properties) {
-    this.properties = properties;
-  }
-
-  public void setSupertype(EntityDescription supertype) {
-    this.supertype = supertype;
-  }
-
-  public void setTypeName(String typeName) {
-    this.typeName = typeName;
-  }
-
   @Override
   protected UUID defaultUuid() {
     if (typeName == null) {
       throw new IllegalStateException();
     }
     return UUID.nameUUIDFromBytes((getClass().getName() + ":" + typeName).getBytes(UTF8));
+  }
+
+  @NoPack
+  void setEntityType(Class<? extends HasUuid> entityType) {
+    this.entityType = entityType;
+  }
+
+  void setPersistent(boolean persistent) {
+    this.persistent = persistent;
+  }
+
+  void setProperties(List<Property> properties) {
+    this.properties = properties;
+  }
+
+  void setSupertype(EntityDescription supertype) {
+    this.supertype = supertype;
+  }
+
+  void setTypeName(String typeName) {
+    this.typeName = typeName;
   }
 }
