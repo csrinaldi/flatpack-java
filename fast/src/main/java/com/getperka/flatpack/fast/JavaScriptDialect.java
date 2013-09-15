@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Size;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +78,41 @@ public class JavaScriptDialect implements Dialect {
 
   private static final Logger logger = LoggerFactory.getLogger(JavaScriptDialect.class);
 
+  private static final Map<String, String> validationMap = new HashMap<String, String>();
+
+  static {
+
+    validationMap.put("javax.validation.Valid",
+        "com.getperka.flatpack.validation.Valid");
+    validationMap.put("javax.validation.constraints.AssertFalse",
+        "com.getperka.flatpack.validation.AssertFalse");
+    validationMap.put("javax.validation.constraints.AssertTrue",
+        "com.getperka.flatpack.validation.AssertTrue");
+    validationMap.put("javax.validation.constraints.DecimalMax",
+        "com.getperka.flatpack.validation.Max");
+    validationMap.put("javax.validation.constraints.DecimalMin",
+        "com.getperka.flatpack.validation.Min");
+    validationMap.put("javax.validation.constraints.Future",
+        "com.getperka.flatpack.validation.Future");
+    validationMap.put("javax.validation.constraints.Min",
+        "com.getperka.flatpack.validation.Min");
+    validationMap.put("javax.validation.constraints.Max",
+        "com.getperka.flatpack.validation.Max");
+    validationMap.put("javax.validation.constraints.NotNull",
+        "com.getperka.flatpack.validation.NotNull");
+    validationMap.put("javax.validation.constraints.Null",
+        "com.getperka.flatpack.validation.Null");
+    validationMap.put("javax.validation.constraints.Past",
+        "com.getperka.flatpack.validation.Past");
+    validationMap.put("javax.validation.constraints.Size",
+        "com.getperka.flatpack.validation.Size");
+
+    // validationMap.put("javax.validation.constraints.Digits",
+    // "com.getperka.flatpack.validation.");
+    // validationMap.put("javax.validation.constraints.Pattern",
+    // "com.getperka.flatpack.validation.");
+  }
+
   private static String upcase(String s) {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
@@ -88,23 +130,13 @@ public class JavaScriptDialect implements Dialect {
 
     // first collect just our model entities
     Set<String> requires = new HashSet<String>();
-    Map<String, EntityDescription> allEntities = FlatPackCollections
-        .mapForIteration();
+    Map<String, EntityDescription> allEntities =
+        FlatPackCollections.mapForIteration();
+
     for (EntityDescription entity : api.getEntities()) {
-      allEntities.put(entity.getTypeName(), entity);
-      for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
-        Property prop = it.next();
-        // Remove the uuid property
-        if ("uuid".equals(prop.getName())) {
-          it.remove();
-        }
-        // and properties not declared in the current type
-        else if (!prop.getEnclosingType().equals(entity)) {
-          it.remove();
-        }
-      }
-      requires.add(packageName + "." + upcase(entity.getTypeName()));
+      addEntity(allEntities, requires, entity);
     }
+
     // Ensure that the "real" implementations are used
     baseHasUuid = allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
@@ -127,6 +159,48 @@ public class JavaScriptDialect implements Dialect {
   @Override
   public String getDialectName() {
     return "js";
+  }
+
+  /**
+   * Adds an entity and its supertypes to a map. The properties defined by the entity will be pruned
+   * so that the entity contains only its declared properties.
+   * 
+   * @param allEntities an accumulator map of entity payload names to descriptions
+   * @param entity the entity to add
+   */
+  protected void addEntity(Map<String, EntityDescription> allEntities,
+      Set<String> requires, EntityDescription entity) {
+
+    if (entity == null) {
+      return;
+    }
+
+    String typeName = entity.getTypeName();
+
+    if (allEntities.containsKey(typeName)) {
+      // Already processed
+      return;
+    } else if ("baseHasUuid".equals(typeName) || "hasUuid".equals(typeName)) {
+      // Ensure that the "real" implementations are used
+      return;
+    }
+
+    allEntities.put(typeName, entity);
+    for (Iterator<Property> it = entity.getProperties().iterator(); it.hasNext();) {
+      Property prop = it.next();
+      if ("uuid".equals(prop.getName())) {
+        // Crop the UUID property
+        it.remove();
+      } else if (!prop.getEnclosingType().equals(entity)) {
+        // Remove properties not declared in the current type
+        it.remove();
+      }
+    }
+
+    requires.add(getPackageName(entity) + "." + upcase(entity.getTypeName()));
+
+    // Add the supertype
+    addEntity(allEntities, requires, entity.getSupertype());
   }
 
   private String camelCaseToUnderscore(String s) {
@@ -180,6 +254,57 @@ public class JavaScriptDialect implements Dialect {
     name = name == null || name.trim().length() == 0 ? type.getJsonKind().name()
         .toLowerCase() : name;
     return name;
+  }
+
+  private String getPackageName(EntityDescription entity) {
+    return entity.getTypeName().equals("baseHasUuid") ?
+        "com.getperka.flatpack.core" : packageName;
+  }
+
+  private List<Property> getSortedCollectionProperties(EntityDescription entity) {
+    List<Property> properties = new ArrayList<Property>();
+    for (Property p : entity.getProperties()) {
+      if (p.getType().getListElement() != null &&
+        p.getType().getListElement().getName() != null) {
+        properties.add(p);
+      }
+    }
+    List<Property> sortedProperties = new ArrayList<Property>();
+    sortedProperties.addAll(properties);
+    Collections.sort(sortedProperties, new Comparator<Property>() {
+      @Override
+      public int compare(Property p1, Property p2) {
+        return p1.getName().compareTo(p2.getName());
+      }
+    });
+    return sortedProperties;
+  }
+
+  private String getValidationParameters(Annotation annotation) {
+    String params = "";
+
+    if (annotation instanceof Min) {
+      params += ((Min) annotation).value();
+    }
+
+    if (annotation instanceof Max) {
+      params += ((Max) annotation).value();
+    }
+
+    if (annotation instanceof DecimalMin) {
+      params += ((DecimalMax) annotation).value();
+    }
+
+    if (annotation instanceof DecimalMax) {
+      params += ((DecimalMax) annotation).value();
+    }
+
+    if (annotation instanceof Size) {
+      Size size = (Size) annotation;
+      params += size.min() + ", " + size.max();
+    }
+
+    return params;
   }
 
   private boolean hasCustomRequestBuilderClass(EndpointDescription end) {
@@ -261,7 +386,8 @@ public class JavaScriptDialect implements Dialect {
         jsType = "Number";
         break;
       case LIST:
-        if (type.getListElement() != null && type.getListElement().getEnumValues() != null) {
+        if (type.getListElement() != null && (type.getListElement().getEnumValues() != null ||
+          type.getListElement().getName() == null)) {
           jsType = "Array";
         } else {
           jsType = "Backbone.Collection";
@@ -314,13 +440,7 @@ public class JavaScriptDialect implements Dialect {
             }
 
             else if ("canonicalName".equals(propertyName)) {
-              String prefix = packageName;
-              String typeName = entity.getTypeName();
-              if (entity.getTypeName().equalsIgnoreCase("baseHasUuid")) {
-                prefix = "com.getperka.flatpack.core";
-              }
-
-              return prefix + "." + upcase(typeName);
+              return getPackageName(entity) + "." + upcase(entity.getTypeName());
             }
 
             else if ("supertype".equals(propertyName)) {
@@ -351,26 +471,77 @@ public class JavaScriptDialect implements Dialect {
             }
 
             else if ("collectionProperties".equals(propertyName)) {
-              List<Property> properties = new ArrayList<Property>();
-              for (Property p : entity.getProperties()) {
-                if (p.getType().getListElement() != null &&
-                  !jsTypeForType(p.getType().getListElement()).equals("String")) {
-                  properties.add(p);
+              return getSortedCollectionProperties(entity);
+            }
+
+            else if ("uniqueTypeCollectionListProperties".equals(propertyName)) {
+              List<Property> props = getSortedCollectionProperties(entity);
+              Iterator<Property> iter = props.iterator();
+
+              Set<String> seen = new HashSet<String>();
+              while (iter.hasNext()) {
+                Property prop = iter.next();
+                String name = collectionNameForProperty(prop);
+                if (!seen.contains(name)) {
+                  seen.add(name);
+                }
+                else {
+                  iter.remove();
                 }
               }
-              List<Property> sortedProperties = new ArrayList<Property>();
-              sortedProperties.addAll(properties);
-              Collections.sort(sortedProperties, new Comparator<Property>() {
-                @Override
-                public int compare(Property p1, Property p2) {
-                  return p1.getName().compareTo(p2.getName());
+              return props;
+            }
+
+            else if ("validations".equals(propertyName)) {
+              Map<String, List<String>> map = new HashMap<String, List<String>>();
+
+              for (Property p : entity.getProperties()) {
+                List<String> validations = new ArrayList<String>();
+
+                List<Annotation> docAnnotations = p.getDocAnnotations();
+                if (docAnnotations != null) {
+                  for (Annotation a : docAnnotations) {
+                    String name = a.annotationType().getName();
+
+                    String validation = validationMap.get(name);
+                    if (validation != null) {
+                      validation = "new " + validation + "(";
+                      validation += getValidationParameters(a);
+                      validation += ")";
+                      validations.add(validation);
+                    }
+                  }
                 }
-              });
-              return sortedProperties;
+
+                if (!validations.isEmpty()) {
+                  map.put(p.getName(), validations);
+                }
+              }
+              return map;
+            }
+
+            else if ("validationRequires".equals(propertyName)) {
+              Set<String> requires = new HashSet<String>();
+
+              for (Property p : entity.getProperties()) {
+                List<Annotation> docAnnotations = p.getDocAnnotations();
+                if (docAnnotations != null) {
+                  for (Annotation a : docAnnotations) {
+                    String name = a.annotationType().getName();
+                    String require = validationMap.get(name);
+                    if (require != null) {
+                      requires.add(require);
+                    }
+                  }
+                }
+              }
+
+              return requires;
             }
 
             return super.getProperty(interp, self, o, property, propertyName);
           }
+
         });
 
     group.registerModelAdaptor(Property.class, new ObjectModelAdaptor() {
@@ -421,7 +592,8 @@ public class JavaScriptDialect implements Dialect {
         }
 
         else if ("listElementKind".equals(propertyName)) {
-          if (p.getType().getListElement() != null) {
+          if (p.getType().getListElement() != null &&
+            p.getType().getListElement().getName() != null) {
             return (packageName + "." + upcase(p.getType().getListElement().toString()));
           }
         }
@@ -443,7 +615,7 @@ public class JavaScriptDialect implements Dialect {
                 "    }";
             }
             else {
-              return (collectionModelType);
+              return collectionModelType;
             }
           }
         }
@@ -459,7 +631,7 @@ public class JavaScriptDialect implements Dialect {
             jsTypeForType(p.getType());
           }
           else if (p.getType().getJsonKind().equals(JsonKind.LIST) &&
-            !jsTypeForType(p.getType().getListElement()).equals("String")) {
+            p.getType().getListElement().getName() != null) {
             defaultVal = "new " + collectionNameForProperty(p) + "()";
           }
           return defaultVal;

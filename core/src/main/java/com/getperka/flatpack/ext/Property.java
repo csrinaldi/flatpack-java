@@ -22,9 +22,11 @@ package com.getperka.flatpack.ext;
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleName;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -141,6 +143,10 @@ public class Property extends BaseHasUuid {
   private Codex<?> codex;
   private boolean deepTraversalOnly;
   /**
+   * This property exists for exposing annotations to callers.
+   */
+  private List<Annotation> docAnnotations;
+  /**
    * This property is mutable by external callers. It's kind of a hack to allow the describe
    * endpoint to lazily add the doc strings.
    */
@@ -161,6 +167,17 @@ public class Property extends BaseHasUuid {
   @NoPack
   public Codex<?> getCodex() {
     return codex;
+  }
+
+  /**
+   * Annotations that provide additional information about the entity. This could include
+   * deprecation or JSR-303 validation constraints.
+   * <p>
+   * The value of this property will not influence any runtime behavior in the Flatpack
+   * serialization code.
+   */
+  public List<Annotation> getDocAnnotations() {
+    return docAnnotations;
   }
 
   public String getDocString() {
@@ -243,6 +260,10 @@ public class Property extends BaseHasUuid {
    */
   public boolean isSuppressDefaultValue() {
     return suppressDefaultValue;
+  }
+
+  public void setDocAnnotations(List<Annotation> docAnnotations) {
+    this.docAnnotations = docAnnotations;
   }
 
   public void setDocString(String docString) {

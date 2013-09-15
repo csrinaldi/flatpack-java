@@ -21,6 +21,7 @@ package com.getperka.flatpack.ext;
 
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +32,7 @@ import com.getperka.flatpack.HasUuid;
  * A description of an entity type.
  */
 public class EntityDescription extends BaseHasUuid {
+  private List<Annotation> docAnnotations;
   private String docString;
   private Class<? extends HasUuid> entityType;
   private GroupPermissions groupPermissions;
@@ -40,6 +42,14 @@ public class EntityDescription extends BaseHasUuid {
   private String typeName;
 
   EntityDescription() {}
+
+  /**
+   * Annotations that provide additional information about the entity. This could include
+   * deprecation or JSR-303 validation constraints.
+   */
+  public List<Annotation> getDocAnnotations() {
+    return docAnnotations;
+  }
 
   public String getDocString() {
     return docString;
@@ -72,6 +82,10 @@ public class EntityDescription extends BaseHasUuid {
    */
   public boolean isPersistent() {
     return persistent;
+  }
+
+  public void setDocAnnotations(List<Annotation> annotations) {
+    this.docAnnotations = annotations;
   }
 
   public void setDocString(String docString) {

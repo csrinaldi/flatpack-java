@@ -28,6 +28,7 @@ import static com.getperka.flatpack.util.FlatPackTypes.getParameterization;
 import static com.getperka.flatpack.util.FlatPackTypes.getSingleParameterization;
 import static com.getperka.flatpack.util.FlatPackTypes.instantiable;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -83,6 +84,11 @@ public class DefaultCodexMapper implements CodexMapper {
       return getInstance(EntityCodex.class, type);
     }
 
+    // Annotations
+    if (erased.isAnnotation()) {
+      return simpleCodexes.get(Annotation.class);
+    }
+
     // Enums
     if (Enum.class.isAssignableFrom(erased)) {
       return getInstance(EnumCodex.class, erased);
@@ -91,6 +97,9 @@ public class DefaultCodexMapper implements CodexMapper {
     // Collections and collection-like objects
     if (erased.isArray()) {
       // Treat an array like a list
+      if (erased.getComponentType().isPrimitive()) {
+        return getInstance(PrimitiveArrayCodex.class, box(erased.getComponentType()));
+      }
       return getInstance(ArrayCodex.class, erased.getComponentType());
     }
     if (Collection.class.equals(erased) || List.class.isAssignableFrom(erased)) {
@@ -132,6 +141,7 @@ public class DefaultCodexMapper implements CodexMapper {
   void inject(Injector injector) {
     this.injector = injector;
 
+    simpleCodexes.put(Annotation.class, injector.getInstance(AnnotationCodex.class));
     simpleCodexes.put(BigDecimal.class, (NumberCodex<?>) injector.getInstance(
         Key.get(createType(NumberCodex.class, BigDecimal.class))));
     simpleCodexes.put(BigInteger.class, (NumberCodex<?>) injector.getInstance(

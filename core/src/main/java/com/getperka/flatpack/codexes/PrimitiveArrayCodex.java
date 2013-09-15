@@ -1,8 +1,9 @@
+package com.getperka.flatpack.codexes;
 /*
  * #%L
  * FlatPack serialization code
  * %%
- * Copyright (C) 2012 Perka Inc.
+ * Copyright (C) 2012 - 2013 Perka Inc.
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,46 +18,39 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.codexes;
 
-import static com.getperka.flatpack.util.FlatPackTypes.erase;
+import static com.getperka.flatpack.util.FlatPackTypes.unbox;
 
-import java.io.IOException;
 import java.lang.reflect.Array;
 
 import javax.inject.Inject;
 
-import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
-import com.getperka.flatpack.ext.VisitorContext;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.TypeLiteral;
 
 /**
- * Serializes Java arrays as a json array.
+ * A variation on ArrayCodex that handles the non-trivial differences between primitive arrays and
+ * object arrays.
  * 
- * @param <T> the type of data contained in the array
+ * @param <T> a boxed version of a primitive type
  */
-public class ArrayCodex<T> extends Codex<T[]> {
-  protected Class<T> elementType;
+public class PrimitiveArrayCodex<T> extends ValueCodex<Object> {
+  protected Class<T> boxedType;
+  protected Class<?> elementType;
   protected Codex<T> valueCodex;
 
-  protected ArrayCodex() {}
-
-  @Override
-  public void acceptNotNull(FlatPackVisitor visitor, T[] value, VisitorContext<T[]> context) {
-    if (visitor.visitValue(value, this, context)) {
-      context.walkArray(valueCodex).accept(visitor, value);
-    }
-    visitor.endVisitValue(value, this, context);
-  }
+  /**
+   * Requires injection.
+   */
+  protected PrimitiveArrayCodex() {}
 
   @Override
   public Type describe() {
@@ -67,31 +61,22 @@ public class ArrayCodex<T> extends Codex<T[]> {
   }
 
   @Override
-  public String getPropertySuffix() {
-    return valueCodex.getPropertySuffix();
-  }
-
-  @Override
-  public T[] readNotNull(JsonElement element, DeserializationContext context) throws Exception {
+  public Object readNotNull(JsonElement element, DeserializationContext context) throws Exception {
     JsonArray array = element.getAsJsonArray();
-    @SuppressWarnings("unchecked")
-    T[] toReturn = (T[]) Array.newInstance(elementType, array.size());
+    Object toReturn = Array.newInstance(elementType, array.size());
     for (int i = 0, j = array.size(); i < j; i++) {
-      context.pushPath("[" + i + "]");
-      toReturn[i] = valueCodex.read(array.get(i), context);
-      context.popPath();
+      Array.set(toReturn, i, valueCodex.read(array.get(i), context));
     }
     return toReturn;
   }
 
   @Override
-  public void writeNotNull(T[] object, SerializationContext context) throws IOException {
+  public void writeNotNull(Object object, SerializationContext context) throws Exception {
     JsonWriter writer = context.getWriter();
     writer.beginArray();
-    int count = 0;
-    for (T t : object) {
-      context.pushPath("[" + count++ + "]");
-      valueCodex.write(t, context);
+    for (int i = 0, j = Array.getLength(object); i < j; i++) {
+      context.pushPath("[" + i + "]");
+      valueCodex.write(boxedType.cast(Array.get(object, i)), context);
       context.popPath();
     }
     writer.endArray();
@@ -100,7 +85,8 @@ public class ArrayCodex<T> extends Codex<T[]> {
   @Inject
   @SuppressWarnings("unchecked")
   void inject(TypeLiteral<T> elementType, TypeContext context) {
-    this.elementType = erase(elementType.getType());
-    this.valueCodex = (Codex<T>) context.getCodex(elementType.getType());
+    boxedType = (Class<T>) elementType.getRawType();
+    this.elementType = unbox(elementType.getRawType());
+    valueCodex = (Codex<T>) context.getCodex(elementType.getType());
   }
 }

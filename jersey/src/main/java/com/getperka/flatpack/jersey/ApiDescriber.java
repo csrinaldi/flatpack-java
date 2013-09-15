@@ -19,6 +19,7 @@
  */
 package com.getperka.flatpack.jersey;
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.setForLookup;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.net.URLDecoder;
@@ -278,6 +280,9 @@ public class ApiDescriber {
       return toReturn;
     }
 
+    // Attach interesting annotations
+    toReturn.setDocAnnotations(extractInterestingAnnotations(clazz));
+
     // Attach the docstring
     Map<String, String> strings = getDocStrings(clazz);
     String docString = strings.get(clazz.getName());
@@ -298,6 +303,9 @@ public class ApiDescriber {
         accessor = prop.getSetter();
       }
 
+      // Send down interesting annotations
+      prop.setDocAnnotations(extractInterestingAnnotations(accessor));
+
       // The property set include all properties defined in supertypes
       Class<?> declaringClass = accessor.getDeclaringClass();
       strings = getDocStrings(declaringClass);
@@ -307,6 +315,30 @@ public class ApiDescriber {
       }
     }
     return toReturn;
+  }
+
+  private List<Annotation> extractInterestingAnnotations(AnnotatedElement elt) {
+    List<Annotation> toReturn = listForAny();
+
+    for (Annotation a : elt.getAnnotations()) {
+      if (a.annotationType().equals(Deprecated.class)) {
+        toReturn.add(a);
+        continue;
+      }
+
+      if (a.annotationType().getName().equals("javax.validation.Valid")) {
+        toReturn.add(a);
+      }
+
+      // Look for JSR-303 constraints
+      for (Annotation meta : a.annotationType().getAnnotations()) {
+        if (meta.annotationType().getName().equals("javax.validation.Constraint")) {
+          toReturn.add(a);
+        }
+      }
+    }
+
+    return toReturn.isEmpty() ? Collections.<Annotation> emptyList() : toReturn;
   }
 
   /**
