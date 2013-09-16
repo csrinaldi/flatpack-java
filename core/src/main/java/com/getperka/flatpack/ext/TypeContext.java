@@ -90,8 +90,7 @@ public class TypeContext {
    * <li>public Foo getFoo()</li>
    * <li>public boolean isFoo()</li>
    * </ul>
-   * Ignores any method declared annotated with {@link NoPack} or an annotation whose simple name is
-   * {@code Transient}.
+   * Ignores any private method or those annotated with {@link NoPack}.
    */
   private static boolean isGetter(Method m) {
     if (m.getParameterTypes().length != 0) {
@@ -102,9 +101,6 @@ public class TypeContext {
       name.startsWith("is") && name.length() > 2 && isBoolean(m.getReturnType())) {
 
       if (m.isAnnotationPresent(NoPack.class)) {
-        return false;
-      }
-      if (hasAnnotationWithSimpleName(m, "Transient")) {
         return false;
       }
       if (!Modifier.isPrivate(m.getModifiers())) {
