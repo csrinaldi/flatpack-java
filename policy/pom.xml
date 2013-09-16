@@ -53,41 +53,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <!-- Because major versions of ASM do not maintain binary compatibility, 
-        we'll pack the minimum amount of stuff necessary to make the parsing code 
-        actually run into our output jar and then relocate the classes to prevent 
-        binary conflicts. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.1</version>
-        <configuration>
-          <artifactSet>
-            <includes>
-              <include>org.parboiled:*</include>
-              <include>org.ow2.asm:*</include>
-            </includes>
-          </artifactSet>
-          <createDependencyReducedPom>true</createDependencyReducedPom>
-          <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
-          <relocations>
-            <relocation>
-              <pattern>org.objectweb.asm</pattern>
-              <shadedPattern>com.getperka.flatpack.policy.thirdparty.asm4</shadedPattern>
-            </relocation>
-          </relocations>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>
