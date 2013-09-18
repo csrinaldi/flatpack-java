@@ -66,13 +66,14 @@ import com.getperka.flatpack.policy.pst.Verb;
  */
 public class IdentResolver extends PolicyLocationVisitor {
   private final Deque<NodeScope> currentScope = new ArrayDeque<NodeScope>();
-  private List<String> errors = listForAny();
+  private Set<String> errors = setForIteration();
   @FlatPackLogger
   @Inject
   private Logger logger;
   private final NodeScope rootScope = new NodeScope();
   @Inject
   private SecurityGroups securityGroups;
+  private boolean secondPass;
   @Inject
   private TypeContext typeContext;
   private Set<Ident<?>> unresolved = setForIteration();
@@ -105,13 +106,14 @@ public class IdentResolver extends PolicyLocationVisitor {
       if (unresolved.isEmpty() || !errors.isEmpty()) {
         break;
       }
+      secondPass = true;
     }
     for (Ident<?> ident : unresolved) {
       errors.add("Unresolved identifier " + ident + " on line " + ident.getLineNumber());
     }
   }
 
-  public List<String> getErrors() {
+  public Set<String> getErrors() {
     return errors;
   }
 
@@ -535,7 +537,20 @@ public class IdentResolver extends PolicyLocationVisitor {
   private TypePolicy findTypePolicy(Property p) {
     String typeName = nextPropertyPathTypeName(p);
     Class ref = Class.class;
-    return scope().get(TypePolicy.class, ref, typeName);
+    TypePolicy toReturn = scope().get(TypePolicy.class, ref, typeName);
+
+    /*
+     * Synthesize an empty TypePolicy on the second pass to stub out any types that are implicitly
+     * referenced through property chains but that do not have their own type policy.
+     */
+    if (toReturn == null && secondPass) {
+      Ident ident = new Ident(Class.class, typeName);
+      toReturn = new TypePolicy();
+      toReturn.setName(ident);
+      ensureReferent(ident);
+      scope().put(toReturn);
+    }
+    return toReturn;
   }
 
   /**

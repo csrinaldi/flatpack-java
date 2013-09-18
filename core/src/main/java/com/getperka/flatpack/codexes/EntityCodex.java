@@ -47,7 +47,7 @@ import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.ext.Walker;
 import com.getperka.flatpack.security.CrudOperation;
-import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.PackSecurity;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
@@ -92,7 +92,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   @Inject
   private TypeContext typeContext;
   @Inject
-  private Provider<Security> security;
+  private Provider<PackSecurity> security;
 
   protected EntityCodex() {}
 

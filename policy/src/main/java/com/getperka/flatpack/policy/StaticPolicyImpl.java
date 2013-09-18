@@ -209,7 +209,11 @@ class StaticPolicyImpl {
     IdentResolver resolver = resolvers.get();
     resolver.exec(policy);
     if (!resolver.getErrors().isEmpty()) {
-      throw new IllegalArgumentException(resolver.getErrors().toString());
+      StringBuilder sb = new StringBuilder("Could not resolve name(s):");
+      for (String error : resolver.getErrors()) {
+        sb.append("\n").append(error);
+      }
+      throw new IllegalArgumentException(sb.toString());
     }
 
     IdentChecker checker = checkers.get();
@@ -218,8 +222,9 @@ class StaticPolicyImpl {
       throw new IllegalArgumentException(checker.getErrors().toString());
     }
 
-    if (logger.isDebugEnabled()) {
-      logger.debug("Evaluated security policy:\n{}", policy.toSource());
-    }
+    // XXX re-enable
+    // if (logger.isDebugEnabled()) {
+    logger.warn("Evaluated security policy:\n{}", policy.toSource());
+    // }
   }
 }

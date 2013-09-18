@@ -24,7 +24,7 @@ import java.util.List;
 
 import com.getperka.flatpack.HasUuid;
 
-public class TypePolicy extends PolicyNode implements HasName<Class<? extends HasUuid>> {
+public class TypePolicy extends PolicyNode implements HasRootScopeName<Class<? extends HasUuid>> {
   private List<Allow> allows = list();
   private List<Group> groups = list();
   private Ident<Class<? extends HasUuid>> name;

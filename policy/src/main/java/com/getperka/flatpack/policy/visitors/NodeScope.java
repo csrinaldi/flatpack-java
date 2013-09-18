@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.getperka.flatpack.policy.pst.HasName;
+import com.getperka.flatpack.policy.pst.HasRootScopeName;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 
@@ -99,10 +100,18 @@ class NodeScope {
   }
 
   public void put(HasName<?> named) {
-    namedThings.put(named.getName(), named);
+    if (named instanceof HasRootScopeName && parent != null) {
+      parent.put(named);
+    } else {
+      namedThings.put(named.getName(), named);
+    }
   }
 
   public <T> void put(Ident<T> name, HasName<T> named) {
-    namedThings.put(name, named);
+    if (named instanceof HasRootScopeName && parent != null) {
+      parent.put(name, named);
+    } else {
+      namedThings.put(name, named);
+    }
   }
 }

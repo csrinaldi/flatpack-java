@@ -23,6 +23,7 @@ import java.lang.reflect.Type;
 
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackModule;
+import com.getperka.flatpack.security.Security;
 import com.google.inject.Guice;
 import com.google.inject.ImplementedBy;
 import com.google.inject.Injector;
@@ -49,6 +50,11 @@ public abstract class FlatPack {
    * Returns a configured instance of {@link Packer}.
    */
   public abstract Packer getPacker();
+
+  /**
+   * Allows access to the configured security policy.
+   */
+  public abstract Security getSecurity();
 
   /**
    * Returns a reference to the typesystem introspection logic.

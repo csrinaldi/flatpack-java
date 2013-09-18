@@ -1,4 +1,5 @@
 package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -19,11 +20,8 @@ package com.getperka.flatpack.security;
  * #L%
  */
 
-import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
-
 import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -41,48 +39,12 @@ import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
-import com.getperka.flatpack.inject.PackScoped;
 
-@PackScoped
 public class PrincipalSecurity implements Security {
-  static class PrincipalEntityKey {
-    private final HasUuid entity;
-    private final SecurityGroup group;
-    private final Principal principal;
-    private final int hashCode;
-
-    public PrincipalEntityKey(HasUuid entity, SecurityGroup group, Principal principal) {
-      this.entity = entity;
-      this.group = group;
-      this.principal = principal;
-
-      hashCode = entity.hashCode() * 3 + group.hashCode() * 5 + principal.hashCode() * 7;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) {
-        return true;
-      }
-      if (!(obj instanceof PrincipalEntityKey)) {
-        return false;
-      }
-      PrincipalEntityKey other = (PrincipalEntityKey) obj;
-
-      return entity.equals(other.entity) && group.equals(other.group)
-        && principal.equals(other.principal);
-    }
-
-    @Override
-    public int hashCode() {
-      return hashCode;
-    }
-  }
 
   @FlatPackLogger
   @Inject
   private Logger logger;
-  private final Map<PrincipalEntityKey, Boolean> memberCache = mapForLookup();
   @Inject
   private PrincipalMapper principalMapper;
   @Inject
@@ -152,25 +114,16 @@ public class PrincipalSecurity implements Security {
   }
 
   private boolean isMember(HasUuid entity, SecurityGroup group, final Principal principal) {
-    PrincipalEntityKey key = new PrincipalEntityKey(entity, group, principal);
-    Boolean cached = memberCache.get(key);
-    if (cached != null) {
-      return cached;
-    }
-
     if (securityGroups.getGroupAll().equals(group)) {
-      memberCache.put(key, true);
       return true;
     }
     if (securityGroups.getGroupEmpty().equals(group)) {
-      memberCache.put(key, false);
       return false;
     }
 
     if (group.isGlobalSecurityGroup()) {
       List<String> global = principalMapper.getGlobalSecurityGroups(principal);
       if (global != null && global.contains(group.getName())) {
-        memberCache.put(key, true);
         return true;
       }
     }
@@ -193,7 +146,6 @@ public class PrincipalSecurity implements Security {
       });
     }
 
-    memberCache.put(key, toReturn[0]);
     return toReturn[0];
   }
 }

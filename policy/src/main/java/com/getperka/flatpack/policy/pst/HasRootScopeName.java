@@ -1,8 +1,7 @@
-package com.getperka.flatpack.ext;
-
+package com.getperka.flatpack.policy.pst;
 /*
  * #%L
- * FlatPack serialization code
+ * FlatPack Security Policy
  * %%
  * Copyright (C) 2012 - 2013 Perka Inc.
  * %%
@@ -20,16 +19,7 @@ package com.getperka.flatpack.ext;
  * #L%
  */
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Renders a getter or setter method invisible to FlatPack.
+ * Indicates that the named object should be globally referenced.
  */
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface NoPack {}
+public interface HasRootScopeName<R> extends HasName<R> {}

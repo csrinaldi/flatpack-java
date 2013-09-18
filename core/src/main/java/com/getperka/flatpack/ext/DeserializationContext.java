@@ -31,7 +31,7 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.PackSecurity;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -45,7 +45,7 @@ public class DeserializationContext extends BaseContext {
   private PrincipalMapper principalMapper;
   private final Set<UUID> resolved = FlatPackCollections.setForLookup();
   @Inject
-  private Security security;
+  private PackSecurity security;
   @Inject
   private TypeContext typeContext;
 

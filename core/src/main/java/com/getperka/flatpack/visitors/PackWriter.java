@@ -49,7 +49,7 @@ import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.PackSecurity;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.stream.JsonWriter;
 
@@ -73,7 +73,7 @@ public class PackWriter extends FlatPackVisitor {
   private PersistenceMapper persistenceMapper;
   private List<HasUuid> persistent = FlatPackCollections.listForAny();
   @Inject
-  private Security security;
+  private PackSecurity security;
   private final Deque<PackWriter.State> stack = new ArrayDeque<PackWriter.State>();
   @Inject
   private TypeContext typeContext;

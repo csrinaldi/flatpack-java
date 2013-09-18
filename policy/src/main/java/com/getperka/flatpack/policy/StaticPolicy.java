@@ -118,7 +118,7 @@ public class StaticPolicy implements SecurityPolicy {
       }
       case TYPE: {
         Class<?> superType = target.getEntityType().getSuperclass();
-        if (HasUuid.class.isAssignableFrom(superType)) {
+        if (superType != null && HasUuid.class.isAssignableFrom(superType)) {
           computeTargets(SecurityTarget.of(superType.asSubclass(HasUuid.class)), accumulator);
         } else {
           computeTargets(SecurityTarget.global(), accumulator);

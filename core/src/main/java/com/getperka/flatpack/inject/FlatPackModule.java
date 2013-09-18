@@ -129,12 +129,12 @@ public class FlatPackModule extends AbstractModule {
         .toProvider(Providers.of(new DateTime(0)))
         .in(packScope);
 
-    bind(TraversalMode.class)
-        .toProvider(PackScope.<TraversalMode> provider())
-        .in(packScope);
-
     bind(JsonWriter.class)
         .toProvider(PackScope.<JsonWriter> provider())
+        .in(packScope);
+
+    bind(TraversalMode.class)
+        .toProvider(PackScope.<TraversalMode> provider())
         .in(packScope);
   }
 

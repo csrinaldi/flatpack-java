@@ -265,7 +265,7 @@ public class TypeContext {
   private void extractOneEntity(EntityDescription d, Class<? extends HasUuid> clazz) {
     EntityDescription supertype;
     List<Property> properties = listForAny();
-    if (HasUuid.class.isAssignableFrom(clazz.getSuperclass())) {
+    if (!clazz.isInterface() && HasUuid.class.isAssignableFrom(clazz.getSuperclass())) {
       // Start by collecting all supertype properties
       supertype = describe(clazz.getSuperclass().asSubclass(HasUuid.class));
       properties.addAll(supertype.getProperties());
