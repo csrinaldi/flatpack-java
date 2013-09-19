@@ -99,6 +99,9 @@ public class PropertyPath extends BaseHasUuid {
     Throwable ex;
     try {
       Property prop = properties.get(0);
+      if (prop.getGetter() == null) {
+        return false;
+      }
       Object currentValue = prop.getGetter().invoke(target);
       if (currentValue == null) {
         return false;

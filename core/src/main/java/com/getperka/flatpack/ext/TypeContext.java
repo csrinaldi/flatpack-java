@@ -363,7 +363,9 @@ public class TypeContext {
       for (EntityDescription d : toFinish) {
         d.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(d.getEntityType())));
         for (Property p : d.getProperties()) {
-          p.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(p)));
+          if (p.getGroupPermissions() == null) {
+            p.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(p)));
+          }
         }
       }
     }

@@ -22,6 +22,7 @@ package com.getperka.flatpack.security;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
@@ -41,6 +42,15 @@ import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 
 public class PrincipalSecurity implements Security {
+  static class Result {
+    final boolean decision;
+    final String reason;
+
+    public Result(boolean decision, String reason) {
+      this.decision = decision;
+      this.reason = reason;
+    }
+  }
 
   @FlatPackLogger
   @Inject
@@ -60,92 +70,69 @@ public class PrincipalSecurity implements Security {
   protected PrincipalSecurity() {}
 
   @Override
-  public boolean may(Principal principal, SecurityTarget target, SecurityAction op) {
+  public boolean may(final Principal principal, SecurityTarget target, SecurityAction op) {
+    Result toReturn = mayImpl(principal, target, op);
+    logger.trace("{} {} to {} on {} via {}", toReturn.decision ? "Allow" : "Deny",
+        principal, op, target, toReturn.reason);
+    return toReturn.decision;
+  }
+
+  private Result mayImpl(final Principal principal, SecurityTarget target, SecurityAction op) {
+    // Bypass for super-users, secure contexts, etc.
     if (!principalMapper.isAccessEnforced(principal, target)) {
-      return true;
+      return new Result(true, "isAccessEnforced=false");
     }
+
+    // Find the permissions that govern access to the requested target
     GroupPermissions permissions = securityPolicy.getPermissions(target);
-    switch (target.getKind()) {
-      case ENTITY:
-      case ENTITY_PROPERTY:
-        return check(principal, target.getEntity(), op, permissions);
-      case TYPE:
-        return check(principal, target.getEntityType(), op, permissions);
-      default:
-        throw new UnsupportedOperationException(target.getKind().name());
-    }
-  }
 
-  private boolean check(Principal principal, Class<? extends HasUuid> entity, SecurityAction op,
-      GroupPermissions permissions) {
+    // Unsecured target, allow access
     if (permissions == null) {
-      return true;
+      return new Result(true, "no GroupPermissions");
     }
 
-    for (SecurityGroup group : permissions.getOperations().keySet()) {
-      if (permissions.contains(group, op)) {
-        logger.info("Allow principal {} to {} on {} via {}",
-            principal, op, entity.getName(), group.getName());
-        return true;
+    // Iterate over each SecurityGroup that can grant the requested action
+    for (SecurityGroup group : permissions.grants(op)) {
+
+      // Inclusive security group
+      if (securityGroups.getGroupAll().equals(group)) {
+        return new Result(true, group.getDescription());
       }
-    }
-    logger.info("Deny principal {} to {} on {}", principal, op, entity.getName());
-    return false;
-  }
 
-  private boolean check(Principal principal, HasUuid entity, SecurityAction op,
-      GroupPermissions permissions) {
-    if (permissions == null) {
-      return true;
-    }
+      // Global
+      if (group.isGlobalSecurityGroup()) {
+        List<String> global = principalMapper.getGlobalSecurityGroups(principal);
+        if (global != null && global.contains(group.getName())) {
+          return new Result(true, group.getDescription());
+        }
+        continue;
+      }
 
-    for (SecurityGroup group : permissions.getOperations().keySet()) {
-      if (isMember(entity, group, principal)) {
-        if (permissions.contains(group, op)) {
-          logger.info("Allow principal {} to {} on {} {} via {}",
-              principal, op, entity.getClass().getName(), entity.getUuid(), group.getName());
-          return true;
+      // Entity-relative
+      final HasUuid entity = target.getEntity();
+      if (entity != null) {
+        final AtomicBoolean found = new AtomicBoolean();
+        for (PropertyPath path : group.getPaths()) {
+          path.evaluate(entity, new Receiver() {
+            @Override
+            public boolean receive(Object value) {
+              if (!(value instanceof HasUuid)) {
+                return true;
+              }
+              List<Principal> principals = principalMapper.getPrincipals((HasUuid) value);
+              if (principals != null && principals.contains(principal)) {
+                found.set(true);
+                return false;
+              }
+              return true;
+            }
+          });
+        }
+        if (found.get()) {
+          return new Result(true, group.getDescription());
         }
       }
     }
-    logger.info("Deny principal {} to {} on {} {}",
-        principal, op, entity.getClass().getName(), entity.getUuid());
-    return false;
-  }
-
-  private boolean isMember(HasUuid entity, SecurityGroup group, final Principal principal) {
-    if (securityGroups.getGroupAll().equals(group)) {
-      return true;
-    }
-    if (securityGroups.getGroupEmpty().equals(group)) {
-      return false;
-    }
-
-    if (group.isGlobalSecurityGroup()) {
-      List<String> global = principalMapper.getGlobalSecurityGroups(principal);
-      if (global != null && global.contains(group.getName())) {
-        return true;
-      }
-    }
-
-    final boolean[] toReturn = { false };
-    for (PropertyPath path : group.getPaths()) {
-      path.evaluate(entity, new Receiver() {
-        @Override
-        public boolean receive(Object value) {
-          if (!(value instanceof HasUuid)) {
-            return true;
-          }
-          List<Principal> principals = principalMapper.getPrincipals((HasUuid) value);
-          if (principals != null && principals.contains(principal)) {
-            toReturn[0] = true;
-            return false;
-          }
-          return true;
-        }
-      });
-    }
-
-    return toReturn[0];
+    return new Result(false, "no match");
   }
 }

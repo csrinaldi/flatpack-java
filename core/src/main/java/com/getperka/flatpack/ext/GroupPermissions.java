@@ -20,10 +20,13 @@ package com.getperka.flatpack.ext;
  * #L%
  */
 
-import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
@@ -35,34 +38,32 @@ import com.getperka.flatpack.util.UuidDigest;
  */
 public class GroupPermissions extends BaseHasUuid {
 
-  private Map<SecurityGroup, Set<SecurityAction>> operations = mapForIteration();
-
-  /**
-   * Returns {@code true} if members of {@code group} are allowed to perform {@code action}.
-   */
-  public boolean contains(SecurityGroup group, SecurityAction action) {
-    Set<SecurityAction> set = operations.get(group);
-    if (set == null) {
-      return false;
-    }
-
-    // Exact match
-    if (set.contains(action)) {
-      return true;
-    }
-
-    // Handle wildcards
-    for (SecurityAction test : set) {
-      if (test.permit(action)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
+  private Map<SecurityGroup, Set<SecurityAction>> operations = new TreeMap<SecurityGroup, Set<SecurityAction>>(
+      new Comparator<SecurityGroup>() {
+        @Override
+        public int compare(SecurityGroup a, SecurityGroup b) {
+          return a.getName().compareTo(b.getName());
+        }
+      });
 
   public Map<SecurityGroup, Set<SecurityAction>> getOperations() {
     return operations;
+  }
+
+  /**
+   * Returns the {@link SecurityGroups} that can grant access to the requested {@code action}.
+   */
+  public List<SecurityGroup> grants(SecurityAction action) {
+    List<SecurityGroup> toReturn = listForAny();
+
+    for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : operations.entrySet()) {
+      for (SecurityAction maybe : entry.getValue()) {
+        if (maybe.permit(action)) {
+          toReturn.add(entry.getKey());
+        }
+      }
+    }
+    return toReturn;
   }
 
   public void setOperations(Map<SecurityGroup, Set<SecurityAction>> operations) {

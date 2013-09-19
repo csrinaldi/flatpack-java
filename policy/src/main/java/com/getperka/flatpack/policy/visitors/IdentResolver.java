@@ -176,7 +176,7 @@ public class IdentResolver extends PolicyLocationVisitor {
         uniqueNames.put(inherited.getName(), inherited);
 
         GroupDefinition aliased = new GroupDefinition(def, inheritFrom);
-        aliased.setName(def.getName());
+        aliased.setName(aliased.getName().removeLeadingIdent());
         uniqueNames.put(aliased.getName(), aliased);
       }
     }
@@ -447,7 +447,7 @@ public class IdentResolver extends PolicyLocationVisitor {
         return;
       }
       SecurityGroup group = securityGroups.getGroup(type,
-          groupDefinition.getName().toString(), "<DESCRIPTION>", paths);
+          groupDefinition.getName().toString(), groupDefinition.toSource(), paths);
       x.setReferent(group);
       return;
     }

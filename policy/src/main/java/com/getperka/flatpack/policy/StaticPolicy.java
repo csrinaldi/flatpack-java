@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -45,7 +46,7 @@ public class StaticPolicy implements SecurityPolicy {
   private final Map<SecurityTarget, GroupPermissions> cache =
       new ConcurrentHashMap<SecurityTarget, GroupPermissions>();
   private final String contents;
-  private StaticPolicyImpl impl;
+  private final AtomicReference<StaticPolicyImpl> impl = new AtomicReference<StaticPolicyImpl>();
   @Inject
   private Provider<StaticPolicyImpl> implProvider;
   @Inject
@@ -72,6 +73,29 @@ public class StaticPolicy implements SecurityPolicy {
    */
   @Override
   public GroupPermissions getPermissions(SecurityTarget target) {
+    /*
+     * Since the policy file can't talk about specific entities, we'll generalize any incoming
+     * target. This will allow targets to be cached, without
+     */
+    switch (target.getKind()) {
+      case ENTITY:
+        target = SecurityTarget.of(target.getEntityType());
+        break;
+      case ENTITY_PROPERTY:
+        target = SecurityTarget.of(target.getProperty());
+        break;
+      case PROPERTY:
+        if (target.getProperty().getName().equals("uuid")) {
+          System.out.println("XXX");
+        }
+      case GLOBAL:
+      case TYPE:
+        // OK;
+        break;
+      default:
+        // Definitively break if a new kind is added
+        throw new UnsupportedOperationException(target.getKind().name());
+    }
     GroupPermissions toReturn = cache.get(target);
     if (toReturn != null) {
       return toReturn;
@@ -80,11 +104,11 @@ public class StaticPolicy implements SecurityPolicy {
     List<SecurityTarget> targets = listForAny();
     computeTargets(target, targets);
 
-    maybeParse();
+    StaticPolicyImpl policy = maybeParse();
 
     toReturn = new GroupPermissions();
     for (SecurityTarget t : targets) {
-      impl.extractPermissions(toReturn, t);
+      policy.extractPermissions(toReturn, t);
     }
     toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
     cache.put(target, toReturn);
@@ -131,14 +155,17 @@ public class StaticPolicy implements SecurityPolicy {
     accumulator.add(target);
   }
 
-  private synchronized StaticPolicyImpl maybeParse() {
-    if (impl == null) {
-      if (implProvider == null) {
-        throw new IllegalStateException("Not injected, must be initialized via FlatPack.create()");
-      }
-      impl = implProvider.get();
-      impl.parse(contents);
+  private StaticPolicyImpl maybeParse() {
+    StaticPolicyImpl toReturn = impl.get();
+    if (toReturn != null) {
+      return toReturn;
     }
-    return impl;
+    if (implProvider == null) {
+      throw new IllegalStateException("Not injected, must be initialized via FlatPack.create()");
+    }
+    toReturn = implProvider.get();
+    toReturn.parse(contents);
+    impl.compareAndSet(null, toReturn);
+    return toReturn;
   }
 }

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,10 +20,12 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
-import java.util.ArrayList;
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 
 /**
  * An ident is a (possibly-complex) name that ultimately refers to some in-memory object. To avoid
@@ -44,7 +47,13 @@ public class Ident<R> extends PolicyNode {
   }
 
   public Ident(Class<R> type, List<Ident<?>> compoundName) {
-    this.compoundName = Collections.unmodifiableList(new ArrayList<Ident<?>>(compoundName));
+    for (Ident<?> sub : compoundName) {
+      if (sub.isCompound()) {
+        throw new IllegalArgumentException("Compound Idents can only be composed of simple Idents");
+      }
+    }
+
+    this.compoundName = Collections.unmodifiableList(listForAny(compoundName));
     this.simpleName = null;
     this.referentType = type;
 
@@ -55,7 +64,6 @@ public class Ident<R> extends PolicyNode {
     this.compoundName = null;
     this.simpleName = simpleName;
     this.referentType = type;
-
     this.hashCode = type.hashCode() * 3 + simpleName.hashCode() * 7;
   }
 
@@ -144,6 +152,31 @@ public class Ident<R> extends PolicyNode {
 
   public boolean isWildcard() {
     return "*".equals(simpleName);
+  }
+
+  /**
+   * Given a compound ident {@code a.b.c} returns {@code b.c}. The newly-returned Ident, and it's
+   * compound Idents, will be distinct copies.
+   * 
+   * @throws IllegalArgumentException if the current ident is simple
+   */
+  public Ident<R> removeLeadingIdent() {
+    if (isSimple()) {
+      throw new IllegalArgumentException();
+    }
+    // Convert to a simple ident
+    if (compoundName.size() == 2) {
+      return new Ident<R>(getReferentType(), compoundName.get(1).getSimpleName());
+    }
+    List<Ident<?>> newName = listForAny(compoundName);
+    newName.remove(0);
+    for (ListIterator<Ident<?>> it = newName.listIterator(); it.hasNext();) {
+      Ident<?> toCopy = it.next();
+      @SuppressWarnings({ "rawtypes", "unchecked" })
+      Ident<?> copy = new Ident(toCopy.getReferentType(), toCopy.getSimpleName());
+      it.set(copy);
+    }
+    return new Ident<R>(getReferentType(), newName);
   }
 
   public void setReferent(R referent) {

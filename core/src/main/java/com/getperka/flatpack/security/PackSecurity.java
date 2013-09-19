@@ -1,4 +1,5 @@
 package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -19,8 +20,9 @@ package com.getperka.flatpack.security;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+
 import java.security.Principal;
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -73,7 +75,7 @@ public class PackSecurity implements Security {
     }
   }
 
-  private final Map<Key, Boolean> cache = new HashMap<Key, Boolean>();
+  private final Map<Key, Boolean> cache = mapForLookup();
   @Inject
   private Security delegate;
 
