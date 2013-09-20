@@ -96,7 +96,7 @@ class StaticPolicyImpl {
         set.add(ident.getReferent());
       }
       SecurityGroup group = x.getGroupName().getReferent();
-      toReturn.getOperations().put(group, set);
+      toReturn.addPermissions(group, set);
       return false;
     }
 
@@ -106,7 +106,7 @@ class StaticPolicyImpl {
     @Override
     public boolean visit(Allow x) {
       if (x.isOnly()) {
-        toReturn.getOperations().clear();
+        toReturn.clear();
       }
       return true;
     }
@@ -222,9 +222,8 @@ class StaticPolicyImpl {
       throw new IllegalArgumentException(checker.getErrors().toString());
     }
 
-    // XXX re-enable
-    // if (logger.isDebugEnabled()) {
-    logger.warn("Evaluated security policy:\n{}", policy.toSource());
-    // }
+    if (logger.isDebugEnabled()) {
+      logger.debug("Evaluated security policy:\n{}", policy.toSource());
+    }
   }
 }

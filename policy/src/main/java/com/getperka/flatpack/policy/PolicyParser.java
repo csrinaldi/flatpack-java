@@ -337,7 +337,10 @@ class PolicyParser extends BaseParser<Object> {
   @Cached
   <P extends HasName<R>, R> Rule NodeName(final Class<R> clazz, final Var<P> x) {
     return Sequence(
-        Ident(clazz),
+        FirstOf(
+            Ident(clazz),
+            ACTION(push(new Ident<R>(clazz, "$" + getContext().getPosition().line)))
+        ),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {

@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -136,9 +137,16 @@ public class IdentResolver extends PolicyLocationVisitor {
 
     x.setInheritFrom(null);
 
+    /*
+     * Make copies of each AclRule to ensure that groups are resolved against the current type's
+     * scope.
+     */
     List<AclRule> toInherit = listForAny();
     for (Allow inherited : policy.getAllows()) {
       toInherit.addAll(inherited.getAclRules());
+    }
+    for (ListIterator<AclRule> it = toInherit.listIterator(); it.hasNext();) {
+      it.set(new AclRule(it.next()));
     }
     x.getAclRules().addAll(0, toInherit);
     return true;

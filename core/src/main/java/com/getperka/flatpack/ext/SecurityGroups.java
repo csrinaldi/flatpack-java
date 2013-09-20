@@ -22,8 +22,6 @@ package com.getperka.flatpack.ext;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -60,11 +58,6 @@ public class SecurityGroups {
 
   private GroupPermissions permissionsDenyAll = new GroupPermissions() {
     @Override
-    public Map<SecurityGroup, Set<SecurityAction>> getOperations() {
-      return Collections.emptyMap();
-    }
-
-    @Override
     public String toString() {
       return "Deny all";
     }
@@ -72,8 +65,7 @@ public class SecurityGroups {
 
   private final GroupPermissions permissionsPermitAll = new GroupPermissions() {
     {
-      setOperations(Collections.singletonMap(groupAll,
-          Collections.singleton(new SecurityAction("*", "*"))));
+      addPermissions(groupAll, Collections.singleton(new SecurityAction("*", "*")));
     }
 
     @Override

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -27,6 +28,14 @@ import com.getperka.flatpack.ext.SecurityGroup;
 public class AclRule extends PolicyNode {
   private Ident<SecurityGroup> groupName;
   private List<Ident<SecurityAction>> securityActions = list();
+
+  public AclRule() {}
+
+  public AclRule(AclRule copyFrom) {
+    groupName = new Ident<SecurityGroup>(
+        SecurityGroup.class, copyFrom.getGroupName().getSimpleName());
+    securityActions.addAll(copyFrom.getSecurityActions());
+  }
 
   @Override
   public void accept(PolicyVisitor v) {

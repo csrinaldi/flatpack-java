@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -19,11 +20,9 @@ package com.getperka.flatpack.ext;
  * #L%
  */
 
-import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -47,17 +46,14 @@ public class ReflexiveSecurityPolicy implements SecurityPolicy {
 
   @Inject
   void inject() {
-    Map<SecurityGroup, Set<SecurityAction>> map = mapForIteration();
-    map.put(securityGroups.getGroupAll(),
-        Collections.singleton(new SecurityAction(CrudOperation.READ)));
-
     Set<SecurityAction> allOps = setForIteration();
     for (CrudOperation op : CrudOperation.values()) {
       allOps.add(new SecurityAction(op));
     }
-    map.put(securityGroups.getGroupReflexive(), allOps);
 
     reflexivePermissions = new GroupPermissions();
-    reflexivePermissions.setOperations(Collections.unmodifiableMap(map));
+    reflexivePermissions.addPermissions(securityGroups.getGroupAll(),
+        Collections.singleton(new SecurityAction(CrudOperation.READ)));
+    reflexivePermissions.addPermissions(securityGroups.getGroupReflexive(), allOps);
   }
 }

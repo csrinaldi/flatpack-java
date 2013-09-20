@@ -362,9 +362,11 @@ public class TypeContext {
       isExtracting.clear();
       for (EntityDescription d : toFinish) {
         d.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(d.getEntityType())));
+        logger.warn("{} -> {}", d.getTypeName(), d.getGroupPermissions());
         for (Property p : d.getProperties()) {
           if (p.getGroupPermissions() == null) {
             p.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(p)));
+            logger.warn("{}.{} -> {}", d.getTypeName(), p.getName(), p.getGroupPermissions());
           }
         }
       }

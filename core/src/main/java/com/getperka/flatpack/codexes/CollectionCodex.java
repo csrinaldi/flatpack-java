@@ -30,6 +30,7 @@ import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.UpdatingCodex;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
@@ -41,7 +42,7 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of collection to be serialized
  * @param <V> the value type contained in the collection
  */
-public abstract class CollectionCodex<T extends Collection<V>, V> extends Codex<T> {
+public abstract class CollectionCodex<T extends Collection<V>, V> extends UpdatingCodex<T> {
   /**
    * Initialized in {@link #setType(TypeLiteral, TypeContext)} so subclasses need not call an
    * explicit super-constructor.
@@ -75,6 +76,13 @@ public abstract class CollectionCodex<T extends Collection<V>, V> extends Codex<
       context.popPath();
     }
     return toReturn;
+  }
+
+  @Override
+  public T replacementValueNotNull(T oldValue, T newValue) {
+    oldValue.clear();
+    oldValue.addAll(newValue);
+    return oldValue;
   }
 
   @Override

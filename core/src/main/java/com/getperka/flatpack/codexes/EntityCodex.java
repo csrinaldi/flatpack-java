@@ -44,6 +44,7 @@ import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.UpdatingCodex;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.ext.Walker;
 import com.getperka.flatpack.security.CrudOperation;
@@ -225,6 +226,15 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   protected void setProperty(Property property, T target, Object value) {
     if (property.getSetter() != null) {
       try {
+        // Allow some properties (e.g. collections) to be updated in-place
+        @SuppressWarnings("unchecked")
+        Codex<Object> codex = (Codex<Object>) property.getCodex();
+        if (codex instanceof UpdatingCodex && property.getGetter() != null) {
+          Object oldValue = property.getGetter().invoke(target);
+          if (oldValue != null && value != null) {
+            value = ((UpdatingCodex<Object>) codex).replacementValue(oldValue, value);
+          }
+        }
         property.getSetter().invoke(target, value);
       } catch (Exception e) {
         throw new RuntimeException("Could not set property value", e);

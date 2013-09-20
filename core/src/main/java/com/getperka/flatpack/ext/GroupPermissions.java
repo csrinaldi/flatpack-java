@@ -22,6 +22,7 @@ package com.getperka.flatpack.ext;
 
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,6 @@ import com.getperka.flatpack.util.UuidDigest;
  * {@link SecurityAction} permissions.
  */
 public class GroupPermissions extends BaseHasUuid {
-
   private Map<SecurityGroup, Set<SecurityAction>> operations = new TreeMap<SecurityGroup, Set<SecurityAction>>(
       new Comparator<SecurityGroup>() {
         @Override
@@ -46,8 +46,21 @@ public class GroupPermissions extends BaseHasUuid {
         }
       });
 
+  public void addPermissions(SecurityGroup group, Set<SecurityAction> actions) {
+    // Remove the existing key object, since we have a name-based equivalence
+    operations.remove(group);
+    operations.put(group, actions);
+  }
+
+  public void clear() {
+    operations.clear();
+  }
+
+  /**
+   * Returns an immutable view of the groups and their respective permissions.
+   */
   public Map<SecurityGroup, Set<SecurityAction>> getOperations() {
-    return operations;
+    return Collections.unmodifiableMap(operations);
   }
 
   /**
@@ -64,10 +77,6 @@ public class GroupPermissions extends BaseHasUuid {
       }
     }
     return toReturn;
-  }
-
-  public void setOperations(Map<SecurityGroup, Set<SecurityAction>> operations) {
-    this.operations = operations;
   }
 
   /**

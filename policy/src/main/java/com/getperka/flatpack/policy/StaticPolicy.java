@@ -23,7 +23,6 @@ import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,9 +84,6 @@ public class StaticPolicy implements SecurityPolicy {
         target = SecurityTarget.of(target.getProperty());
         break;
       case PROPERTY:
-        if (target.getProperty().getName().equals("uuid")) {
-          System.out.println("XXX");
-        }
       case GLOBAL:
       case TYPE:
         // OK;
@@ -110,7 +106,6 @@ public class StaticPolicy implements SecurityPolicy {
     for (SecurityTarget t : targets) {
       policy.extractPermissions(toReturn, t);
     }
-    toReturn.setOperations(Collections.unmodifiableMap(toReturn.getOperations()));
     cache.put(target, toReturn);
     return toReturn;
   }
@@ -166,6 +161,6 @@ public class StaticPolicy implements SecurityPolicy {
     toReturn = implProvider.get();
     toReturn.parse(contents);
     impl.compareAndSet(null, toReturn);
-    return toReturn;
+    return impl.get();
   }
 }
