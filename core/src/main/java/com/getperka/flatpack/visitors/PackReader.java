@@ -19,7 +19,6 @@ package com.getperka.flatpack.visitors;
  * limitations under the License.
  * #L%
  */
-import static com.getperka.flatpack.security.CrudOperation.CREATE_ACTION;
 import static com.getperka.flatpack.security.CrudOperation.DELETE_ACTION;
 import static com.getperka.flatpack.security.CrudOperation.UPDATE_ACTION;
 
@@ -41,6 +40,7 @@ import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.CrudOperation;
 import com.getperka.flatpack.security.PackSecurity;
 import com.google.gson.JsonObject;
 
@@ -58,6 +58,8 @@ public class PackReader extends FlatPackVisitor {
   @Inject
   private Provider<ImpliedPropertySetter> impliedPropertySetters;
   private JsonObject payload;
+  @Inject
+  private Provider<CreatedPropertyVerifier> propertyVerifiers;
   @Inject
   private PackSecurity security;
   private final Deque<PackReader.State> stack = new ArrayDeque<PackReader.State>();
@@ -123,36 +125,24 @@ public class PackReader extends FlatPackVisitor {
         }
 
         HasUuid entity = stack.peek().entity;
-        Principal principal = context.getPrincipal();
 
         // Verify the new value may be set
-        SecurityTarget target = SecurityTarget.of(entity);
-        boolean wasResolved = context.wasResolved(entity);
-        boolean mayCreate = security.may(principal, target, CREATE_ACTION);
-        boolean mayDelete = security.may(principal, target, DELETE_ACTION);
-        boolean mayUpdate = security.may(principal, target, UPDATE_ACTION);
-        if (value == null && mayDelete) {
-          // OK
-        } else if (wasResolved && mayUpdate) {
-          // OK
-        } else if (!wasResolved && (mayCreate || mayUpdate)) {
-          // OK
-        } else {
+        if (!checkAccess(entity, prop, value, context)) {
           return;
         }
 
         // Perhaps set the other side of a OneToMany relationship
-        Property impliedPropery = prop.getImpliedProperty();
-        if (impliedPropery != null && value != null) {
+        Property impliedProperty = prop.getImpliedProperty();
+        if (impliedProperty != null && value != null) {
           // Ensure that any linked property is also mutable
-          if (!checkAccess(value, context)) {
+          if (!checkAccess(value, impliedProperty, entity, context)) {
             context.addWarning(entity,
                 "Ignoring property %s because the inverse relationship (%s) may not be set",
-                prop.getName(), impliedPropery.getName());
+                prop.getName(), impliedProperty.getName());
             return;
           }
           ImpliedPropertySetter setter = impliedPropertySetters.get();
-          setter.setLater(impliedPropery, value, entity);
+          setter.setLater(impliedProperty, value, entity);
           context.addPostWork(setter);
         }
 
@@ -199,9 +189,6 @@ public class PackReader extends FlatPackVisitor {
     if (payload.entrySet().size() == 1 && payload.has("uuid")) {
       return false;
     }
-    if (!context.checkAccess(entity)) {
-      return false;
-    }
 
     // Allow the object to see the data that's about to be applied
     for (Method m : codex.getPreUnpackMethods()) {
@@ -244,17 +231,39 @@ public class PackReader extends FlatPackVisitor {
     }
   }
 
-  /**
-   * A fan-out to to {@link DeserializationContext#checkAccess(HasUuid)} that will accept
-   * collections.
-   */
-  private boolean checkAccess(Object object, DeserializationContext ctx) {
+  private boolean checkAccess(Object object, Property property, Object value,
+      DeserializationContext ctx) throws Exception {
     if (object instanceof HasUuid) {
-      return ctx.checkAccess((HasUuid) object);
+      HasUuid entity = (HasUuid) object;
+      Principal principal = ctx.getPrincipal();
+      // Verify the new value may be set
+      SecurityTarget target = SecurityTarget.of(entity, property);
+
+      switch (context.getEntitySource(entity)) {
+        case CREATED: {
+          // Allow properties of newly-created entities to be set, but check them later
+          CreatedPropertyVerifier verifier = propertyVerifiers.get();
+          verifier.configure(principal, entity, property, CrudOperation.CREATE_ACTION);
+          ctx.addPostWork(verifier);
+          return true;
+        }
+        case RESOLVED: {
+          boolean mayDelete = security.may(principal, target, DELETE_ACTION);
+          boolean mayUpdate = security.may(principal, target, UPDATE_ACTION);
+          if (value == null) {
+            return mayDelete || mayUpdate;
+          }
+          return mayUpdate;
+        }
+        case UNKNOWN:
+          return false;
+        default:
+          throw new UnsupportedOperationException(context.getEntitySource(entity).name());
+      }
     }
     if (object instanceof Iterable) {
       for (Object obj : ((Iterable<?>) object)) {
-        if (!checkAccess(obj, ctx)) {
+        if (!checkAccess(obj, property, value, ctx)) {
           return false;
         }
       }

@@ -19,8 +19,6 @@
  */
 package com.getperka.flatpack.visitors;
 
-import static com.getperka.flatpack.security.CrudOperation.UPDATE_ACTION;
-
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -31,7 +29,6 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.security.PackSecurity;
 import com.getperka.flatpack.util.FlatPackCollections;
 
@@ -59,9 +56,6 @@ class ImpliedPropertySetter implements Callable<Void> {
     Class<?> type = toSet.getGetter().getReturnType();
     if (Collection.class.isAssignableFrom(type)) {
       HasUuid entity = (HasUuid) target;
-      if (!context.checkAccess(entity)) {
-        return null;
-      }
       Collection<Object> collection = null;
 
       /*
@@ -88,12 +82,9 @@ class ImpliedPropertySetter implements Callable<Void> {
       }
     } else if (target instanceof Collection) {
       for (Object element : (Collection<?>) target) {
-        if (context.checkAccess((HasUuid) element) &&
-          security.may(context.getPrincipal(), SecurityTarget.of((HasUuid) element), UPDATE_ACTION)) {
-          toSet.getSetter().invoke(element, value);
-        }
+        toSet.getSetter().invoke(element, value);
       }
-    } else if (context.checkAccess((HasUuid) target)) {
+    } else {
       toSet.getSetter().invoke(target, value);
     }
     return null;
