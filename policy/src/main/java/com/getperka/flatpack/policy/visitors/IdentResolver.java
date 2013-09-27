@@ -454,8 +454,10 @@ public class IdentResolver extends PolicyLocationVisitor {
         unresolved.add(typePolicy.getName());
         return;
       }
-      SecurityGroup group = securityGroups.getGroup(type,
-          groupDefinition.getName().toString(), groupDefinition.toSource(), paths);
+      SecurityGroup group = paths.isEmpty() ?
+          securityGroups.getGroupEmpty() :
+          securityGroups.getGroup(type, groupDefinition.getName().toString(),
+              groupDefinition.toSource(), paths);
       x.setReferent(group);
       return;
     }

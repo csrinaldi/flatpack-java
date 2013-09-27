@@ -105,8 +105,12 @@ public class ToSourceVisitor extends PolicyVisitor {
   @Override
   public boolean visit(GroupDefinition x) {
     traverse(x.getName());
-    print(" = ");
-    traverse(x.getPaths(), ", ");
+    if (x.getPaths().isEmpty()) {
+      print("empty");
+    } else {
+      print(" = ");
+      traverse(x.getPaths(), ", ");
+    }
     return false;
   }
 

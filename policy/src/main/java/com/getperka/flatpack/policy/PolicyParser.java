@@ -274,14 +274,21 @@ class PolicyParser extends BaseParser<Object> {
    * 
    * <pre>
    * groupName = some.property.path [ , another.path ]
+   * groupName empty
    * </pre>
    */
   Rule GroupDefinition() {
     final Var<GroupDefinition> var = new Var<GroupDefinition>(new GroupDefinition());
     return Sequence(
         NodeName(SecurityGroup.class, var),
-        "=",
-        OneOrListOf(CompoundIdent(PropertyPath.class, Property.class), Ident.class, ","),
+        FirstOf(
+            Sequence(
+                "empty",
+                ACTION(push(new ArrayList<Object>()))
+            ),
+            Sequence(
+                "=",
+                OneOrListOf(CompoundIdent(PropertyPath.class, Property.class), Ident.class, ","))),
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {

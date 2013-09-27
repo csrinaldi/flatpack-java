@@ -42,14 +42,19 @@ public class PropertyPath extends BaseHasUuid {
     boolean receive(Object value);
   }
 
-  private final List<Property> path;
+  private List<Property> path;
 
   /**
    * Constructor that creates a copy of {@code path}.
    */
   public PropertyPath(Collection<Property> path) {
     this.path = Collections.unmodifiableList(new ArrayList<Property>(path));
-  }
+  };
+
+  /**
+   * Flatpack.
+   */
+  PropertyPath() {}
 
   /**
    * Evaluate each possible property value in the path, passing the value to {@code receiver}.
@@ -90,6 +95,10 @@ public class PropertyPath extends BaseHasUuid {
   @Override
   protected UUID defaultUuid() {
     return new UuidDigest().add(path).digest();
+  }
+
+  void setPath(List<Property> path) {
+    this.path = path;
   }
 
   private boolean evaluate(Object target, List<Property> properties, Receiver receiver) {

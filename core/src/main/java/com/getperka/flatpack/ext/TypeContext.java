@@ -192,6 +192,14 @@ public class TypeContext {
   }
 
   /**
+   * @deprecated Use {@link #describe(Class)} and {@link EntityDescription#getProperties()} instead.
+   */
+  @Deprecated
+  public List<Property> extractProperties(Class<? extends HasUuid> clazz) {
+    return describe(clazz).getProperties();
+  }
+
+  /**
    * Convenience method to provide generics alignment.
    */
   @SuppressWarnings("unchecked")
@@ -232,6 +240,14 @@ public class TypeContext {
     return Collections.unmodifiableCollection(entitiesByClass.values());
   }
 
+  /**
+   * @deprecated Use {@link #describe(Class)} and {@link EntityDescription#getTypeName()} instead.
+   */
+  @Deprecated
+  public String getPayloadName(Class<? extends HasUuid> clazz) {
+    return describe(clazz).getTypeName();
+  }
+
   @Inject
   void inject(@AllTypes Collection<Class<?>> allTypes) {
     if (allTypes.isEmpty()) {
@@ -250,6 +266,14 @@ public class TypeContext {
       }
       if (clazz.isInterface()) {
         logger.warn("Ignoring interface {}", clazz.getName());
+        continue;
+      }
+      if (Modifier.isAbstract(clazz.getModifiers())) {
+        logger.warn("Ignoring abstract class {}", clazz.getName());
+        continue;
+      }
+      if (clazz.isAnonymousClass()) {
+        logger.warn("Ignoring anonymous class {}", clazz.getName());
         continue;
       }
 
@@ -328,11 +352,14 @@ public class TypeContext {
           "return type is not a Collection", clazz.getName(), getter.getName());
       } else {
         Class<? extends HasUuid> otherModel = erase(elementType).asSubclass(HasUuid.class);
-        for (Property otherProperty : describe(otherModel).getProperties()) {
-          if (otherProperty.getName().equals(impliedPropertyName)) {
-            builder.withImpliedProperty(otherProperty);
-            otherProperty.setImpliedProperty(builder.peek());
-            break;
+        List<Property> otherProperties = describe(otherModel).getProperties();
+        if (otherProperties != null) {
+          for (Property otherProperty : otherProperties) {
+            if (otherProperty.getName().equals(impliedPropertyName)) {
+              builder.withImpliedProperty(otherProperty);
+              otherProperty.setImpliedProperty(builder.peek());
+              break;
+            }
           }
         }
       }
@@ -362,11 +389,11 @@ public class TypeContext {
       isExtracting.clear();
       for (EntityDescription d : toFinish) {
         d.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(d.getEntityType())));
-        logger.warn("{} -> {}", d.getTypeName(), d.getGroupPermissions());
+        logger.debug("{} -> {}", d.getTypeName(), d.getGroupPermissions());
         for (Property p : d.getProperties()) {
           if (p.getGroupPermissions() == null) {
             p.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(p)));
-            logger.warn("{}.{} -> {}", d.getTypeName(), p.getName(), p.getGroupPermissions());
+            logger.debug("{}.{} -> {}", d.getTypeName(), p.getName(), p.getGroupPermissions());
           }
         }
       }
