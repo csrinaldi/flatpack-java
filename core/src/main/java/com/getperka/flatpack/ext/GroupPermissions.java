@@ -89,7 +89,7 @@ public class GroupPermissions extends BaseHasUuid {
 
   @Override
   protected UUID defaultUuid() {
-    UuidDigest digest = new UuidDigest();
+    UuidDigest digest = new UuidDigest().add("GroupPermissions");
     for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : operations.entrySet()) {
       digest.add(entry.getKey());
       for (SecurityAction value : entry.getValue()) {
@@ -97,5 +97,12 @@ public class GroupPermissions extends BaseHasUuid {
       }
     }
     return digest.digest();
+  }
+
+  /**
+   * Setter for serialization.
+   */
+  void setOperations(Map<SecurityGroup, Set<SecurityAction>> operations) {
+    this.operations = operations;
   }
 }

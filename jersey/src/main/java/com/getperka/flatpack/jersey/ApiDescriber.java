@@ -44,6 +44,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.inject.Inject;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -53,19 +54,32 @@ import javax.ws.rs.core.UriBuilder;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.FlatPackEntity;
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.Packer;
 import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.TypeReference;
+import com.getperka.flatpack.Unpacker;
+import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.dto.TypeDescription;
+import com.getperka.flatpack.codexes.EntityCodex;
+import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.EntityDescription;
+import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityAction;
+import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.VisitorContext;
+import com.getperka.flatpack.inject.HasInjector;
 import com.getperka.flatpack.jersey.FlatPackResponse.ExtraEntity;
+import com.getperka.flatpack.util.AcyclicVisitor;
 import com.getperka.flatpack.util.FlatPackTypes;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 
 /**
  * Analyzes a FlatPack instance and a API methods to produce an {@link ApiDescription}.
@@ -74,18 +88,35 @@ public class ApiDescriber {
   private static final Pattern linkPattern =
       Pattern.compile("[{]@link[\\s]+([^\\s}]+)([^}]*)?[}]");
 
+  private String apiName = "API";
   private final Collection<Method> apiMethods;
+  @Inject
+  private TypeContext ctx;
   private final Map<Package, Map<String, String>> docStringsByPackage = mapForLookup();
-  private final TypeContext ctx;
   private final Set<Class<? extends HasUuid>> described = setForLookup();
   private Set<Class<? extends HasUuid>> entitiesToExtract = setForIteration();
-  private Set<Class<? extends HasUuid>> ignoreSubtypesOf = Collections.emptySet();
-  private Set<String> limitRoles;
+  private Set<String> limitGroupNames;
+  @Inject
+  private Packer packer;
   private final Map<Property, EntityDescription> propertiesToEntities = mapForLookup();
+  @Inject
+  private SecurityGroups securityGroups;
+  @Inject
+  private Unpacker unpacker;
+  @Inject
+  private Visitors visitors;
+  /**
+   * Allows weak entity types to be included.
+   */
+  private Set<EntityDescription> weakEntities = setForLookup();
+  /**
+   * Entities that contain only these properties will be filtered.
+   */
+  private Set<Property> weakProperties = setForIteration();
 
   public ApiDescriber(FlatPack flatpack, Collection<Method> apiMethods) {
     this.apiMethods = apiMethods;
-    ctx = flatpack.getTypeContext();
+    ((HasInjector) flatpack).getInjector().injectMembers(this);
   }
 
   /**
@@ -93,6 +124,7 @@ public class ApiDescriber {
    */
   public ApiDescription describe() throws IOException {
     ApiDescription description = new ApiDescription();
+    description.setApiName(apiName);
 
     List<EntityDescription> entities = new ArrayList<EntityDescription>();
     description.setEntities(entities);
@@ -109,29 +141,111 @@ public class ApiDescriber {
     description.setEndpoints(new ArrayList<EndpointDescription>(endpoints));
 
     // Extract all entities
+    Set<Class<?>> seen = setForLookup();
     do {
       Set<Class<? extends HasUuid>> toProcess = entitiesToExtract;
       entitiesToExtract = setForIteration();
       for (Class<? extends HasUuid> clazz : toProcess) {
-        entities.add(describeEntity(clazz));
+        if (seen.add(clazz)) {
+          entities.add(describeEntity(clazz));
+        }
       }
     } while (!entitiesToExtract.isEmpty());
+
+    if (limitGroupNames != null) {
+      /*
+       * Filter the description, but first we need to make a mutable copy of the internal
+       * datastructures.
+       */
+      JsonElement elt = packer.pack(FlatPackEntity.entity(description));
+      description = unpacker.<ApiDescription> unpack(ApiDescription.class, elt, null).getValue();
+
+      visitors.visit(new AcyclicVisitor() {
+        @Override
+        public <T> void endVisitValue(T value, Codex<T> codex, VisitorContext<T> ctx) {
+          boolean keep;
+          if (value instanceof Property) {
+            Property p = (Property) value;
+            keep = shouldKeep(p.getGroupPermissions());
+          } else if (value instanceof EntityDescription) {
+            EntityDescription e = (EntityDescription) value;
+            if (e.getProperties().isEmpty()) {
+              keep = false;
+            } else if (!weakEntities.contains(e)
+              && weakProperties.containsAll(e.getProperties())) {
+              keep = false;
+            } else {
+              keep = true;
+            }
+          } else {
+            keep = true;
+          }
+
+          if (keep) {
+            return;
+          }
+
+          if (ctx.canRemove()) {
+            ctx.remove();
+          } else if (ctx.canReplace()) {
+            ctx.replace(null);
+          } else {
+            System.out.println("XXX");
+          }
+        }
+
+        @Override
+        protected <T extends HasUuid> boolean visitOnce(T entity, EntityCodex<T> codex,
+            VisitorContext<T> ctx) {
+          return true || entity instanceof ApiDescription || entity instanceof EntityDescription;
+        }
+
+        private boolean shouldKeep(GroupPermissions permissions) {
+          if (permissions == null) {
+            return true;
+          }
+          for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : permissions.getOperations()
+              .entrySet()) {
+            // If no actions are granted, ignore the group
+            if (entry.getValue().isEmpty()) {
+              continue;
+            }
+            SecurityGroup group = entry.getKey();
+            if (securityGroups.getGroupAll().equals(group)
+              || securityGroups.getGroupReflexive().equals(group)
+              || limitGroupNames.contains(group.getName())) {
+              return true;
+            }
+          }
+          return false;
+        }
+      }, description);
+    }
 
     return description;
   }
 
-  public ApiDescriber ignoreSubtypesOf(Collection<? extends Class<? extends HasUuid>> toIgnore) {
-    ignoreSubtypesOf = setForIteration();
-    ignoreSubtypesOf.addAll(toIgnore);
+  /**
+   * Filter entities that contain only properties defined by the given class.
+   */
+  public ApiDescriber ignoreEmptySubtypes(Class<? extends HasUuid> toIgnore) {
+    EntityDescription describe = ctx.describe(toIgnore);
+    weakEntities.add(describe);
+    weakProperties.addAll(describe.getProperties());
     return this;
   }
 
   /**
-   * Only extract items that may be accessesd by the given roles.
+   * Only extract items that may be accessed by {@link SecurityGroup} with the given names.
    */
-  public ApiDescriber limitRoles(Collection<String> limitRoles) {
-    this.limitRoles = setForIteration();
-    this.limitRoles.addAll(limitRoles);
+  public ApiDescriber limitGroupNames(Collection<String> limitRoles) {
+    this.limitGroupNames = setForIteration();
+    this.limitGroupNames.addAll(limitRoles);
+    return this;
+  }
+
+  public ApiDescriber withApiName(String apiName) {
+    this.apiName = apiName;
     return this;
   }
 

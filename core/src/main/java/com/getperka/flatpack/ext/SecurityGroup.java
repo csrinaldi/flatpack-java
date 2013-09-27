@@ -88,6 +88,7 @@ public class SecurityGroup extends BaseHasUuid {
   @Override
   protected UUID defaultUuid() {
     return new UuidDigest()
+        .add("SecurityGroup")
         .add(description)
         .add(String.valueOf(globalSecurityGroup))
         .add(paths)

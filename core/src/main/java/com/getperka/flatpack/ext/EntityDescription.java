@@ -96,6 +96,14 @@ public class EntityDescription extends BaseHasUuid {
     this.groupPermissions = groupPermissions;
   }
 
+  /**
+   * For debugging use only.
+   */
+  @Override
+  public String toString() {
+    return typeName;
+  }
+
   @Override
   protected UUID defaultUuid() {
     if (typeName == null) {

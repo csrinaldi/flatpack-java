@@ -23,6 +23,7 @@ import static com.getperka.flatpack.util.FlatPackCollections.identitySetForItera
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+import static com.getperka.flatpack.util.FlatPackCollections.sortedMapForIteration;
 import static com.getperka.flatpack.util.FlatPackTypes.decapitalize;
 import static com.getperka.flatpack.util.FlatPackTypes.erase;
 import static com.getperka.flatpack.util.FlatPackTypes.flatten;
@@ -183,7 +184,9 @@ public class TypeContext {
 
     // Extract the entity data
     extractOneEntity(toReturn, clazz);
-    entitiesByName.put(toReturn.getTypeName(), toReturn);
+    if (entitiesByName.put(toReturn.getTypeName(), toReturn) != null) {
+      logger.warn("Duplicate type name {}", clazz.getName());
+    }
 
     if (topCall) {
       finalizeEntityDescriptions();
@@ -372,6 +375,15 @@ public class TypeContext {
         properties.add(p);
       }
     }
+
+    // Deduplicate by name, allowing subtype properties to replace supertype properties
+    Map<String, Property> propertiesByName = sortedMapForIteration();
+    for (Property p : properties) {
+      propertiesByName.put(p.getName(), p);
+    }
+
+    properties.clear();
+    properties.addAll(propertiesByName.values());
 
     logger.debug("Extracted type map: {} -> {}", clazz.getCanonicalName(), d.getTypeName());
   }
