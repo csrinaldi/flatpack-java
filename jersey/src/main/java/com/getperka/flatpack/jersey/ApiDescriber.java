@@ -63,7 +63,6 @@ import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.dto.TypeDescription;
-import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.GroupPermissions;
@@ -101,6 +100,10 @@ public class ApiDescriber {
   private final Map<Property, EntityDescription> propertiesToEntities = mapForLookup();
   @Inject
   private SecurityGroups securityGroups;
+  /**
+   * Each entry contains the key and all of its known subtypes.
+   */
+  private final Map<Class<? extends HasUuid>, Set<Class<? extends HasUuid>>> typeHierarchy = mapForLookup();
   @Inject
   private Unpacker unpacker;
   @Inject
@@ -123,6 +126,26 @@ public class ApiDescriber {
    * Analyze the Methods provided to the constructor and produce an ApiDescription.
    */
   public ApiDescription describe() throws IOException {
+    // Compute type hierarchy so a reference to a base type will include its subtypes
+    for (EntityDescription entity : ctx.getEntityDescriptions()) {
+      // Accumulate subtypes as we ascend the type hiererchy
+      List<Class<? extends HasUuid>> chain = listForAny();
+      while (entity != null) {
+        Class<? extends HasUuid> clazz = entity.getEntityType();
+        chain.add(clazz);
+
+        Set<Class<? extends HasUuid>> set = typeHierarchy.get(clazz);
+        if (set == null) {
+          set = setForIteration();
+          typeHierarchy.put(clazz, set);
+        }
+
+        // Add all accumulated subtypes
+        set.addAll(chain);
+        entity = entity.getSupertype();
+      }
+    }
+
     ApiDescription description = new ApiDescription();
     description.setApiName(apiName);
 
@@ -167,6 +190,15 @@ public class ApiDescriber {
           if (value instanceof Property) {
             Property p = (Property) value;
             keep = shouldKeep(p.getGroupPermissions());
+
+            /*
+             * If the implied property should be kept, also keep this one. This allows collection
+             * properties in parent types to be generated if only the child's parent-referencing
+             * property is visible.
+             */
+            if (!keep && p.getImpliedProperty() != null) {
+              keep = shouldKeep(p.getImpliedProperty().getGroupPermissions());
+            }
           } else if (value instanceof EntityDescription) {
             EntityDescription e = (EntityDescription) value;
             if (e.getProperties().isEmpty()) {
@@ -190,14 +222,8 @@ public class ApiDescriber {
           } else if (ctx.canReplace()) {
             ctx.replace(null);
           } else {
-            System.out.println("XXX");
+            throw new UnsupportedOperationException("Could not filter");
           }
-        }
-
-        @Override
-        protected <T extends HasUuid> boolean visitOnce(T entity, EntityCodex<T> codex,
-            VisitorContext<T> ctx) {
-          return true || entity instanceof ApiDescription || entity instanceof EntityDescription;
         }
 
         private boolean shouldKeep(GroupPermissions permissions) {
@@ -478,8 +504,8 @@ public class ApiDescriber {
   }
 
   private void reference(Class<? extends HasUuid> clazz) {
-    if (clazz != null && !described.contains(clazz)) {
-      entitiesToExtract.add(clazz);
+    if (clazz != null) {
+      entitiesToExtract.addAll(typeHierarchy.get(clazz));
     }
   }
 
