@@ -37,6 +37,7 @@ import com.getperka.flatpack.jersey.FlatPackProvider;
 import com.getperka.flatpack.jersey.FlatPackResolver;
 import com.getperka.flatpack.policy.StaticPolicy;
 import com.getperka.flatpack.search.SearchTypeSource;
+import com.getperka.flatpack.util.FlatPackStreams;
 
 /**
  * A trivial JAX-RS application that registers a single resource and configures the FlatPack
@@ -82,9 +83,9 @@ public class DemoApplication extends Application {
   public Set<Object> getSingletons() {
     SecurityPolicy securityPolicy;
     try {
-      securityPolicy = new StaticPolicy(
+      securityPolicy = new StaticPolicy(FlatPackStreams.read(
           new InputStreamReader(getClass().getResourceAsStream("DemoServer.policy"),
-              Charset.forName("UTF8")));
+              Charset.forName("UTF8"))));
     } catch (IOException e) {
       throw new RuntimeException("Could not load security policy file", e);
     }

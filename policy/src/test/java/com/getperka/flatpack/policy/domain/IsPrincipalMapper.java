@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.domain;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -31,20 +32,31 @@ import com.getperka.flatpack.ext.SecurityTarget;
 
 public class IsPrincipalMapper implements PrincipalMapper {
   private static class FakePrincipal extends BaseHasUuid implements Principal {
+
+    private String globalName;
+
     public FakePrincipal(UUID uuid) {
       setUuid(uuid);
+    }
+
+    public String getGlobalName() {
+      return globalName;
     }
 
     @Override
     public String getName() {
       return getUuid().toString();
     }
+
+    public void setGlobalName(String globalName) {
+      this.globalName = globalName;
+    }
   }
 
   @Override
   public List<String> getGlobalSecurityGroups(Principal principal) {
-    // XXX Needs testing
-    return null;
+    FakePrincipal p = (FakePrincipal) principal;
+    return p.getGlobalName() == null ? null : Collections.<String> singletonList(p.getGlobalName());
   }
 
   @Override
@@ -52,7 +64,11 @@ public class IsPrincipalMapper implements PrincipalMapper {
     if (!(entity instanceof IsPrincipal)) {
       return null;
     }
-    return Collections.<Principal> singletonList(new FakePrincipal(entity.getUuid()));
+    FakePrincipal toReturn = new FakePrincipal(entity.getUuid());
+    if (((IsPrincipal) entity).isInGlobalGroup()) {
+      toReturn.setGlobalName("global");
+    }
+    return Collections.<Principal> singletonList(toReturn);
   }
 
   @Override

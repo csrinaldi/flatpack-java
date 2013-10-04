@@ -21,6 +21,7 @@ package com.getperka.flatpack.policy;
  */
 
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.security.Principal;
@@ -44,6 +45,7 @@ import com.getperka.flatpack.TypeSource;
 import com.getperka.flatpack.ext.NoPack;
 import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.SecurityAction;
 import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.ext.SecurityTarget;
@@ -263,11 +265,11 @@ public class PrincipalSecurityTest extends PolicyTestBase {
     for (CrudOperation op : ops) {
       boolean may;
       if (property == null) {
-        // may = security.may(principal, p, op);
+        may = security.may(principal, SecurityTarget.of(p), SecurityAction.of(op));
       } else {
-        // may = security.may(principal, p, property, op);
+        may = security.may(principal, SecurityTarget.of(p, property), SecurityAction.of(op));
       }
-      // assertEquals(p.getUuid() + (expect ? " could not " : " should not ") + op, expect, may);
+      assertEquals(p.getUuid() + (expect ? " could not " : " should not ") + op, expect, may);
     }
   }
 
@@ -278,10 +280,6 @@ public class PrincipalSecurityTest extends PolicyTestBase {
   private void checkMay(Person p, Property property, CrudOperation... ops) {
     assertNotNull(property);
     check(new MyPrincipal(p), p, property, true, ops);
-  }
-
-  private void checkMayNot(Person p, CrudOperation... ops) {
-    check(new MyPrincipal(p), p, null, false, ops);
   }
 
   private void checkMayNot(Person p, Property property, CrudOperation... ops) {

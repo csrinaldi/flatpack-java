@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -26,19 +27,27 @@ package com.getperka.flatpack.ext;
  */
 public abstract class UpdatingCodex<T> extends Codex<T> {
 
-  public T replacementValue(T oldValue, T newValue) {
-    if (oldValue != null && newValue != null) {
-      return replacementValueNotNull(oldValue, newValue);
+  /**
+   * Given a pre-existing value in the object graph being reified and a replament value, returns the
+   * value that should be stored in the object graph.
+   * <p>
+   * If both {@code existingValue} and {@code newValue} are non-null, delegates to
+   * {@link #replacementValueNotNull}, otherwise returns {@code newValue}.
+   * 
+   * @param existingValue the value that was already present in the entity being mutated
+   * @param newValue the value contained in the payload
+   * @return the value that should be set in the entity
+   */
+  public T replacementValue(T existingValue, T newValue) {
+    if (existingValue != null && newValue != null) {
+      return replacementValueNotNull(existingValue, newValue);
     }
     return newValue;
   }
 
   /**
-   * XXX document me
-   * 
-   * @param oldValue
-   * @param newValue
-   * @return
+   * Called by {@link #replacementValue} only if both {@code oldValue} and {@code newValue} are
+   * non-null.
    */
   public abstract T replacementValueNotNull(T oldValue, T newValue);
 }

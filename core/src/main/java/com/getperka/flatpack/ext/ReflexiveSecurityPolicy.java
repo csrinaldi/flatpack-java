@@ -48,12 +48,12 @@ public class ReflexiveSecurityPolicy implements SecurityPolicy {
   void inject() {
     Set<SecurityAction> allOps = setForIteration();
     for (CrudOperation op : CrudOperation.values()) {
-      allOps.add(new SecurityAction(op));
+      allOps.add(SecurityAction.of(op));
     }
 
     reflexivePermissions = new GroupPermissions();
     reflexivePermissions.addPermissions(securityGroups.getGroupAll(),
-        Collections.singleton(new SecurityAction(CrudOperation.READ)));
+        Collections.singleton(SecurityAction.of(CrudOperation.READ)));
     reflexivePermissions.addPermissions(securityGroups.getGroupReflexive(), allOps);
   }
 }

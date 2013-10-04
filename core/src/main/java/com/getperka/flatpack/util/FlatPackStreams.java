@@ -1,4 +1,4 @@
-package com.getperka.flatpack.security;
+package com.getperka.flatpack.util;
 
 /*
  * #%L
@@ -20,17 +20,19 @@ package com.getperka.flatpack.security;
  * #L%
  */
 
-import com.getperka.flatpack.ext.SecurityAction;
+import java.io.IOException;
+import java.io.Reader;
 
-public enum CrudOperation {
-  CREATE,
-  DELETE,
-  READ,
-  UPDATE;
-
-  public static final SecurityAction CREATE_ACTION = SecurityAction.of(CrudOperation.CREATE);
-  public static final SecurityAction DELETE_ACTION = SecurityAction.of(CrudOperation.DELETE);
-  public static final SecurityAction READ_ACTION = SecurityAction.of(CrudOperation.READ);
-  public static final SecurityAction UPDATE_ACTION = SecurityAction.of(CrudOperation.UPDATE);
-
+/**
+ * Utility methods for reading and writing things.
+ */
+public class FlatPackStreams {
+  public static String read(Reader contents) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    char[] chars = new char[4096];
+    for (int read = contents.read(chars); read != -1; read = contents.read(chars)) {
+      sb.append(chars, 0, read);
+    }
+    return sb.toString();
+  }
 }

@@ -100,7 +100,7 @@ public class PolicyExtractionTest extends PolicyTestBase {
     for (String name : actionNames) {
       String[] parts = name.split("\\.");
       assertEquals(2, parts.length);
-      expected.add(new SecurityAction(parts[0], parts[1]));
+      expected.add(SecurityAction.of(parts[0], parts[1]));
     }
     for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : p.getOperations().entrySet()) {
       if (groupName.equals(entry.getKey().getName())) {

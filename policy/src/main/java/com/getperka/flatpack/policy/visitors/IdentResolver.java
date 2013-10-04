@@ -79,6 +79,9 @@ public class IdentResolver extends PolicyLocationVisitor {
   private TypeContext typeContext;
   private Set<Ident<?>> unresolved = setForIteration();
 
+  /**
+   * Requires injection.
+   */
   IdentResolver() {}
 
   @Override
@@ -359,8 +362,8 @@ public class IdentResolver extends PolicyLocationVisitor {
     // Are we declaring a verb?
     Verb currentVerb = currentLocation(Verb.class);
     if (currentVerb != null) {
-      SecurityAction a = new SecurityAction(currentVerb.getName().getSimpleName(),
-          x.getSimpleName());
+      SecurityAction a = SecurityAction.of(
+          currentVerb.getName().getSimpleName(), x.getSimpleName());
       x.setReferent(a);
       return;
     }
@@ -372,7 +375,7 @@ public class IdentResolver extends PolicyLocationVisitor {
 
       if (verbIdent.isWildcard()) {
         // Parser shouldn't allow *.foo, so we can ignore the second part
-        x.setReferent(new SecurityAction("*", "*"));
+        x.setReferent(SecurityAction.all());
         return;
       }
 
@@ -386,7 +389,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       Ident<SecurityAction> actionIdent = x.getCompoundName().get(1).cast(SecurityAction.class);
       if (actionIdent.isWildcard()) {
         // Foo.*
-        SecurityAction action = new SecurityAction(verbIdent.getSimpleName(), "*");
+        SecurityAction action = SecurityAction.of(verbIdent.getSimpleName(), "*");
         actionIdent.setReferent(action);
         x.setReferent(action);
       } else {
@@ -404,7 +407,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       }
     } else if (x.isWildcard()) {
       // Interpret "*" as "*.*"
-      x.setReferent(new SecurityAction("*", "*"));
+      x.setReferent(SecurityAction.all());
     } else {
       // read
       String simpleName = x.getSimpleName();

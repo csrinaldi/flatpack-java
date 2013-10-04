@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.domain;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -21,4 +22,15 @@ package com.getperka.flatpack.policy.domain;
 
 import com.getperka.flatpack.BaseHasUuid;
 
-public class IntegratorUser extends BaseHasUuid implements IsPrincipal {}
+public class IntegratorUser extends BaseHasUuid implements IsPrincipal {
+  private boolean inGlobalGroup;
+
+  @Override
+  public boolean isInGlobalGroup() {
+    return inGlobalGroup;
+  }
+
+  public void setInGlobalGroup(boolean inGlobalGroup) {
+    this.inGlobalGroup = inGlobalGroup;
+  }
+}

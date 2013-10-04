@@ -4,6 +4,12 @@ allow {
   global none;
 }
 
+type baseHasUuid {
+  allow {
+    this to *;
+  }
+}
+
 type person {
   group inherit boss {
     boss = boss;
@@ -15,7 +21,7 @@ type person {
   }
   policy bosses {
     property boss;
-    allow {
+    allow only {
       // Look at using local override
       boss to *;
       // As well as the inherited-through group

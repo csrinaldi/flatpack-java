@@ -65,7 +65,7 @@ public class SecurityGroups {
 
   private final GroupPermissions permissionsPermitAll = new GroupPermissions() {
     {
-      addPermissions(groupAll, Collections.singleton(new SecurityAction("*", "*")));
+      addPermissions(groupAll, Collections.singleton(SecurityAction.of("*", "*")));
     }
 
     @Override

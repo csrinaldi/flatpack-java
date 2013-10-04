@@ -155,7 +155,7 @@ public class Ident<R> extends PolicyNode {
   }
 
   /**
-   * Given a compound ident {@code a.b.c} returns {@code b.c}. The newly-returned Ident, and it's
+   * Given a compound ident {@code a.b.c} returns {@code b.c}. The newly-returned Ident, and its
    * compound Idents, will be distinct copies.
    * 
    * @throws IllegalArgumentException if the current ident is simple

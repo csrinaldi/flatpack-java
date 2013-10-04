@@ -21,8 +21,6 @@ package com.getperka.flatpack.policy;
  */
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 
-import java.io.IOException;
-import java.io.Reader;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,15 +51,6 @@ public class StaticPolicy implements SecurityPolicy {
   @Inject
   private TypeContext typeContext;
 
-  public StaticPolicy(Reader contents) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    char[] chars = new char[4096];
-    for (int read = contents.read(chars); read != -1; read = contents.read(chars)) {
-      sb.append(chars, 0, read);
-    }
-    this.contents = sb.toString();
-  }
-
   public StaticPolicy(String contents) {
     this.contents = contents;
   }
@@ -74,7 +63,7 @@ public class StaticPolicy implements SecurityPolicy {
   public GroupPermissions getPermissions(SecurityTarget target) {
     /*
      * Since the policy file can't talk about specific entities, we'll generalize any incoming
-     * target. This will allow targets to be cached, without
+     * target. This will allow targets to be cached, without indefinitely retaining an entity.
      */
     switch (target.getKind()) {
       case ENTITY:
@@ -92,20 +81,27 @@ public class StaticPolicy implements SecurityPolicy {
         // Definitively break if a new kind is added
         throw new UnsupportedOperationException(target.getKind().name());
     }
+
+    // See if there's any cached data
     GroupPermissions toReturn = cache.get(target);
     if (toReturn != null) {
       return toReturn;
     }
 
+    // Determine which targets should be inherited from
     List<SecurityTarget> targets = listForAny();
     computeTargets(target, targets);
 
+    // Lazily construct the inner implementation, since it requires injection
     StaticPolicyImpl policy = maybeParse();
 
+    // Pull the data from the policy tree
     toReturn = new GroupPermissions();
     for (SecurityTarget t : targets) {
       policy.extractPermissions(toReturn, t);
     }
+
+    // Cache and return
     cache.put(target, toReturn);
     return toReturn;
   }
@@ -120,22 +116,18 @@ public class StaticPolicy implements SecurityPolicy {
   private void computeTargets(SecurityTarget target, List<SecurityTarget> accumulator) {
     // Look for inherited data first
     switch (target.getKind()) {
-      case ENTITY:
-        computeTargets(SecurityTarget.of(target.getEntityType()), accumulator);
-        break;
-      case ENTITY_PROPERTY:
-        computeTargets(SecurityTarget.of(target.getEntity()), accumulator);
-        break;
       case GLOBAL:
         // Just add the global target
         break;
       case PROPERTY: {
+        // Inherit from the entity type that defines the property
         Class<? extends HasUuid> enclosing =
             target.getProperty().getEnclosingType().getEntityType();
         computeTargets(SecurityTarget.of(enclosing), accumulator);
         break;
       }
       case TYPE: {
+        // Inherit from the entity type's supertype or global rules
         Class<?> superType = target.getEntityType().getSuperclass();
         if (superType != null && HasUuid.class.isAssignableFrom(superType)) {
           computeTargets(SecurityTarget.of(superType.asSubclass(HasUuid.class)), accumulator);
@@ -144,6 +136,9 @@ public class StaticPolicy implements SecurityPolicy {
         }
         break;
       }
+      case ENTITY:
+      case ENTITY_PROPERTY:
+        // Entity-based targets should have been generalized
       default:
         throw new UnsupportedOperationException(target.getKind().name());
     }

@@ -63,6 +63,9 @@ import com.getperka.flatpack.policy.pst.Verb;
  * returning {@link Rule} objects are named with a capitalized first letter. Since most rules will
  * push an object onto the value stack, the rules are generally named in accordance with the object
  * type that they will push.
+ * <p>
+ * Also note that due to parboiled's extensive class rewriting, the code-coverage numbers on this
+ * class are completely wrong.
  */
 class PolicyParser extends BaseParser<Object> {
   private static final String WILDCARD = "*";

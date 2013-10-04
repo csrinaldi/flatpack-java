@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.visitors;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -38,6 +39,11 @@ public class IdentChecker extends PolicyLocationVisitor {
 
   private List<String> errors = listForAny();
   private Map<Property, Integer> seenProperties = mapForLookup();
+
+  /**
+   * Requires injection.
+   */
+  IdentChecker() {}
 
   @Override
   public void endVisit(Allow x) {

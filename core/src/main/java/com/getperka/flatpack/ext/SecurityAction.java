@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -27,20 +28,31 @@ import java.util.UUID;
 import com.getperka.flatpack.BaseHasUuid;
 
 public class SecurityAction extends BaseHasUuid {
+  private static final SecurityAction all = new SecurityAction("*", "*");
+
+  public static SecurityAction all() {
+    return all;
+  }
+
+  public static SecurityAction of(Enum<?> e) {
+    String action = e.name().toLowerCase();
+    String type = Introspector.decapitalize(e.getDeclaringClass().getSimpleName());
+    return new SecurityAction(type, action);
+  }
+
+  public static SecurityAction of(String type, String action) {
+    return new SecurityAction(type, action);
+  }
+
   private String action;
   private String type;
 
-  public SecurityAction(Enum<?> e) {
-    this.action = e.name().toLowerCase();
-    this.type = Introspector.decapitalize(e.getDeclaringClass().getSimpleName());
-  }
+  SecurityAction() {}
 
-  public SecurityAction(String type, String action) {
+  private SecurityAction(String type, String action) {
     this.action = action.toLowerCase();
     this.type = Introspector.decapitalize(type);
   }
-
-  SecurityAction() {}
 
   public String getAction() {
     return action;
