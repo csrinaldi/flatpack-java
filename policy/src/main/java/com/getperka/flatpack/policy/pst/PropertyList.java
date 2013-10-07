@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,12 +20,18 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
 
+/**
+ * Zero or more {@link Property} references.
+ */
 public class PropertyList extends PolicyNode {
-  private List<Ident<Property>> propertyNames = list();
+  private List<Ident<Property>> propertyNames = listForAny();
 
   @Override
   public void accept(PolicyVisitor v) {

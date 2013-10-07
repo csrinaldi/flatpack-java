@@ -20,8 +20,10 @@ package com.getperka.flatpack.security;
  * #L%
  */
 
-import com.getperka.flatpack.ext.SecurityAction;
-
+/**
+ * An enum that defines {@link SecurityAction actions} for manipulating objects in an entity graph.
+ * These actions are used by the serialization code to enforce the installed security policy.
+ */
 public enum CrudOperation {
   CREATE,
   DELETE,

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,19 +20,14 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
 import com.getperka.flatpack.policy.visitors.ToSourceVisitor;
 import com.getperka.flatpack.policy.visitors.ToStringVisitor;
 
+/**
+ * A base class for all policy data objects.
+ */
 public abstract class PolicyNode {
-  /**
-   * Convenience method for constructing a generic {@link ArrayList}.
-   */
-  protected static <T> List<T> list() {
-    return new ArrayList<T>();
-  }
 
   private int lineNumber = -1;
 

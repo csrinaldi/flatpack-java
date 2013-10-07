@@ -35,6 +35,8 @@ import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.SuppressDefaultValue;
+import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.security.SecurityGroups;
 
 /**
  * An immutable view of a property that should be serialized.

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,6 +20,8 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
 /**
@@ -26,12 +29,12 @@ import java.util.List;
  */
 public abstract class PolicyBlock extends PolicyNode {
 
-  private List<Allow> allows = list();
-  private List<Verb> verbs = list();
-  private List<PackagePolicy> packagePolicies = list();
-  private List<TypePolicy> typePolicies = list();
+  private List<AllowBlock> allows = listForAny();
+  private List<ActionDefinition> verbs = listForAny();
+  private List<PackagePolicy> packagePolicies = listForAny();
+  private List<TypePolicy> typePolicies = listForAny();
 
-  public List<Allow> getAllows() {
+  public List<AllowBlock> getAllows() {
     return allows;
   }
 
@@ -43,11 +46,11 @@ public abstract class PolicyBlock extends PolicyNode {
     return typePolicies;
   }
 
-  public List<Verb> getVerbs() {
+  public List<ActionDefinition> getVerbs() {
     return verbs;
   }
 
-  public void setAllows(List<Allow> allows) {
+  public void setAllows(List<AllowBlock> allows) {
     this.allows = allows;
   }
 
@@ -59,7 +62,7 @@ public abstract class PolicyBlock extends PolicyNode {
     this.typePolicies = types;
   }
 
-  public void setVerbs(List<Verb> verbs) {
+  public void setVerbs(List<ActionDefinition> verbs) {
     this.verbs = verbs;
   }
 

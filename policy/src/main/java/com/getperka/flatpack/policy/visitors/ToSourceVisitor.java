@@ -22,18 +22,17 @@ package com.getperka.flatpack.policy.visitors;
 
 import java.util.List;
 
-import com.getperka.flatpack.policy.pst.AclRule;
-import com.getperka.flatpack.policy.pst.Allow;
-import com.getperka.flatpack.policy.pst.Group;
+import com.getperka.flatpack.policy.pst.ActionDefinition;
+import com.getperka.flatpack.policy.pst.AllowBlock;
+import com.getperka.flatpack.policy.pst.AllowRule;
+import com.getperka.flatpack.policy.pst.GroupBlock;
 import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PackagePolicy;
 import com.getperka.flatpack.policy.pst.PolicyNode;
-import com.getperka.flatpack.policy.pst.PolicyVisitor;
 import com.getperka.flatpack.policy.pst.PropertyList;
 import com.getperka.flatpack.policy.pst.PropertyPolicy;
 import com.getperka.flatpack.policy.pst.TypePolicy;
-import com.getperka.flatpack.policy.pst.Verb;
 
 /**
  * Generates an exquivalent policy source file from policy nodes.
@@ -64,19 +63,28 @@ public class ToSourceVisitor extends PolicyVisitor {
   }
 
   @Override
-  public boolean visit(AclRule x) {
-    traverse(x.getGroupName());
-    if (x.getSecurityActions().isEmpty()) {
-      print(" none");
-      return false;
+  public void traverse(List<? extends PolicyNode> list) {
+    if (list == null) {
+      return;
     }
-    print(" to ");
-    traverse(x.getSecurityActions(), ", ");
+    for (PolicyNode x : list) {
+      traverse(x);
+      nl();
+    }
+  }
+
+  @Override
+  public boolean visit(ActionDefinition x) {
+    print("action ");
+    traverse(x.getName());
+    print(" = ");
+    traverse(x.getActions(), ", ");
+    println(";");
     return false;
   }
 
   @Override
-  public boolean visit(Allow x) {
+  public boolean visit(AllowBlock x) {
     print("allow ");
     if (x.isOnly()) {
       print("only ");
@@ -91,7 +99,19 @@ public class ToSourceVisitor extends PolicyVisitor {
   }
 
   @Override
-  public boolean visit(Group x) {
+  public boolean visit(AllowRule x) {
+    traverse(x.getGroupName());
+    if (x.getSecurityActions().isEmpty()) {
+      print(" none");
+      return false;
+    }
+    print(" to ");
+    traverse(x.getSecurityActions(), ", ");
+    return false;
+  }
+
+  @Override
+  public boolean visit(GroupBlock x) {
     print("group ");
     if (x.getInheritFrom() != null) {
       print("inherit ");
@@ -175,16 +195,6 @@ public class ToSourceVisitor extends PolicyVisitor {
     return false;
   }
 
-  @Override
-  public boolean visit(Verb x) {
-    print("verb ");
-    traverse(x.getName());
-    print(" = ");
-    traverse(x.getActions(), ", ");
-    println(";");
-    return false;
-  }
-
   protected void closeBlock() {
     outdent();
     println("}");
@@ -249,17 +259,6 @@ public class ToSourceVisitor extends PolicyVisitor {
   protected void println(String... data) {
     print(data);
     nl();
-  }
-
-  @Override
-  protected void traverse(List<? extends PolicyNode> list) {
-    if (list == null) {
-      return;
-    }
-    for (PolicyNode x : list) {
-      traverse(x);
-      nl();
-    }
   }
 
   protected void traverse(List<? extends PolicyNode> list, String separator) {

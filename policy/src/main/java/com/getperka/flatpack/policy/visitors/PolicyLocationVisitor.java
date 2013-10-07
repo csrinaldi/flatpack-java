@@ -27,7 +27,6 @@ import java.util.Deque;
 import java.util.List;
 
 import com.getperka.flatpack.policy.pst.PolicyNode;
-import com.getperka.flatpack.policy.pst.PolicyVisitor;
 
 /**
  * A utility class for policy visitors that maintains the current location of the visitor to improve
@@ -36,6 +35,19 @@ import com.getperka.flatpack.policy.pst.PolicyVisitor;
 public class PolicyLocationVisitor extends PolicyVisitor {
 
   private final Deque<PolicyNode> location = new ArrayDeque<PolicyNode>();
+
+  @Override
+  public final void traverse(PolicyNode x) {
+    if (x == null) {
+      return;
+    }
+    location.push(x);
+    try {
+      doTraverse(x);
+    } finally {
+      location.pop();
+    }
+  }
 
   protected List<PolicyNode> currentLocation() {
     List<PolicyNode> toReturn = listForAny();
@@ -70,18 +82,5 @@ public class PolicyLocationVisitor extends PolicyVisitor {
       toReturn += " (Line " + node.getLineNumber() + ")";
     }
     return toReturn;
-  }
-
-  @Override
-  protected final void traverse(PolicyNode x) {
-    if (x == null) {
-      return;
-    }
-    location.push(x);
-    try {
-      doTraverse(x);
-    } finally {
-      location.pop();
-    }
   }
 }

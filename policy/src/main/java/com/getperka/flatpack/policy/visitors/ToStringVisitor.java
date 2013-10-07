@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.visitors;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -30,6 +31,21 @@ import com.getperka.flatpack.policy.pst.PolicyNode;
 public class ToStringVisitor extends ToSourceVisitor {
 
   @Override
+  public void traverse(List<? extends PolicyNode> list) {
+    print(" ... ");
+  }
+
+  @Override
+  public void traverse(PolicyNode x) {
+    // Always print single idents, since they make the summary usable
+    if (x instanceof Ident) {
+      print(x.toSource());
+    } else {
+      print(" ... ");
+    }
+  }
+
+  @Override
   public boolean visit(Ident<?> x) {
     // Always print compound names
     if (x.isCompound()) {
@@ -48,23 +64,8 @@ public class ToStringVisitor extends ToSourceVisitor {
   }
 
   @Override
-  protected void traverse(List<? extends PolicyNode> list) {
-    print(" ... ");
-  }
-
-  @Override
   protected void traverse(List<? extends PolicyNode> list, String separator) {
     print(" ... ");
-  }
-
-  @Override
-  protected void traverse(PolicyNode x) {
-    // Always print single idents, since they make the summary usable
-    if (x instanceof Ident) {
-      print(x.toSource());
-    } else {
-      print(" ... ");
-    }
   }
 
 }

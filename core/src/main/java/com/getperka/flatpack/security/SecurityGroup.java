@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 /*
  * #%L
@@ -27,10 +27,13 @@ import java.util.List;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertyPath;
 import com.getperka.flatpack.util.UuidDigest;
 
 /**
- * A definition for an ACL security group.
+ * A definition for an ACL security group. Instances are constructed via the {@link SecurityGroups}
+ * factory.
  */
 public class SecurityGroup extends BaseHasUuid {
   private String description;

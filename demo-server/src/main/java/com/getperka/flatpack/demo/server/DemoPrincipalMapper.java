@@ -24,8 +24,8 @@ import java.util.Collections;
 import java.util.List;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.SecurityTarget;
+import com.getperka.flatpack.security.PrincipalMapper;
+import com.getperka.flatpack.security.SecurityTarget;
 
 public class DemoPrincipalMapper implements PrincipalMapper {
   @Override

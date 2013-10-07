@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.security.GroupPermissions;
 
 /**
  * A description of an entity type.

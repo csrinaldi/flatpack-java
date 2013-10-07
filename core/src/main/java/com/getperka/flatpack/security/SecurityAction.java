@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 /*
  * #%L
@@ -27,6 +27,11 @@ import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 
+/**
+ * Describes some action that a principal may or may not be allowed to perform. Each SecurityAction
+ * has a {@code type} and {@code action} name to allow wildcard aggregations of related actions.
+ * Instances are constructed via static factory methods.
+ */
 public class SecurityAction extends BaseHasUuid {
   private static final SecurityAction all = new SecurityAction("*", "*");
 

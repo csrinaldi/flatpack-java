@@ -55,6 +55,8 @@ import com.getperka.flatpack.SparseCollection;
 import com.getperka.flatpack.codexes.DynamicCodex;
 import com.getperka.flatpack.inject.AllTypes;
 import com.getperka.flatpack.inject.FlatPackLogger;
+import com.getperka.flatpack.security.SecurityPolicy;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 

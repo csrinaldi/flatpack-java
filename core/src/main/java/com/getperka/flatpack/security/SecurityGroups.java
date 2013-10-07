@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 /*
  * #%L
@@ -30,6 +30,9 @@ import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
+import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.ext.PropertyPath;
+import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 
 /**

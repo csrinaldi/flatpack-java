@@ -27,8 +27,8 @@ import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.SecurityTarget;
+import com.getperka.flatpack.security.PrincipalMapper;
+import com.getperka.flatpack.security.SecurityTarget;
 
 public class IsPrincipalMapper implements PrincipalMapper {
   private static class FakePrincipal extends BaseHasUuid implements Principal {

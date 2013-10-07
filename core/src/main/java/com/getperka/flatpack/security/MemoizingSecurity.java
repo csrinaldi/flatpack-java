@@ -27,15 +27,10 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityTarget;
-import com.getperka.flatpack.inject.PackScoped;
-
 /**
- * Memoizes security decisions within a PackScope.
+ * Memoizes security decisions.
  */
-@PackScoped
-public class PackSecurity implements Security {
+public class MemoizingSecurity implements Security {
   static class Key {
     private final SecurityAction action;
     private final int hashCode;
@@ -78,6 +73,11 @@ public class PackSecurity implements Security {
   private final Map<Key, Boolean> cache = mapForLookup();
   @Inject
   private Security delegate;
+
+  /**
+   * Requires injection.
+   */
+  protected MemoizingSecurity() {}
 
   @Override
   public boolean may(Principal principal, SecurityTarget target, SecurityAction op) {

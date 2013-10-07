@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,25 +20,32 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
 import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
 
-public class Group extends PolicyNode implements HasInheritFrom<Property> {
-  private List<GroupDefinition> definitions = list();
+/**
+ * A structural member, containing {@link AllowRule} and an inheritable {@link Property}.
+ */
+public class AllowBlock extends PolicyNode implements HasInheritFrom<Property> {
+  private List<AllowRule> aclRules = listForAny();
   private Ident<Property> inheritFrom;
+  private boolean only;
 
   @Override
   public void accept(PolicyVisitor v) {
     if (v.visit(this)) {
-      v.traverse(definitions);
+      v.traverse(aclRules);
       v.traverse(inheritFrom);
     }
     v.endVisit(this);
   }
 
-  public List<GroupDefinition> getDefinitions() {
-    return definitions;
+  public List<AllowRule> getAclRules() {
+    return aclRules;
   }
 
   @Override
@@ -45,12 +53,20 @@ public class Group extends PolicyNode implements HasInheritFrom<Property> {
     return inheritFrom;
   }
 
-  public void setDefinitions(List<GroupDefinition> definitions) {
-    this.definitions = definitions;
+  public boolean isOnly() {
+    return only;
+  }
+
+  public void setAclRules(List<AllowRule> aclRules) {
+    this.aclRules = aclRules;
   }
 
   @Override
   public void setInheritFrom(Ident<Property> inheritFrom) {
     this.inheritFrom = inheritFrom;
+  }
+
+  public void setOnly(boolean only) {
+    this.only = only;
   }
 }

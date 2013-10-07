@@ -34,8 +34,8 @@ import com.getperka.flatpack.domain.Employee;
 import com.getperka.flatpack.domain.Person;
 import com.getperka.flatpack.domain.TestTypeSource;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.SecurityTarget;
+import com.getperka.flatpack.security.PrincipalMapper;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**

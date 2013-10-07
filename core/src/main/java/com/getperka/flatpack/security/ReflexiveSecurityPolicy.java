@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 /*
  * #%L
@@ -28,15 +28,18 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.getperka.flatpack.security.CrudOperation;
 
+/**
+ * Allows a principal to edit any entity mapped by {@link PrincipalMapper#getPrincipals}.
+ */
 @Singleton
 public class ReflexiveSecurityPolicy implements SecurityPolicy {
 
-  @Inject
-  private SecurityGroups securityGroups;
   private GroupPermissions reflexivePermissions;
 
+  /**
+   * Requires injection.
+   */
   protected ReflexiveSecurityPolicy() {}
 
   @Override
@@ -45,7 +48,7 @@ public class ReflexiveSecurityPolicy implements SecurityPolicy {
   }
 
   @Inject
-  void inject() {
+  void inject(SecurityGroups securityGroups) {
     Set<SecurityAction> allOps = setForIteration();
     for (CrudOperation op : CrudOperation.values()) {
       allOps.add(SecurityAction.of(op));

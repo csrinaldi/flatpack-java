@@ -17,7 +17,7 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 import java.security.Principal;
 import java.util.List;

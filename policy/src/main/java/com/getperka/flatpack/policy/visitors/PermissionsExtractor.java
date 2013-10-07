@@ -24,14 +24,10 @@ import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 import java.util.Set;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.policy.StaticPolicy;
-import com.getperka.flatpack.policy.pst.AclRule;
-import com.getperka.flatpack.policy.pst.Allow;
+import com.getperka.flatpack.policy.pst.AllowRule;
+import com.getperka.flatpack.policy.pst.AllowBlock;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PackagePolicy;
 import com.getperka.flatpack.policy.pst.PolicyFile;
@@ -39,6 +35,10 @@ import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.PropertyList;
 import com.getperka.flatpack.policy.pst.PropertyPolicy;
 import com.getperka.flatpack.policy.pst.TypePolicy;
+import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityGroup;
+import com.getperka.flatpack.security.SecurityTarget;
 
 /**
  * Converts policy tree data into the in-memory datastructures used by {@link StaticPolicy}.
@@ -79,7 +79,7 @@ public class PermissionsExtractor extends PolicyLocationVisitor {
    * other {@code visit} methods choosing to descend into enclosing nodes.
    */
   @Override
-  public boolean visit(AclRule x) {
+  public boolean visit(AllowRule x) {
     Set<SecurityAction> set = setForIteration();
     for (Ident<SecurityAction> ident : x.getSecurityActions()) {
       set.add(ident.getReferent());
@@ -93,7 +93,7 @@ public class PermissionsExtractor extends PolicyLocationVisitor {
    * Supports the "only" construct by clearing whatever permissions have already been accumulated.
    */
   @Override
-  public boolean visit(Allow x) {
+  public boolean visit(AllowBlock x) {
     if (x.isOnly()) {
       accumulator.clear();
     }
@@ -101,7 +101,7 @@ public class PermissionsExtractor extends PolicyLocationVisitor {
   }
 
   /**
-   * Descend to find types, the inherited {@link AclRule} nodes are taken care of by examining the
+   * Descend to find types, the inherited {@link AllowRule} nodes are taken care of by examining the
    * visitor's current location when the target is actually found.
    */
   @Override

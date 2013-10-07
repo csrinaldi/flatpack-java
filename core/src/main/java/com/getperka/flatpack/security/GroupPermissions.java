@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 /*
  * #%L

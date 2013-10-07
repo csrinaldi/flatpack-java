@@ -20,16 +20,22 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
 
+/**
+ * Policy information for a single type.
+ */
 public class TypePolicy extends PolicyNode implements HasRootScopeName<Class<? extends HasUuid>> {
-  private List<Allow> allows = list();
-  private List<Group> groups = list();
+  private List<AllowBlock> allows = listForAny();
+  private List<GroupBlock> groups = listForAny();
   private Ident<Class<? extends HasUuid>> name;
-  private List<PropertyPolicy> policies = list();
-  private List<Verb> verbs = list();
+  private List<PropertyPolicy> policies = listForAny();
+  private List<ActionDefinition> verbs = listForAny();
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -43,11 +49,11 @@ public class TypePolicy extends PolicyNode implements HasRootScopeName<Class<? e
     v.endVisit(this);
   }
 
-  public List<Allow> getAllows() {
+  public List<AllowBlock> getAllows() {
     return allows;
   }
 
-  public List<Group> getGroups() {
+  public List<GroupBlock> getGroups() {
     return groups;
   }
 
@@ -60,15 +66,15 @@ public class TypePolicy extends PolicyNode implements HasRootScopeName<Class<? e
     return policies;
   }
 
-  public List<Verb> getVerbs() {
+  public List<ActionDefinition> getVerbs() {
     return verbs;
   }
 
-  public void setAllows(List<Allow> allow) {
+  public void setAllows(List<AllowBlock> allow) {
     this.allows = allow;
   }
 
-  public void setGroups(List<Group> group) {
+  public void setGroups(List<GroupBlock> group) {
     this.groups = group;
   }
 
@@ -81,7 +87,7 @@ public class TypePolicy extends PolicyNode implements HasRootScopeName<Class<? e
     this.policies = policy;
   }
 
-  public void setVerbs(List<Verb> verb) {
+  public void setVerbs(List<ActionDefinition> verb) {
     this.verbs = verb;
   }
 }

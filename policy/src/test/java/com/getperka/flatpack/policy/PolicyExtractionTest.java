@@ -35,17 +35,17 @@ import org.junit.Test;
 
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.GroupPermissions;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroup;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.policy.domain.ExtendsMerchant;
 import com.getperka.flatpack.policy.domain.Merchant;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
-import com.getperka.flatpack.policy.pst.PolicyVisitor;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityGroup;
 
 /**
  * Verify that a parsed policy file is correctly transformed into the appropriate in-memory objects.
@@ -70,19 +70,22 @@ public class PolicyExtractionTest extends PolicyTestBase {
       policyFile.accept(new PolicyVisitor() {
 
         /**
+         * Shuffle nested lists.
+         */
+        @Override
+        public void traverse(List<? extends PolicyNode> list) {
+          if (list != null) {
+            Collections.shuffle(list, r);
+          }
+          super.traverse(list);
+        }
+
+        /**
          * Don't re-order the internal state of an Ident.
          */
         @Override
         public boolean visit(Ident<?> x) {
           return false;
-        }
-
-        @Override
-        protected void traverse(List<? extends PolicyNode> list) {
-          if (list != null) {
-            Collections.shuffle(list, r);
-          }
-          super.traverse(list);
         }
       });
 

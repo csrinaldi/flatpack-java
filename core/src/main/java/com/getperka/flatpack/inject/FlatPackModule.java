@@ -34,12 +34,14 @@ import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.ReflexiveSecurityPolicy;
-import com.getperka.flatpack.ext.SecurityPolicy;
+import com.getperka.flatpack.security.MemoizingSecurity;
 import com.getperka.flatpack.security.NoSecurity;
+import com.getperka.flatpack.security.PermissivePrincipalMapper;
+import com.getperka.flatpack.security.PrincipalMapper;
 import com.getperka.flatpack.security.PrincipalSecurity;
+import com.getperka.flatpack.security.ReflexiveSecurityPolicy;
 import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.SecurityPolicy;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.AbstractModule;
@@ -132,6 +134,8 @@ public class FlatPackModule extends AbstractModule {
     bind(JsonWriter.class)
         .toProvider(PackScope.<JsonWriter> provider())
         .in(packScope);
+
+    bind(MemoizingSecurity.class).in(packScope);
 
     bind(TraversalMode.class)
         .toProvider(PackScope.<TraversalMode> provider())

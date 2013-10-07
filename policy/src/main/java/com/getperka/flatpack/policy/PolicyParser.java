@@ -37,11 +37,10 @@ import org.parboiled.support.Var;
 
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.policy.pst.AclRule;
-import com.getperka.flatpack.policy.pst.Allow;
-import com.getperka.flatpack.policy.pst.Group;
+import com.getperka.flatpack.policy.pst.ActionDefinition;
+import com.getperka.flatpack.policy.pst.AllowBlock;
+import com.getperka.flatpack.policy.pst.AllowRule;
+import com.getperka.flatpack.policy.pst.GroupBlock;
 import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.HasInheritFrom;
 import com.getperka.flatpack.policy.pst.HasName;
@@ -53,7 +52,8 @@ import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.PropertyList;
 import com.getperka.flatpack.policy.pst.PropertyPolicy;
 import com.getperka.flatpack.policy.pst.TypePolicy;
-import com.getperka.flatpack.policy.pst.Verb;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityGroup;
 
 /**
  * The grammar definition for the policy file.
@@ -150,7 +150,7 @@ class PolicyParser extends BaseParser<Object> {
         new Action<Object>() {
           @Override
           public boolean run(Context<Object> ctx) {
-            AclRule x = new AclRule();
+            AllowRule x = new AllowRule();
             x.setSecurityActions(popIdentList(SecurityAction.class));
             x.setGroupName(popIdent(SecurityGroup.class));
             push(x);
@@ -160,7 +160,33 @@ class PolicyParser extends BaseParser<Object> {
   }
 
   /**
-   * An inheritable block which holds zero or more {@link AclRule}. Also supports a single-line
+   * Defines an action verb.
+   * 
+   * <pre>
+   * verb name = action, anotherAction, ...;
+   * </pre>
+   */
+  Rule ActionDef() {
+    final Var<ActionDefinition> var = new Var<ActionDefinition>(new ActionDefinition());
+    return Sequence(
+        "action",
+        NodeName(ActionDefinition.class, var),
+        "=",
+        OneOrListOf(Ident(SecurityAction.class), Ident.class, ","),
+        ";",
+        new Action<Object>() {
+          @Override
+          public boolean run(Context<Object> ctx) {
+            ActionDefinition x = var.get();
+            x.setActions(popIdentList(SecurityAction.class));
+            push(x);
+            return true;
+          }
+        });
+  }
+
+  /**
+   * An inheritable block which holds zero or more {@link AllowRule}. Also supports a single-line
    * version.
    * 
    * <pre>
@@ -176,19 +202,19 @@ class PolicyParser extends BaseParser<Object> {
    * </pre>
    */
   Rule Allow() {
-    final Var<Allow> var = new Var<Allow>(new Allow());
+    final Var<AllowBlock> var = new Var<AllowBlock>(new AllowBlock());
     final Var<Boolean> only = new Var<Boolean>(false);
     return Sequence(
         "allow",
         Optional("only", ACTION(only.set(true))),
         MaybeInherit(Property.class, var),
-        ZeroOneOrBlock(AclRule(), AclRule.class),
+        ZeroOneOrBlock(AclRule(), AllowRule.class),
         new Action<Object>() {
           @Override
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
-            Allow x = var.get();
-            x.setAclRules((List<AclRule>) pop());
+            AllowBlock x = var.get();
+            x.setAclRules((List<AllowRule>) pop());
             x.setOnly(only.get());
             push(x);
             return true;
@@ -255,7 +281,7 @@ class PolicyParser extends BaseParser<Object> {
    * </pre>
    */
   Rule Group() {
-    final Var<Group> var = new Var<Group>(new Group());
+    final Var<GroupBlock> var = new Var<GroupBlock>(new GroupBlock());
     return Sequence(
         "group",
         MaybeInherit(Property.class, var),
@@ -264,7 +290,7 @@ class PolicyParser extends BaseParser<Object> {
           @Override
           @SuppressWarnings("unchecked")
           public boolean run(Context<Object> ctx) {
-            Group x = var.get();
+            GroupBlock x = var.get();
             x.setDefinitions((List<GroupDefinition>) pop());
             push(x);
             return true;
@@ -409,11 +435,11 @@ class PolicyParser extends BaseParser<Object> {
     return Sequence(
         WS(),
         ZeroOrMore(FirstOf(
-            Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
+            Sequence(Allow(), ACTION(x.get().getAllows().add((AllowBlock) pop()))),
             Sequence(PackagePolicy(), ACTION(x.get().getPackagePolicies()
                 .add((PackagePolicy) pop()))),
             Sequence(TypePolicy(), ACTION(x.get().getTypePolicies().add((TypePolicy) pop()))),
-            Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop())))
+            Sequence(ActionDef(), ACTION(x.get().getVerbs().add((ActionDefinition) pop())))
         )),
         ACTION(push(x.get())));
   }
@@ -466,7 +492,7 @@ class PolicyParser extends BaseParser<Object> {
   }
 
   /**
-   * An named block that contains {@link Allow} and {@link PropertyList} nodes.
+   * An named block that contains {@link AllowBlock} and {@link PropertyList} nodes.
    * 
    * <pre>
    * policy name {
@@ -486,7 +512,7 @@ class PolicyParser extends BaseParser<Object> {
         ZeroOrMore(FirstOf(
             Sequence(
                 Allow(),
-                ACTION(x.get().getAllows().add((Allow) pop()))),
+                ACTION(x.get().getAllows().add((AllowBlock) pop()))),
             Sequence(
                 PropertyList(),
                 ACTION(x.get().getPropertyLists().add((PropertyList) pop())))
@@ -514,10 +540,10 @@ class PolicyParser extends BaseParser<Object> {
         NodeNameRaw(Class.class, x),
         "{",
         ZeroOrMore(FirstOf(
-            Sequence(Allow(), ACTION(x.get().getAllows().add((Allow) pop()))),
-            Sequence(Group(), ACTION(x.get().getGroups().add((Group) pop()))),
+            Sequence(Allow(), ACTION(x.get().getAllows().add((AllowBlock) pop()))),
+            Sequence(Group(), ACTION(x.get().getGroups().add((GroupBlock) pop()))),
             Sequence(PropertyPolicy(), ACTION(x.get().getPolicies().add((PropertyPolicy) pop()))),
-            Sequence(VerbDef(), ACTION(x.get().getVerbs().add((Verb) pop()))))),
+            Sequence(ActionDef(), ACTION(x.get().getVerbs().add((ActionDefinition) pop()))))),
         "}",
         ACTION(push(x.get())));
   }
@@ -541,41 +567,16 @@ class PolicyParser extends BaseParser<Object> {
             Optional(".", WILDCARD),
             ACTION(push(new Ident<SecurityAction>(SecurityAction.class, "*")))),
         Sequence(
-            Ident(Verb.class),
+            Ident(ActionDefinition.class),
             ".",
             WildcardOrIdent(SecurityAction.class),
             ACTION(swap()
-              && push(new Ident<SecurityAction>(SecurityAction.class, popIdent(Verb.class),
+              && push(new Ident<SecurityAction>(SecurityAction.class,
+                  popIdent(ActionDefinition.class),
                   popIdent(SecurityAction.class))))),
         Ident(SecurityAction.class)
 
     );
-  }
-
-  /**
-   * Defines an action verb.
-   * 
-   * <pre>
-   * verb name = action, anotherAction, ...;
-   * </pre>
-   */
-  Rule VerbDef() {
-    final Var<Verb> var = new Var<Verb>(new Verb());
-    return Sequence(
-        "verb",
-        NodeName(Verb.class, var),
-        "=",
-        OneOrListOf(Ident(SecurityAction.class), Ident.class, ","),
-        ";",
-        new Action<Object>() {
-          @Override
-          public boolean run(Context<Object> ctx) {
-            Verb x = var.get();
-            x.setActions(popIdentList(SecurityAction.class));
-            push(x);
-            return true;
-          }
-        });
   }
 
   /**

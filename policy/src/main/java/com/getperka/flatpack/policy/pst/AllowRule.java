@@ -20,18 +20,24 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityGroup;
 
-public class AclRule extends PolicyNode {
+/**
+ * Maps a {@link SecurityGroup} to one or more {@link SecurityAction}.
+ */
+public class AllowRule extends PolicyNode {
   private Ident<SecurityGroup> groupName;
-  private List<Ident<SecurityAction>> securityActions = list();
+  private List<Ident<SecurityAction>> securityActions = listForAny();
 
-  public AclRule() {}
+  public AllowRule() {}
 
-  public AclRule(AclRule copyFrom) {
+  public AllowRule(AllowRule copyFrom) {
     groupName = new Ident<SecurityGroup>(
         SecurityGroup.class, copyFrom.getGroupName().getSimpleName());
     securityActions.addAll(copyFrom.getSecurityActions());

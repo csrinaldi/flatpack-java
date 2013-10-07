@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,12 +20,20 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
+import com.getperka.flatpack.ext.Property;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+
+/**
+ * Associates one or more {@link Property} instances with an {@link AllowBlock}.
+ */
 public class PropertyPolicy extends PolicyNode implements HasName<PropertyPolicy> {
-  private List<Allow> allows = list();
+  private List<AllowBlock> allows = listForAny();
   private Ident<PropertyPolicy> name;
-  private List<PropertyList> propertyLists = list();
+  private List<PropertyList> propertyLists = listForAny();
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -36,7 +45,7 @@ public class PropertyPolicy extends PolicyNode implements HasName<PropertyPolicy
     v.endVisit(this);
   }
 
-  public List<Allow> getAllows() {
+  public List<AllowBlock> getAllows() {
     return allows;
   }
 
@@ -49,7 +58,7 @@ public class PropertyPolicy extends PolicyNode implements HasName<PropertyPolicy
     return propertyLists;
   }
 
-  public void setAllows(List<Allow> allows) {
+  public void setAllows(List<AllowBlock> allows) {
     this.allows = allows;
   }
 

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,6 +20,11 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+/**
+ * Indicates that the {@link PolicyNode} will inherit from another object.
+ * 
+ * @param <R> the referent type
+ */
 public interface HasInheritFrom<R> {
   Ident<R> getInheritFrom();
 

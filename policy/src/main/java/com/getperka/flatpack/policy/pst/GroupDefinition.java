@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,15 +20,22 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
-import com.getperka.flatpack.ext.SecurityGroup;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+import com.getperka.flatpack.security.SecurityGroup;
 
+/**
+ * Defines a {@link SecurityGroup} and the {@link PropertyPath} that should be evaluated to
+ * determine its memberships.
+ */
 public class GroupDefinition extends PolicyNode implements HasName<SecurityGroup> {
   private Ident<SecurityGroup> name;
-  private List<Ident<PropertyPath>> paths = list();
+  private List<Ident<PropertyPath>> paths = listForAny();
 
   public GroupDefinition() {}
 
@@ -36,7 +44,7 @@ public class GroupDefinition extends PolicyNode implements HasName<SecurityGroup
    */
   public GroupDefinition(GroupDefinition copyFrom, Ident<Property> prefix) {
     // Prefix the inherited name
-    List<Ident<?>> newNameParts = list();
+    List<Ident<?>> newNameParts = listForAny();
     newNameParts.add(prefix);
     if (copyFrom.name.isSimple()) {
       newNameParts.add(copyFrom.name);
@@ -51,7 +59,7 @@ public class GroupDefinition extends PolicyNode implements HasName<SecurityGroup
 
       // Either prepend a new path segment to a compound name, or turn a simple name into a compound
       if (old.isCompound()) {
-        List<Ident<?>> newName = list();
+        List<Ident<?>> newName = listForAny();
         newName.add(prefix);
         newName.addAll(old.getCompoundName());
         path = new Ident<PropertyPath>(PropertyPath.class, newName);

@@ -1,4 +1,5 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -19,6 +20,9 @@ package com.getperka.flatpack.ext;
  * #L%
  */
 
+/**
+ * Determines the permissions that are required to access security targets.
+ */
 public interface SecurityPolicy {
   /**
    * Return the set of permissions that govern the given target.

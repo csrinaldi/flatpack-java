@@ -36,12 +36,12 @@ import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
 import com.getperka.flatpack.security.CrudOperation;
-import com.getperka.flatpack.security.PackSecurity;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.google.gson.JsonObject;
 
 /**
@@ -61,7 +61,7 @@ public class PackReader extends FlatPackVisitor {
   @Inject
   private Provider<CreatedPropertyVerifier> propertyVerifiers;
   @Inject
-  private PackSecurity security;
+  private MemoizingSecurity security;
   private final Deque<PackReader.State> stack = new ArrayDeque<PackReader.State>();
   @Inject
   private TypeContext typeContext;

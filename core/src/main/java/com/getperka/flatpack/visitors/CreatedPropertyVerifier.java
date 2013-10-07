@@ -27,9 +27,9 @@ import javax.inject.Inject;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.getperka.flatpack.util.FlatPackTypes;
 
 /**

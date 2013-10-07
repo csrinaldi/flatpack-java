@@ -42,15 +42,12 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.PropertyPath;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.ext.SecurityGroups;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
-import com.getperka.flatpack.policy.pst.AclRule;
-import com.getperka.flatpack.policy.pst.Allow;
-import com.getperka.flatpack.policy.pst.Group;
+import com.getperka.flatpack.policy.pst.AllowRule;
+import com.getperka.flatpack.policy.pst.AllowBlock;
+import com.getperka.flatpack.policy.pst.GroupBlock;
 import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.HasName;
 import com.getperka.flatpack.policy.pst.Ident;
@@ -59,7 +56,10 @@ import com.getperka.flatpack.policy.pst.PolicyBlock;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.TypePolicy;
-import com.getperka.flatpack.policy.pst.Verb;
+import com.getperka.flatpack.policy.pst.ActionDefinition;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityGroup;
+import com.getperka.flatpack.security.SecurityGroups;
 
 /**
  * Ensures that all {@link Ident} instances have a valid {@link Ident#getReferent() referent}. This
@@ -122,10 +122,10 @@ public class IdentResolver extends PolicyLocationVisitor {
   }
 
   /**
-   * Duplicate inherited rules into the {@link Allow}.
+   * Duplicate inherited rules into the {@link AllowBlock}.
    */
   @Override
-  public boolean visit(Allow x) {
+  public boolean visit(AllowBlock x) {
     Ident<Property> inheritFrom = x.getInheritFrom();
     if (inheritFrom == null) {
       return true;
@@ -144,22 +144,22 @@ public class IdentResolver extends PolicyLocationVisitor {
      * Make copies of each AclRule to ensure that groups are resolved against the current type's
      * scope.
      */
-    List<AclRule> toInherit = listForAny();
-    for (Allow inherited : policy.getAllows()) {
+    List<AllowRule> toInherit = listForAny();
+    for (AllowBlock inherited : policy.getAllows()) {
       toInherit.addAll(inherited.getAclRules());
     }
-    for (ListIterator<AclRule> it = toInherit.listIterator(); it.hasNext();) {
-      it.set(new AclRule(it.next()));
+    for (ListIterator<AllowRule> it = toInherit.listIterator(); it.hasNext();) {
+      it.set(new AllowRule(it.next()));
     }
     x.getAclRules().addAll(0, toInherit);
     return true;
   }
 
   /**
-   * Duplicate inherited rules into the {@link Group}.
+   * Duplicate inherited rules into the {@link GroupBlock}.
    */
   @Override
-  public boolean visit(Group x) {
+  public boolean visit(GroupBlock x) {
     Ident<Property> inheritFrom = x.getInheritFrom();
     if (inheritFrom == null) {
       return true;
@@ -180,7 +180,7 @@ public class IdentResolver extends PolicyLocationVisitor {
      * groups, unless the group name is overridden by a local declaration.
      */
     Map<Ident<SecurityGroup>, GroupDefinition> uniqueNames = mapForIteration();
-    for (Group group : policy.getGroups()) {
+    for (GroupBlock group : policy.getGroups()) {
       // Make a copy of the GroupDefinition that prepends the property being inherited from
       for (GroupDefinition def : group.getDefinitions()) {
         GroupDefinition inherited = new GroupDefinition(def, inheritFrom);
@@ -360,7 +360,7 @@ public class IdentResolver extends PolicyLocationVisitor {
 
   void resolveSecurityAction(Ident<SecurityAction> x) {
     // Are we declaring a verb?
-    Verb currentVerb = currentLocation(Verb.class);
+    ActionDefinition currentVerb = currentLocation(ActionDefinition.class);
     if (currentVerb != null) {
       SecurityAction a = SecurityAction.of(
           currentVerb.getName().getSimpleName(), x.getSimpleName());
@@ -371,7 +371,7 @@ public class IdentResolver extends PolicyLocationVisitor {
     // Otherwise, it must be a verb reference
     if (x.isCompound()) {
       // *.*, Foo.*, or Foo.bar
-      Ident<Verb> verbIdent = x.getCompoundName().get(0).cast(Verb.class);
+      Ident<ActionDefinition> verbIdent = x.getCompoundName().get(0).cast(ActionDefinition.class);
 
       if (verbIdent.isWildcard()) {
         // Parser shouldn't allow *.foo, so we can ignore the second part
@@ -379,7 +379,7 @@ public class IdentResolver extends PolicyLocationVisitor {
         return;
       }
 
-      Verb verb = scope().get(verbIdent);
+      ActionDefinition verb = scope().get(verbIdent);
       if (verb == null) {
         error("Unknown verb: " + verbIdent.getSimpleName());
         return;
@@ -413,7 +413,7 @@ public class IdentResolver extends PolicyLocationVisitor {
       String simpleName = x.getSimpleName();
 
       Ident<SecurityAction> match = null;
-      for (Verb v : scope().get(Verb.class)) {
+      for (ActionDefinition v : scope().get(ActionDefinition.class)) {
         for (Ident<SecurityAction> ident : v.getActions()) {
           if (simpleName.equals(ident.getSimpleName())) {
             if (match == null) {

@@ -43,17 +43,17 @@ import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.TypeSource;
 import com.getperka.flatpack.ext.NoPack;
-import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroups;
-import com.getperka.flatpack.ext.SecurityPolicy;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
 import com.getperka.flatpack.inject.PackScope;
 import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.PrincipalMapper;
 import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.SecurityAction;
+import com.getperka.flatpack.security.SecurityGroups;
+import com.getperka.flatpack.security.SecurityPolicy;
+import com.getperka.flatpack.security.SecurityTarget;
 
 /**
  * Test data-driven access policies.

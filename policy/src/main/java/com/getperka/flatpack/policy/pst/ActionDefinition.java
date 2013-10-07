@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,13 +20,19 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
+
 import java.util.List;
 
-import com.getperka.flatpack.ext.SecurityAction;
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+import com.getperka.flatpack.security.SecurityAction;
 
-public class Verb extends PolicyNode implements HasName<Verb> {
-  private List<Ident<SecurityAction>> actions = list();
-  private Ident<Verb> name;
+/**
+ * Used to define {@link SecurityAction} instances.
+ */
+public class ActionDefinition extends PolicyNode implements HasName<ActionDefinition> {
+  private List<Ident<SecurityAction>> actions = listForAny();
+  private Ident<ActionDefinition> name;
 
   @Override
   public void accept(PolicyVisitor v) {
@@ -41,7 +48,7 @@ public class Verb extends PolicyNode implements HasName<Verb> {
   }
 
   @Override
-  public Ident<Verb> getName() {
+  public Ident<ActionDefinition> getName() {
     return name;
   }
 
@@ -50,7 +57,7 @@ public class Verb extends PolicyNode implements HasName<Verb> {
   }
 
   @Override
-  public void setName(Ident<Verb> name) {
+  public void setName(Ident<ActionDefinition> name) {
     this.name = name;
   }
 

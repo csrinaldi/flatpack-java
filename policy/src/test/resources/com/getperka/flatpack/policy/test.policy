@@ -4,11 +4,11 @@
  */
 
 // Implicit definition
-verb crudOperation = create, read, update, delete;
+action crudOperation = create, read, update, delete;
 
 // Default values if a type contains no allow block
 allow {
-  // Matches all verbs, even custom ones
+  // Matches all actions, even custom ones
   internalUser to *;
 }
 
@@ -65,7 +65,7 @@ package arbitraryName {
     }
   
     // Allows other actions to be defined
-    verb validatorActions = redeemCoupon, validate;
+    action validatorActions = redeemCoupon, validate;
   
     allow inherit merchant {
       clerk to read, validatorActions.*;

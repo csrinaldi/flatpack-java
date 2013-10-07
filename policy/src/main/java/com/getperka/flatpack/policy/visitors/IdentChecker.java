@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.policy.pst.Allow;
-import com.getperka.flatpack.policy.pst.Group;
+import com.getperka.flatpack.policy.pst.AllowBlock;
+import com.getperka.flatpack.policy.pst.GroupBlock;
 import com.getperka.flatpack.policy.pst.Ident;
 import com.getperka.flatpack.policy.pst.PropertyList;
 
@@ -46,14 +46,14 @@ public class IdentChecker extends PolicyLocationVisitor {
   IdentChecker() {}
 
   @Override
-  public void endVisit(Allow x) {
+  public void endVisit(AllowBlock x) {
     if (x.getInheritFrom() != null) {
       error("Unexpanded inherit");
     }
   }
 
   @Override
-  public void endVisit(Group x) {
+  public void endVisit(GroupBlock x) {
     if (x.getInheritFrom() != null) {
       error("Unexpanded inherit");
     }

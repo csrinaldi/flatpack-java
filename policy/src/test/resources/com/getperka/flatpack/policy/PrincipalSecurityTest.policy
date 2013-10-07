@@ -1,4 +1,4 @@
-verb crudOperation = create, read, update, delete;
+action crudOperation = create, read, update, delete;
 
 allow {
   global none;

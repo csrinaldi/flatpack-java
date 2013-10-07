@@ -31,14 +31,14 @@ import org.parboiled.parserunners.ReportingParseRunner;
 import org.parboiled.support.ParsingResult;
 import org.slf4j.Logger;
 
-import com.getperka.flatpack.ext.GroupPermissions;
-import com.getperka.flatpack.ext.SecurityGroups;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.inject.FlatPackLogger;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.visitors.IdentChecker;
 import com.getperka.flatpack.policy.visitors.IdentResolver;
 import com.getperka.flatpack.policy.visitors.PermissionsExtractor;
+import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.security.SecurityGroups;
+import com.getperka.flatpack.security.SecurityTarget;
 
 /**
  * Inner implementation of the static policy. This class does not provide any memoization of results

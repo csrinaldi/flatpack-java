@@ -17,22 +17,23 @@
  * limitations under the License.
  * #L%
  */
-package com.getperka.flatpack.inject;
+package com.getperka.flatpack.security;
 
 import java.security.Principal;
 import java.util.Collections;
 import java.util.List;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.SecurityTarget;
 
 /**
  * A trivial implementation of {@link PrincipalMapper} that allows access to all objects.
  */
-class PermissivePrincipalMapper implements PrincipalMapper {
+public class PermissivePrincipalMapper implements PrincipalMapper {
 
-  PermissivePrincipalMapper() {}
+  /**
+   * Requires injection.
+   */
+  protected PermissivePrincipalMapper() {}
 
   @Override
   public List<String> getGlobalSecurityGroups(Principal principal) {

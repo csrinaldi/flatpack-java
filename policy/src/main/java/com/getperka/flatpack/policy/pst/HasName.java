@@ -1,4 +1,5 @@
 package com.getperka.flatpack.policy.pst;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -19,6 +20,11 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+/**
+ * Indicates that the {@link PolicyNode} has a user-defined name.
+ * 
+ * @param <R> the referent type
+ */
 public interface HasName<R> {
   Ident<R> getName();
 

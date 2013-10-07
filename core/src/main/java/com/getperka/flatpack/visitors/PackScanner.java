@@ -30,11 +30,11 @@ import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
-import com.getperka.flatpack.security.PackSecurity;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.SecurityTarget;
 
 /**
  * Performs an initial pass over the object graph to be serialized to populate the
@@ -45,7 +45,7 @@ public class PackScanner extends FlatPackVisitor {
   @Inject
   private SerializationContext context;
   @Inject
-  private PackSecurity security;
+  private MemoizingSecurity security;
   private Deque<HasUuid> stack = new ArrayDeque<HasUuid>();
 
   /**

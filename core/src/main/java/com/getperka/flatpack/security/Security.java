@@ -1,4 +1,5 @@
 package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -21,9 +22,9 @@ package com.getperka.flatpack.security;
 
 import java.security.Principal;
 
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityTarget;
-
+/**
+ * An injectable interface that provides access to security policy decisions.
+ */
 public interface Security {
 
   /**

@@ -1,4 +1,4 @@
-package com.getperka.flatpack.ext;
+package com.getperka.flatpack.security;
 
 /*
  * #%L
@@ -20,13 +20,14 @@ package com.getperka.flatpack.ext;
  * #L%
  */
 
-import static com.getperka.flatpack.ext.SecurityTarget.Kind.ENTITY;
-import static com.getperka.flatpack.ext.SecurityTarget.Kind.ENTITY_PROPERTY;
-import static com.getperka.flatpack.ext.SecurityTarget.Kind.GLOBAL;
-import static com.getperka.flatpack.ext.SecurityTarget.Kind.PROPERTY;
-import static com.getperka.flatpack.ext.SecurityTarget.Kind.TYPE;
+import static com.getperka.flatpack.security.SecurityTarget.Kind.ENTITY;
+import static com.getperka.flatpack.security.SecurityTarget.Kind.ENTITY_PROPERTY;
+import static com.getperka.flatpack.security.SecurityTarget.Kind.GLOBAL;
+import static com.getperka.flatpack.security.SecurityTarget.Kind.PROPERTY;
+import static com.getperka.flatpack.security.SecurityTarget.Kind.TYPE;
 
 import com.getperka.flatpack.HasUuid;
+import com.getperka.flatpack.ext.Property;
 
 /**
  * A carrier object for the various kinds of things that are the target of {@link SecurityAction}.

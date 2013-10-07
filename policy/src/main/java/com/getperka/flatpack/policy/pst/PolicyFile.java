@@ -1,5 +1,7 @@
 package com.getperka.flatpack.policy.pst;
 
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+
 /*
  * #%L
  * FlatPack Security Policy
@@ -20,6 +22,9 @@ package com.getperka.flatpack.policy.pst;
  * #L%
  */
 
+/**
+ * The root node for interpreting a policy file.
+ */
 public class PolicyFile extends PolicyBlock {
   @Override
   public void accept(PolicyVisitor v) {

@@ -30,11 +30,11 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.GroupPermissions;
-import com.getperka.flatpack.ext.SecurityGroups;
-import com.getperka.flatpack.ext.SecurityPolicy;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.security.SecurityGroups;
+import com.getperka.flatpack.security.SecurityPolicy;
+import com.getperka.flatpack.security.SecurityTarget;
 
 /**
  * A {@link SecurityPolicy} implementation that uses policy rules defined in an external file.

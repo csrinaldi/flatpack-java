@@ -1,4 +1,5 @@
 package com.getperka.flatpack.security;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -21,25 +22,18 @@ package com.getperka.flatpack.security;
 
 import java.security.Principal;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.getperka.flatpack.ext.GroupPermissions;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroups;
-import com.getperka.flatpack.ext.SecurityPolicy;
-import com.getperka.flatpack.ext.SecurityTarget;
-
 /**
- * A no-op implementation of {@link Security} that allows all actions.
+ * A no-op implementation of {@link Security} and {@link SecurityPolicy} that allows all actions.
  */
 @Singleton
-public class NoSecurity implements Security, SecurityPolicy {
+public final class NoSecurity implements Security, SecurityPolicy {
 
-  @Inject
-  private SecurityGroups securityGroups;
-
-  NoSecurity() {}
+  /**
+   * Requires injection.
+   */
+  protected NoSecurity() {}
 
   @Override
   public GroupPermissions getPermissions(SecurityTarget target) {

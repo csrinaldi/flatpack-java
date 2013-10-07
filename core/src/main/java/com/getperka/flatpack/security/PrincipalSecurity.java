@@ -29,18 +29,14 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.ext.GroupPermissions;
-import com.getperka.flatpack.ext.PrincipalMapper;
 import com.getperka.flatpack.ext.PropertyPath;
 import com.getperka.flatpack.ext.PropertyPath.Receiver;
-import com.getperka.flatpack.ext.SecurityAction;
-import com.getperka.flatpack.ext.SecurityGroup;
-import com.getperka.flatpack.ext.SecurityGroups;
-import com.getperka.flatpack.ext.SecurityPolicy;
-import com.getperka.flatpack.ext.SecurityTarget;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
 
+/**
+ * Standard implementation of {@link Security}.
+ */
 public class PrincipalSecurity implements Security {
   static class Result {
     final boolean decision;
@@ -69,6 +65,23 @@ public class PrincipalSecurity implements Security {
    */
   protected PrincipalSecurity() {}
 
+  /**
+   * Given a {@link Principal}, {@link SecurityTarget}, and {@link SecurityAction}, the following
+   * permission check is performed:
+   * <ul>
+   * <li>Determine the {@link GroupPermissions} that govern access to {@code target} by querying the
+   * {@link SecurityPolicy}.
+   * <li>Iterate over each {@link SecurityGroup} that may grant the desired action.
+   * <li>If the group is a global group, query the {@link PrincipalMapper} for the global group
+   * names that {@code principal} is a member of and match if the group's name is in the returned
+   * list of names.
+   * <li>For an entity-relative group, evaluate each property path associated with the
+   * {@link SecurityGroup}. The resulting graph entities are given to
+   * {@link PrincipalMapper#getPrincipals(HasUuid)} to determine which, if any, can be represented
+   * by a {@link Principal}. The rule will match if the current principal is a member of the mapped
+   * principals.
+   * </ul>
+   */
   @Override
   public boolean may(final Principal principal, SecurityTarget target, SecurityAction op) {
     Result toReturn = mayImpl(principal, target, op);

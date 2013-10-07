@@ -1,4 +1,6 @@
 package com.getperka.flatpack.policy.pst;
+
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
 /*
  * #%L
  * FlatPack Security Policy

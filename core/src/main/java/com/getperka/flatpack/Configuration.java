@@ -25,8 +25,8 @@ import java.util.Set;
 
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.SecurityPolicy;
+import com.getperka.flatpack.security.PrincipalMapper;
+import com.getperka.flatpack.security.SecurityPolicy;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**

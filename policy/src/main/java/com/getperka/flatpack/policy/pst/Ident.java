@@ -27,9 +27,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 
+import com.getperka.flatpack.policy.visitors.PolicyVisitor;
+
 /**
  * An ident is a (possibly-complex) name that ultimately refers to some in-memory object. To avoid
- * the need to have various {@code Map<String, Object>} scattered throughout the code, the
+ * the need to have various {@code Map<Ident, Object>} scattered throughout the code, the
  * {@link #getReferent() referent} may be stored in the Ident itself. Idents are strongly-typed,
  * however the {@link #cast(Class)} method may be used to adjust the {@code R} parameter.
  * 

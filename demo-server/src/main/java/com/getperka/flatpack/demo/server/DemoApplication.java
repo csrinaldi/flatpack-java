@@ -32,11 +32,11 @@ import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.PersistenceMapper;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.SecurityPolicy;
 import com.getperka.flatpack.jersey.FlatPackProvider;
 import com.getperka.flatpack.jersey.FlatPackResolver;
 import com.getperka.flatpack.policy.StaticPolicy;
 import com.getperka.flatpack.search.SearchTypeSource;
+import com.getperka.flatpack.security.SecurityPolicy;
 import com.getperka.flatpack.util.FlatPackStreams;
 
 /**
