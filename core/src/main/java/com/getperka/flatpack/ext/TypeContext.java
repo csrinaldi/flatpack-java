@@ -292,6 +292,10 @@ public class TypeContext {
   }
 
   private void extractOneEntity(EntityDescription d, Class<? extends HasUuid> clazz) {
+    // Set identifying information before there's any chance of an escape
+    d.setEntityType(clazz);
+    d.setTypeName(getTypeName(clazz));
+
     EntityDescription supertype;
     List<Property> properties = listForAny();
     if (!clazz.isInterface() && HasUuid.class.isAssignableFrom(clazz.getSuperclass())) {
@@ -302,11 +306,9 @@ public class TypeContext {
       supertype = null;
     }
 
-    d.setEntityType(clazz);
     d.setPersistent(persistenceMapper.canPersist(clazz));
     d.setProperties(Collections.unmodifiableList(properties));
     d.setSupertype(supertype);
-    d.setTypeName(getTypeName(clazz));
 
     // Link implied properties after all other properties have been stubbed out
     Map<Property.Builder, String> impliedPropertiesToLink = FlatPackCollections.mapForIteration();

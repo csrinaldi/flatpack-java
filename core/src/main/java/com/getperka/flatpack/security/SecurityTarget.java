@@ -80,7 +80,6 @@ public class SecurityTarget {
   }
 
   private final HasUuid entity;
-
   private final Class<? extends HasUuid> entityType;
   private final int hashCode;
   private final Kind kind;
@@ -131,6 +130,27 @@ public class SecurityTarget {
   @Override
   public int hashCode() {
     return hashCode;
+  }
+
+  /**
+   * Returns {@code true} if {@code o} is described by the current target.
+   */
+  public boolean matches(Object o) {
+    switch (kind) {
+      case ENTITY:
+        // Object comparison intentional, want to talk about the same object
+        return getEntity() == o;
+      case ENTITY_PROPERTY:
+      case PROPERTY:
+        return getProperty().equals(o);
+      case GLOBAL:
+        // All objects match the global security domain
+        return true;
+      case TYPE:
+        return getEntityType().isInstance(o);
+      default:
+        throw new UnsupportedOperationException(kind.name());
+    }
   }
 
   @Override
