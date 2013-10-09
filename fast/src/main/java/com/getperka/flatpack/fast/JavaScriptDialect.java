@@ -137,9 +137,6 @@ public class JavaScriptDialect implements Dialect {
       addEntity(allEntities, requires, entity);
     }
 
-    // Ensure that the "real" implementations are used
-    baseHasUuid = allEntities.remove("baseHasUuid");
-    allEntities.remove("hasUuid");
     entityRequires = new ArrayList<String>(requires);
     Collections.sort(entityRequires);
 
@@ -180,7 +177,11 @@ public class JavaScriptDialect implements Dialect {
     if (allEntities.containsKey(typeName)) {
       // Already processed
       return;
-    } else if ("baseHasUuid".equals(typeName) || "hasUuid".equals(typeName)) {
+    } else if ("baseHasUuid".equals(typeName)) {
+      // Ensure that the "real" implementations are used
+      baseHasUuid = entity;
+      return;
+    } else if ("hasUuid".equals(typeName)) {
       // Ensure that the "real" implementations are used
       return;
     }
