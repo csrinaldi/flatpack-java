@@ -21,8 +21,8 @@ package com.getperka.flatpack.security;
  */
 
 import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
+import static com.getperka.flatpack.util.FlatPackTypes.decapitalize;
 
-import java.beans.Introspector;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
@@ -41,7 +41,7 @@ public class SecurityAction extends BaseHasUuid {
 
   public static SecurityAction of(Enum<?> e) {
     String action = e.name().toLowerCase();
-    String type = Introspector.decapitalize(e.getDeclaringClass().getSimpleName());
+    String type = decapitalize(e.getDeclaringClass().getSimpleName());
     return new SecurityAction(type, action);
   }
 
@@ -56,7 +56,7 @@ public class SecurityAction extends BaseHasUuid {
 
   private SecurityAction(String type, String action) {
     this.action = action.toLowerCase();
-    this.type = Introspector.decapitalize(type);
+    this.type = decapitalize(type);
   }
 
   public String getAction() {
