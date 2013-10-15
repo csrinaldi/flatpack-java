@@ -82,6 +82,10 @@ public class PackScope implements Scope {
     allData.remove();
   }
 
+  public boolean isEntered() {
+    return allData.get() != null;
+  }
+
   @Override
   public <T> Provider<T> scope(final Key<T> key, final Provider<T> unscoped) {
     return cast(new Provider<Object>() {

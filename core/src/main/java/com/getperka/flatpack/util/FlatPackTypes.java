@@ -19,6 +19,8 @@
  */
 package com.getperka.flatpack.util;
 
+import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
@@ -49,6 +51,19 @@ public class FlatPackTypes {
           int.class, long.class, short.class, void.class));
 
   public static final Charset UTF8 = Charset.forName("UTF8");
+
+  private static final Map<Class<?>, Object> DEFAULT_VALUES = mapForLookup();
+  static {
+    DEFAULT_VALUES.put(boolean.class, false);
+    DEFAULT_VALUES.put(byte.class, (byte) 0);
+    DEFAULT_VALUES.put(char.class, (char) 0);
+    DEFAULT_VALUES.put(double.class, (double) 0);
+    DEFAULT_VALUES.put(float.class, (float) 0);
+    DEFAULT_VALUES.put(int.class, 0);
+    DEFAULT_VALUES.put(long.class, (long) 0);
+    DEFAULT_VALUES.put(short.class, (short) 0);
+    DEFAULT_VALUES.put(void.class, null);
+  }
 
   public static Class<?> box(Class<?> primitive) {
     assert PRIMITIVE_TYPES.contains(primitive);
@@ -131,6 +146,13 @@ public class FlatPackTypes {
       toReturn.add(type);
     }
     return toReturn;
+  }
+
+  /**
+   * Returns the default, uninitialized value for a given type, including primitives.
+   */
+  public static Object getDefaultValue(Class<?> clazz) {
+    return DEFAULT_VALUES.get(clazz);
   }
 
   /**

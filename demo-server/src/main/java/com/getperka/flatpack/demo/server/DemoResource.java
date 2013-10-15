@@ -79,7 +79,9 @@ public class DemoResource {
     FlatPack flatpack = providers.getContextResolver(FlatPack.class, MediaType.WILDCARD_TYPE)
         .getContext(FlatPack.class);
     ApiDescriber api = new ApiDescriber(flatpack, Arrays.asList(DemoResource.class.getMethods()));
-    return api.describe();
+    ApiDescription description = api.describe();
+    description.setApiName("Demo");
+    return description;
   }
 
   /**

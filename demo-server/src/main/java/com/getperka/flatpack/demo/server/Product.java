@@ -21,8 +21,6 @@ package com.getperka.flatpack.demo.server;
 
 import java.math.BigDecimal;
 
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -38,36 +36,30 @@ public class Product extends BaseHasUuid {
   private String notes;
   private BigDecimal price;
 
-  @PermitAll
   @NotNull
   @Size(min = 1)
   public String getName() {
     return name;
   }
 
-  @RolesAllowed(Roles.ADMIN)
   public String getNotes() {
     return notes;
   }
 
-  @PermitAll
   @Min(0)
   @NotNull
   public BigDecimal getPrice() {
     return price;
   }
 
-  @RolesAllowed(Roles.ADMIN)
   public void setName(String name) {
     this.name = name;
   }
 
-  // If a setter lacks any security settings, the values applied to the getter will be used
   public void setNotes(String notes) {
     this.notes = notes;
   }
 
-  @RolesAllowed(Roles.ADMIN)
   public void setPrice(BigDecimal price) {
     this.price = price;
   }

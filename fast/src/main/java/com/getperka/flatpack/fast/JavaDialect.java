@@ -44,9 +44,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stringtemplate.v4.AttributeRenderer;
@@ -63,7 +60,6 @@ import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.Embedded;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.FlatPackEntity;
-import com.getperka.flatpack.InheritPrincipal;
 import com.getperka.flatpack.JsonTypeName;
 import com.getperka.flatpack.PersistenceAware;
 import com.getperka.flatpack.PostUnpack;
@@ -75,13 +71,13 @@ import com.getperka.flatpack.client.FlatPackRequest;
 import com.getperka.flatpack.client.Request;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
 import com.getperka.flatpack.client.impl.ApiBase;
 import com.getperka.flatpack.client.impl.BasePersistenceAware;
 import com.getperka.flatpack.client.impl.ConnectionRequestBase;
 import com.getperka.flatpack.client.impl.FlatPackRequestBase;
 import com.getperka.flatpack.collections.DirtyFlag;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.util.FlatPackCollections;
@@ -121,8 +117,8 @@ public class JavaDialect implements Dialect {
       ApiBase.class, Arrays.class, ConnectionRequestBase.class, Collections.class, DirtyFlag.class,
       Embedded.class, FlatPack.class, FlatPackCollections.class, FlatPackEntity.class,
       FlatPackRequest.class, FlatPackRequestBase.class, FlatPackTypes.class, HashSet.class,
-      HttpURLConnection.class, InheritPrincipal.class, IOException.class, JsonTypeName.class,
-      PermitAll.class, PersistenceAware.class, PostUnpack.class, Request.class, RolesAllowed.class,
+      HttpURLConnection.class, IOException.class, JsonTypeName.class,
+      PersistenceAware.class, PostUnpack.class, Request.class,
       Set.class, SparseCollection.class, SuppressDefaultValue.class, TypeReference.class,
       TypeSource.class);
 
@@ -226,7 +222,7 @@ public class JavaDialect implements Dialect {
       if ("uuid".equals(prop.getName())) {
         // Crop the UUID property
         it.remove();
-      } else if (!prop.getEnclosingTypeName().equals(typeName)) {
+      } else if (!prop.getEnclosingType().equals(entity)) {
         // Remove properties not declared in the current type
         it.remove();
       }
@@ -449,13 +445,9 @@ public class JavaDialect implements Dialect {
         Property p = (Property) o;
         if ("getterName".equals(propertyName)) {
           return upcase(p.getName());
-        } else if ("getterPermitAll".equals(propertyName)) {
-          return Collections.singleton("*").equals(p.getGetterRoleNames());
         } else if ("needsImplied".equals(propertyName)) {
           // Returns true if the property has @Implies / @OneToMany and is a list
           return p.getImpliedProperty() != null && p.getType().getListElement() != null;
-        } else if ("setterPermitAll".equals(propertyName)) {
-          return Collections.singleton("*").equals(p.getSetterRoleNames());
         }
         return super.getProperty(interp, self, o, property, propertyName);
       }

@@ -1,4 +1,5 @@
 package com.getperka.flatpack.visitors;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -85,9 +86,6 @@ public class ListContext<T> extends VisitorContext<T> implements Acceptor<List<T
 
   @Override
   public void remove() {
-    if (didRemove()) {
-      return;
-    }
     ensure(canRemove());
     markRemoved();
     iterator.remove();

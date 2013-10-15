@@ -19,6 +19,9 @@
  */
 package com.getperka.flatpack.demo.server;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -31,7 +34,10 @@ import com.getperka.flatpack.PersistenceMapper;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.jersey.FlatPackProvider;
 import com.getperka.flatpack.jersey.FlatPackResolver;
+import com.getperka.flatpack.policy.StaticPolicy;
 import com.getperka.flatpack.search.SearchTypeSource;
+import com.getperka.flatpack.security.SecurityPolicy;
+import com.getperka.flatpack.util.FlatPackStreams;
 
 /**
  * A trivial JAX-RS application that registers a single resource and configures the FlatPack
@@ -75,6 +81,14 @@ public class DemoApplication extends Application {
 
   @Override
   public Set<Object> getSingletons() {
+    SecurityPolicy securityPolicy;
+    try {
+      securityPolicy = new StaticPolicy(FlatPackStreams.read(
+          new InputStreamReader(getClass().getResourceAsStream("DemoServer.policy"),
+              Charset.forName("UTF8"))));
+    } catch (IOException e) {
+      throw new RuntimeException("Could not load security policy file", e);
+    }
     Set<Object> toReturn = new LinkedHashSet<Object>();
     // Create the FlatPack configuration. This object adapts FlatPack behaviors to the local system.
     Configuration configuration = new Configuration()
@@ -96,6 +110,7 @@ public class DemoApplication extends Application {
          * scans the classpath for HasUuid subtypes.
          */
         .addTypeSource(new SearchTypeSource("com.getperka.flatpack.demo.server"))
+        .withSecurityPolicy(securityPolicy)
         .withPrettyPrint(true)
         /*
          * A PrincipalMapper is optional and, if present, enables the use principal-based property
@@ -104,13 +119,6 @@ public class DemoApplication extends Application {
          * properties that have an @InheritPrincipal chain back to the Customer.
          */
         .withPrincipalMapper(new DemoPrincipalMapper())
-        /*
-         * A RoleMapper enables role-based property access, which restricts property getters and
-         * setters based on @PermitAll / @DenyAll / @RolesAllowed annotations. Beyond just simple
-         * security measures, roles can be used to create sets of properties to reduce payload sizes
-         * (e.g. "CustomerSummary" vs. "CustomerDetail").
-         */
-        .withRoleMapper(new DemoRoleMapper())
         .withVerbose(true);
     // The FlatPackResolver makes a FlatPack instance available through the Resources interface
     toReturn.add(new FlatPackResolver(configuration));

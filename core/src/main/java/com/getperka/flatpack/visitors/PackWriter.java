@@ -20,6 +20,8 @@ package com.getperka.flatpack.visitors;
  * #L%
  */
 
+import static com.getperka.flatpack.security.CrudOperation.READ_ACTION;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -42,11 +44,12 @@ import com.getperka.flatpack.Visitors;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.stream.JsonWriter;
 
@@ -70,7 +73,7 @@ public class PackWriter extends FlatPackVisitor {
   private PersistenceMapper persistenceMapper;
   private List<HasUuid> persistent = FlatPackCollections.listForAny();
   @Inject
-  private PropertySecurity security;
+  private MemoizingSecurity security;
   private final Deque<PackWriter.State> stack = new ArrayDeque<PackWriter.State>();
   @Inject
   private TypeContext typeContext;
@@ -89,8 +92,8 @@ public class PackWriter extends FlatPackVisitor {
 
   @Override
   public <Q extends HasUuid> void endVisit(Q entity, EntityCodex<Q> codex, VisitorContext<Q> ctx) {
-    stack.pop();
-    if (stack.isEmpty()) {
+    boolean wasEmitted = stack.pop().entity != null;
+    if (wasEmitted && stack.isEmpty()) {
       try {
         context.getWriter().endObject();
       } catch (IOException e) {
@@ -112,7 +115,7 @@ public class PackWriter extends FlatPackVisitor {
       json.beginObject();
       for (Map.Entry<Class<? extends HasUuid>, List<HasUuid>> entry : collate(
           context.getEntities()).entrySet()) {
-        json.name(typeContext.getPayloadName(entry.getKey()));
+        json.name(typeContext.describe(entry.getKey()).getTypeName());
         json.beginArray();
         for (HasUuid value : entry.getValue()) {
           if (persistenceMapper.isPersisted(value)) {
@@ -195,7 +198,8 @@ public class PackWriter extends FlatPackVisitor {
       return false;
     }
     // Check access
-    if (!security.mayGet(prop, context.getPrincipal(), state.entity)) {
+    if (!security.may(context.getPrincipal(),
+        SecurityTarget.of(stack.peek().entity, prop), READ_ACTION)) {
       return false;
     }
     // Ignore OneToMany type properties unless specifically requested
@@ -219,6 +223,12 @@ public class PackWriter extends FlatPackVisitor {
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
     context.pushPath("." + entity.getUuid());
     PackWriter.State state = new State();
+
+    if (!security.may(context.getPrincipal(), SecurityTarget.of(entity), READ_ACTION)) {
+      stack.push(state);
+      return false;
+    }
+    // Null entity used as a hint in endVisit
     state.entity = entity;
 
     if (entity instanceof PersistenceAware) {

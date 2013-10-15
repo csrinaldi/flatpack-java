@@ -23,8 +23,6 @@ import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.ext.Type;
 
@@ -45,22 +43,18 @@ public class ParameterDescription extends BaseHasUuid {
 
   ParameterDescription() {}
 
-  @PermitAll
   public String getDocString() {
     return docString;
   }
 
-  @PermitAll
   public EndpointDescription getEndpoint() {
     return endpoint;
   }
 
-  @PermitAll
   public String getName() {
     return name;
   }
 
-  @PermitAll
   public Type getType() {
     return type;
   }

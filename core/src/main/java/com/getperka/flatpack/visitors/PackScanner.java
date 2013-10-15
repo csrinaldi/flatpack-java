@@ -19,6 +19,8 @@ package com.getperka.flatpack.visitors;
  * limitations under the License.
  * #L%
  */
+import static com.getperka.flatpack.security.CrudOperation.READ_ACTION;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -28,10 +30,11 @@ import com.getperka.flatpack.FlatPackVisitor;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.SecurityTarget;
 
 /**
  * Performs an initial pass over the object graph to be serialized to populate the
@@ -42,7 +45,7 @@ public class PackScanner extends FlatPackVisitor {
   @Inject
   private SerializationContext context;
   @Inject
-  private PropertySecurity security;
+  private MemoizingSecurity security;
   private Deque<HasUuid> stack = new ArrayDeque<HasUuid>();
 
   /**
@@ -57,7 +60,7 @@ public class PackScanner extends FlatPackVisitor {
 
   @Override
   public <T extends HasUuid> void endVisit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
-    if (entity.equals(stack.peek())) {
+    if (mayRead(entity)) {
       stack.pop();
       context.popPath();
     }
@@ -66,7 +69,8 @@ public class PackScanner extends FlatPackVisitor {
   @Override
   public boolean visit(Property property, VisitorContext<Property> ctx) {
     context.pushPath("." + property.getName());
-    if (!security.mayGet(property, context.getPrincipal(), stack.peek())) {
+    if (!security.may(context.getPrincipal(),
+        SecurityTarget.of(stack.peek(), property), READ_ACTION)) {
       return false;
     }
     if (property.isEmbedded()) {
@@ -80,9 +84,15 @@ public class PackScanner extends FlatPackVisitor {
 
   @Override
   public <T extends HasUuid> boolean visit(T entity, EntityCodex<T> codex, VisitorContext<T> ctx) {
-    // TODO: EntitySecurity.mayRead() ?
+    if (!mayRead(entity)) {
+      return false;
+    }
     context.pushPath("." + entity.getUuid());
     stack.push(entity);
     return context.add(entity);
+  }
+
+  protected boolean mayRead(HasUuid entity) {
+    return security.may(context.getPrincipal(), SecurityTarget.of(entity), READ_ACTION);
   }
 }

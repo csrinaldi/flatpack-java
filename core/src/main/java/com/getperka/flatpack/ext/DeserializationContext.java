@@ -19,6 +19,8 @@
  */
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +30,8 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.PrincipalMapper;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -35,13 +39,20 @@ import com.getperka.flatpack.util.FlatPackCollections;
  */
 @PackScoped
 public class DeserializationContext extends BaseContext {
-  private final Map<UUID, HasUuid> entities = FlatPackCollections.mapForLookup();
-  @Inject
-  private EntitySecurity entitySecurity;
-  private final Map<HasUuid, Set<Property>> modified = FlatPackCollections.mapForLookup();
+  public enum EntitySource {
+    CREATED,
+    RESOLVED,
+    UNKNOWN;
+  }
+
+  private final Map<UUID, HasUuid> entities = mapForLookup();
+  private final Map<HasUuid, Set<Property>> modified = mapForLookup();
   @Inject
   private PrincipalMapper principalMapper;
-  private final Set<UUID> resolved = FlatPackCollections.setForLookup();
+  private final Map<UUID, EntitySource> sources = mapForLookup();
+  @Inject
+  private MemoizingSecurity security;
+
   @Inject
   private TypeContext typeContext;
 
@@ -62,25 +73,6 @@ public class DeserializationContext extends BaseContext {
   }
 
   /**
-   * Apply a principal-based security check for entities that were resolved from the backing store.
-   * This code will follow one or more property paths for the entity and resolve the object at the
-   * end of the path into one or more principals. The test passes if the current principal is in the
-   * list. Otherwise, a warning is added to the context.
-   */
-  public boolean checkAccess(HasUuid object) {
-    // Allow newly-instantiated objects
-    if (!wasResolved(object)) {
-      return true;
-    }
-    if (entitySecurity.mayEdit(getPrincipal(), object)) {
-      return true;
-    }
-    addWarning(object, "User %s does not have permission to edit this %s", getPrincipal(),
-        typeContext.getPayloadName(object.getClass()));
-    return false;
-  }
-
-  /**
    * Retrieve an entity previously provided to {@link #putEntity}.
    * 
    * @return the requested entity or {@code null} if an entity with that UUID has not been provided
@@ -88,6 +80,11 @@ public class DeserializationContext extends BaseContext {
    */
   public HasUuid getEntity(UUID uuid) {
     return entities.get(uuid);
+  }
+
+  public EntitySource getEntitySource(HasUuid entity) {
+    EntitySource toReturn = sources.get(entity.getUuid());
+    return toReturn == null ? EntitySource.UNKNOWN : toReturn;
   }
 
   /**
@@ -103,19 +100,11 @@ public class DeserializationContext extends BaseContext {
    * 
    * @param uuid the UUID to assign to the entity
    * @param entity the entity to store in the context
-   * @param resolved {@code true} if the instance was retrieved from an {@link EntityResolver}
+   * @param source an indication of how the entity instance was obtained
    */
-  public void putEntity(UUID uuid, HasUuid entity, boolean resolved) {
+  public void putEntity(UUID uuid, HasUuid entity, EntitySource source) {
     entities.put(uuid, entity);
-    if (resolved) {
-      this.resolved.add(uuid);
-    }
+    sources.put(uuid, source);
   }
 
-  /**
-   * Returns {@code true} if the entity was obtained via an {@link EntityResolver}.
-   */
-  public boolean wasResolved(HasUuid entity) {
-    return resolved.contains(entity.getUuid());
-  }
 }

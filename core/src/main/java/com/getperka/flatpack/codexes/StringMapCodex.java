@@ -32,6 +32,7 @@ import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.UpdatingCodex;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
@@ -45,7 +46,7 @@ import com.google.inject.TypeLiteral;
  * 
  * @param <V> the map value type
  */
-public class StringMapCodex<K, V> extends Codex<Map<K, V>> {
+public class StringMapCodex<K, V> extends UpdatingCodex<Map<K, V>> {
   private static class StealingSerializationContext extends DelegatingSerializationContext {
     private JsonTreeWriter writer;
 
@@ -113,6 +114,13 @@ public class StringMapCodex<K, V> extends Codex<Map<K, V>> {
       }
     }
     return toReturn;
+  }
+
+  @Override
+  public Map<K, V> replacementValueNotNull(Map<K, V> oldValue, Map<K, V> newValue) {
+    oldValue.clear();
+    oldValue.putAll(newValue);
+    return oldValue;
   }
 
   @Override

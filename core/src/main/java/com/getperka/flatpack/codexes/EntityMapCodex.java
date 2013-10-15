@@ -32,6 +32,7 @@ import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.UpdatingCodex;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.google.gson.JsonElement;
@@ -42,7 +43,7 @@ import com.google.inject.TypeLiteral;
 /**
  * Provides a mapping of entities to arbitrary values.
  */
-public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
+public class EntityMapCodex<K extends HasUuid, V> extends UpdatingCodex<Map<K, V>> {
   private EntityCodex<K> keyCodex;
   private Codex<V> valueCodex;
 
@@ -94,6 +95,13 @@ public class EntityMapCodex<K extends HasUuid, V> extends Codex<Map<K, V>> {
       }
     }
     return toReturn;
+  }
+
+  @Override
+  public Map<K, V> replacementValueNotNull(Map<K, V> oldValue, Map<K, V> newValue) {
+    oldValue.clear();
+    oldValue.putAll(newValue);
+    return oldValue;
   }
 
   @Override

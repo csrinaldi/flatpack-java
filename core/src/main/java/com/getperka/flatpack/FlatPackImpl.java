@@ -29,6 +29,7 @@ import com.getperka.flatpack.codexes.ValueCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.HasInjector;
+import com.getperka.flatpack.security.Security;
 import com.google.inject.Injector;
 
 /**
@@ -40,6 +41,8 @@ class FlatPackImpl extends FlatPack implements HasInjector {
   private Injector injector;
   @Inject
   private Packer packer;
+  @Inject
+  private Security security;
   @Inject
   private TypeContext types;
   @Inject
@@ -60,6 +63,11 @@ class FlatPackImpl extends FlatPack implements HasInjector {
   }
 
   @Override
+  public Security getSecurity() {
+    return security;
+  }
+
+  @Override
   public TypeContext getTypeContext() {
     return types;
   }
@@ -69,6 +77,7 @@ class FlatPackImpl extends FlatPack implements HasInjector {
     return unpacker;
   }
 
+  @Override
   public Visitors getVisitors() {
     return visitors;
   }
