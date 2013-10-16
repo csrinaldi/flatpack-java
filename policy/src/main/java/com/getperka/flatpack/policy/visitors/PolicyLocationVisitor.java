@@ -26,6 +26,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 
+import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 
 /**
@@ -49,12 +50,19 @@ public class PolicyLocationVisitor extends PolicyVisitor {
     }
   }
 
+  /**
+   * Returns the nodes that the currently-visited node is contained by. The first element in the
+   * list will be the most immediately-enclosing node, ending with the {@link PolicyFile}.
+   */
   protected List<PolicyNode> currentLocation() {
     List<PolicyNode> toReturn = listForAny();
     toReturn.addAll(location);
     return toReturn;
   }
 
+  /**
+   * Returns the first entry in {@link #currentLocation()} assignable to {@code clazz}.
+   */
   protected <P extends PolicyNode> P currentLocation(Class<P> clazz) {
     for (PolicyNode x : location) {
       if (clazz.isInstance(x)) {

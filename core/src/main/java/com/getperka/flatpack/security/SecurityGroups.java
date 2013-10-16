@@ -80,7 +80,10 @@ public class SecurityGroups {
   /**
    * Requires injection.
    */
-  SecurityGroups() {}
+  SecurityGroups() {
+    groupAll.setGlobalSecurityGroup(true);
+    groupEmpty.setGlobalSecurityGroup(true);
+  }
 
   /**
    * Create (or find) a group declared by a particular type.

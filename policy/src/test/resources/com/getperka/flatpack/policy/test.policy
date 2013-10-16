@@ -20,6 +20,7 @@ package arbitraryName {
   // Check package-level definitions
   allow {
     * to read;
+    integratorUser none;
   }
 
   type merchant {

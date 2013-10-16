@@ -39,6 +39,7 @@ import org.parboiled.support.Filters;
 import org.parboiled.support.ParsingResult;
 
 import com.getperka.flatpack.policy.pst.PolicyFile;
+import com.getperka.flatpack.policy.visitors.PolicyCloner;
 
 public class PolicyParserTest {
   private PolicyParser parser;
@@ -57,6 +58,15 @@ public class PolicyParserTest {
     String string = p.toSource();
     PolicyFile p2 = (PolicyFile) testRule(parser.PolicyFile(), string);
     assertEquals(string, p2.toSource());
+  }
+
+  @Test
+  public void testCloner() throws IOException {
+    String contents = FileUtils.readAllText(getClass().getResourceAsStream("test.policy"));
+    PolicyFile p = (PolicyFile) testRule(parser.PolicyFile(), contents);
+    PolicyFile p2 = new PolicyCloner().clone(p);
+
+    assertEquals(p.toSource(), p2.toSource());
   }
 
   private void checkResult(ParsingResult<Object> res) {

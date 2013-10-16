@@ -20,8 +20,6 @@ package com.getperka.flatpack.policy;
  * #L%
  */
 
-
-
 import javax.inject.Inject;
 import javax.inject.Provider;
 
@@ -36,6 +34,7 @@ import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.visitors.IdentChecker;
 import com.getperka.flatpack.policy.visitors.IdentResolver;
 import com.getperka.flatpack.policy.visitors.PermissionsExtractor;
+import com.getperka.flatpack.policy.visitors.ScopeHoister;
 import com.getperka.flatpack.security.GroupPermissions;
 import com.getperka.flatpack.security.SecurityGroups;
 import com.getperka.flatpack.security.SecurityTarget;
@@ -73,6 +72,9 @@ class StaticPolicyImpl {
     }
 
     policy = (PolicyFile) result.resultValue;
+
+    // Move top-level and package-level allow declarations into the individual type blocks
+    new ScopeHoister().traverse(policy);
 
     IdentResolver resolver = resolvers.get();
     resolver.exec(policy);

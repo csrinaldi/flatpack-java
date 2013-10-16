@@ -5,6 +5,8 @@ allow {
   * to read;
 }
 
+type baseHasUuid {}
+
 package thingsToProtect {
   allow only {
     ADMIN to *;
@@ -21,6 +23,6 @@ package thingsToProtect {
       allow only {
         ADMIN to *;
       }
-    }
+    }    
   }
 }

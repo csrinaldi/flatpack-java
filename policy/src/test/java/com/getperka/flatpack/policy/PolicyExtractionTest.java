@@ -22,7 +22,9 @@ package com.getperka.flatpack.policy;
 
 import static com.getperka.flatpack.util.FlatPackCollections.setForIteration;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.Collections;
@@ -98,7 +100,7 @@ public class PolicyExtractionTest extends PolicyTestBase {
     }
   }
 
-  void checkPermissions(GroupPermissions p, String groupName, String... actionNames) {
+  SecurityGroup checkPermissions(GroupPermissions p, String groupName, String... actionNames) {
     Set<SecurityAction> expected = setForIteration();
     for (String name : actionNames) {
       String[] parts = name.split("\\.");
@@ -108,10 +110,11 @@ public class PolicyExtractionTest extends PolicyTestBase {
     for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : p.getOperations().entrySet()) {
       if (groupName.equals(entry.getKey().getName())) {
         assertEquals(expected, entry.getValue());
-        return;
+        return entry.getKey();
       }
     }
     fail("Did not find SecurityGroup named " + groupName + " in " + p);
+    return null;
   }
 
   /**
@@ -155,12 +158,21 @@ public class PolicyExtractionTest extends PolicyTestBase {
 
   private void checkMerchantPermissions(GroupPermissions p) {
     assertEquals(p.getOperations().toString(), 5, p.getOperations().size());
-    checkPermissions(p, "*");
+    SecurityGroup everybody = checkPermissions(p, "*");
+    assertTrue(everybody.isGlobalSecurityGroup());
+
     checkPermissions(p, "merchantUser", "crudOperation.update");
-    checkPermissions(p, "integratorUser", "crudOperation.create", "crudOperation.read",
+
+    // integrator is initially defined as a global group, but then redefined in the merchant block
+    SecurityGroup integratorUser = checkPermissions(p, "integratorUser",
+        "crudOperation.create", "crudOperation.read",
         "crudOperation.update", "crudOperation.delete");
+    assertFalse(integratorUser.isGlobalSecurityGroup());
+    assertEquals("integratorUser", integratorUser.getPaths().get(0).getPath().get(0).getName());
+
     checkPermissions(p, "clerk", "crudOperation.read");
-    checkPermissions(p, "internalUser", "*.*");
+    SecurityGroup internalUser = checkPermissions(p, "internalUser", "*.*");
+    assertTrue(internalUser.isGlobalSecurityGroup());
   }
 
   private Property getProperty(TypeContext ctx, Class<? extends HasUuid> clazz, String propertyName) {

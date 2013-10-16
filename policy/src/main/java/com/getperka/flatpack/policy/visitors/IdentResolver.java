@@ -45,8 +45,9 @@ import com.getperka.flatpack.ext.PropertyPath;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.inject.FlatPackLogger;
-import com.getperka.flatpack.policy.pst.AllowRule;
+import com.getperka.flatpack.policy.pst.ActionDefinition;
 import com.getperka.flatpack.policy.pst.AllowBlock;
+import com.getperka.flatpack.policy.pst.AllowRule;
 import com.getperka.flatpack.policy.pst.GroupBlock;
 import com.getperka.flatpack.policy.pst.GroupDefinition;
 import com.getperka.flatpack.policy.pst.HasName;
@@ -56,7 +57,6 @@ import com.getperka.flatpack.policy.pst.PolicyBlock;
 import com.getperka.flatpack.policy.pst.PolicyFile;
 import com.getperka.flatpack.policy.pst.PolicyNode;
 import com.getperka.flatpack.policy.pst.TypePolicy;
-import com.getperka.flatpack.policy.pst.ActionDefinition;
 import com.getperka.flatpack.security.SecurityAction;
 import com.getperka.flatpack.security.SecurityGroup;
 import com.getperka.flatpack.security.SecurityGroups;
@@ -472,15 +472,13 @@ public class IdentResolver extends PolicyLocationVisitor {
       return;
     }
 
-    // Determine if it's a global name
-    if (typePolicy == null) {
-      x.setReferent(securityGroups.getGroupGlobal(x.getSimpleName()));
+    // Otherwise, it's a global name
+    x.setReferent(securityGroups.getGroupGlobal(x.getSimpleName()));
 
-      GroupDefinition globalDef = new GroupDefinition();
-      globalDef.setLineNumber(x.getLineNumber());
-      globalDef.setName(x);
-      scope().put(globalDef);
-    }
+    GroupDefinition globalDef = new GroupDefinition();
+    globalDef.setLineNumber(x.getLineNumber());
+    globalDef.setName(x);
+    rootScope.put(globalDef);
   }
 
   private PropertyPath createPropertyPath(Class<? extends HasUuid> resolveFrom,
