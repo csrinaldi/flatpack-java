@@ -19,7 +19,6 @@
  */
 package com.getperka.flatpack.ext;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleName;
 
 import java.lang.annotation.Annotation;
@@ -37,6 +36,7 @@ import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.SuppressDefaultValue;
 import com.getperka.flatpack.security.GroupPermissions;
 import com.getperka.flatpack.security.SecurityGroups;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * An immutable view of a property that should be serialized.
@@ -289,8 +289,7 @@ public class Property extends BaseHasUuid {
     if (getEnclosingType() == null || getName() == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getEnclosingType().getTypeName() + "." + getName())
-        .getBytes(UTF8));
+    return new UuidDigest(getClass()).add(getEnclosingType()).add(name).digest();
   }
 
   void setDeepTraversalOnly(boolean deepTraversalOnly) {

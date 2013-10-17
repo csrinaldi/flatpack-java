@@ -89,7 +89,7 @@ public class GroupPermissions extends BaseHasUuid {
 
   @Override
   protected UUID defaultUuid() {
-    UuidDigest digest = new UuidDigest().add("GroupPermissions");
+    UuidDigest digest = new UuidDigest(getClass());
     for (Map.Entry<SecurityGroup, Set<SecurityAction>> entry : operations.entrySet()) {
       digest.add(entry.getKey());
       for (SecurityAction value : entry.getValue()) {

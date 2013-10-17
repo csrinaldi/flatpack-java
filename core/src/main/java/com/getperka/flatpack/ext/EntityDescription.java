@@ -19,8 +19,6 @@
  */
 package com.getperka.flatpack.ext;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
-
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +26,7 @@ import java.util.UUID;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * A description of an entity type.
@@ -110,7 +109,7 @@ public class EntityDescription extends BaseHasUuid {
     if (typeName == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getClass().getName() + ":" + typeName).getBytes(UTF8));
+    return new UuidDigest(getClass()).add(typeName).digest();
   }
 
   @NoPack

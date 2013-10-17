@@ -19,14 +19,13 @@
  */
 package com.getperka.flatpack.client.dto;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
-
 import java.util.List;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Describes an {@code HTTP} request endpoint.
@@ -175,6 +174,6 @@ public class EndpointDescription extends BaseHasUuid {
     if (method == null || path == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((method + ":" + path).getBytes(UTF8));
+    return new UuidDigest(getClass()).add(method).add(path).digest();
   }
 }

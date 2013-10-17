@@ -19,8 +19,6 @@
  */
 package com.getperka.flatpack.ext;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +27,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * A simple JSON type description.
@@ -145,8 +144,15 @@ public class Type extends BaseHasUuid {
 
   @Override
   protected UUID defaultUuid() {
-    String key = getClass().getName() + ":" + toString();
-    return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+    return new UuidDigest(getClass())
+        .addStrings(enumValues)
+        .add(hint == null ? null : hint.getValue())
+        .add(jsonKind.name())
+        .add(listElement)
+        .add(mapKey)
+        .add(mapValue)
+        .add(name)
+        .digest();
   }
 
   void setEnumValues(List<String> enumValues) {

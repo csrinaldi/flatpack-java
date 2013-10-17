@@ -20,12 +20,12 @@ package com.getperka.flatpack.security;
  * #L%
  */
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import static com.getperka.flatpack.util.FlatPackTypes.decapitalize;
 
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Describes some action that a principal may or may not be allowed to perform. Each SecurityAction
@@ -118,6 +118,6 @@ public class SecurityAction extends BaseHasUuid {
     if (getType() == null || getAction() == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getType() + "::" + getAction()).getBytes(UTF8));
+    return new UuidDigest(getClass()).add(type).add(action).digest();
   }
 }

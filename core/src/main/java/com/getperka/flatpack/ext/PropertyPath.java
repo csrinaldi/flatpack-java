@@ -94,7 +94,7 @@ public class PropertyPath extends BaseHasUuid {
 
   @Override
   protected UUID defaultUuid() {
-    return new UuidDigest().add("PropertyPath").add(path).digest();
+    return new UuidDigest(getClass()).addEntities(path).digest();
   }
 
   void setPath(List<Property> path) {

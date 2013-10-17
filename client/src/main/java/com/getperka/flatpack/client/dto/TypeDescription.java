@@ -20,12 +20,11 @@ package com.getperka.flatpack.client.dto;
  * #L%
  */
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
-
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Associates a {@link Type} with a documentation string.
@@ -52,7 +51,6 @@ public class TypeDescription extends BaseHasUuid {
 
   @Override
   protected UUID defaultUuid() {
-    String key = type.getUuid() + ":" + docString;
-    return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+    return new UuidDigest(getClass()).add(type).add(docString).digest();
   }
 }

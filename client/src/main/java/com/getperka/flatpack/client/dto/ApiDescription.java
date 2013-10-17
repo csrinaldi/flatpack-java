@@ -19,13 +19,12 @@
  */
 package com.getperka.flatpack.client.dto;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
-
 import java.util.List;
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.ext.EntityDescription;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * A description of the entities contained within an API.
@@ -73,6 +72,6 @@ public class ApiDescription extends BaseHasUuid {
     if (apiName == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getClass().getName() + ":" + apiName).getBytes(UTF8));
+    return new UuidDigest(getClass()).add(apiName).digest();
   }
 }

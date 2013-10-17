@@ -19,12 +19,11 @@
  */
 package com.getperka.flatpack.client.dto;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
-
 import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Describes a path or query parameter in {@link EndpointDescription}.
@@ -80,7 +79,6 @@ public class ParameterDescription extends BaseHasUuid {
     if (endpoint == null || name == null) {
       throw new IllegalStateException();
     }
-    String key = endpoint.getUuid() + ":" + name;
-    return UUID.nameUUIDFromBytes(key.getBytes(UTF8));
+    return new UuidDigest(getClass()).add(endpoint).add(name).add(type).digest();
   }
 }
