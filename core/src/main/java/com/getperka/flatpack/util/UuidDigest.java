@@ -37,7 +37,7 @@ public class UuidDigest {
   private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 
   public UuidDigest(Class<?> owner) {
-    add(owner.getClass().getName());
+    add(owner.getName());
   }
 
   public UuidDigest add(HasUuid entity) {
