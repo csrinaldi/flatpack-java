@@ -635,6 +635,9 @@ public class JavaScriptDialect implements Dialect {
             p.getType().getListElement().getName() != null) {
             defaultVal = "new " + collectionNameForProperty(p) + "()";
           }
+          else if (p.getType().getJsonKind().equals(JsonKind.MAP)) {
+            return "{}";
+          }
           return defaultVal;
         }
 
