@@ -1,4 +1,5 @@
 package com.getperka.flatpack.visitors;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -39,7 +40,7 @@ import com.getperka.flatpack.util.FlatPackTypes;
  * set. If the principal does not have some particular permission on the entity, the value of the
  * property will be nullified.
  */
-@PostWorkOrder(300)
+@PostWorkOrder(150)
 class CreatedPropertyVerifier implements Callable<Void> {
   private SecurityAction action;
   private Principal principal;

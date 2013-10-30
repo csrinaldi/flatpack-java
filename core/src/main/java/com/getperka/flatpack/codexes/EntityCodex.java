@@ -47,7 +47,6 @@ import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.UpdatingCodex;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.ext.Walker;
-import com.getperka.flatpack.security.MemoizingSecurity;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
@@ -91,8 +90,6 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   private List<Method> postUnpackMethods;
   @Inject
   private TypeContext typeContext;
-  @Inject
-  private Provider<MemoizingSecurity> security;
 
   protected EntityCodex() {}
 

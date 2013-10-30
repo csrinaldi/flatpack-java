@@ -265,6 +265,16 @@ public class IdentResolver extends PolicyLocationVisitor {
     ensureReferent(x);
     traverse(x.getVerbs());
     traverse(x.getGroups());
+    /*
+     * Don't continue if inheritance wasn't collapsed, or security groups may be resolved to global,
+     * rather than inherited groups.
+     */
+    for (GroupBlock g : x.getGroups()) {
+      if (g.getInheritFrom() != null) {
+        return false;
+      }
+    }
+
     traverse(x.getAllows());
     traverse(x.getPolicies());
     return false;

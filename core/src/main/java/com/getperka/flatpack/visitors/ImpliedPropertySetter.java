@@ -29,7 +29,6 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
 import com.getperka.flatpack.ext.PostWorkOrder;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.security.MemoizingSecurity;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -40,8 +39,6 @@ import com.getperka.flatpack.util.FlatPackCollections;
 class ImpliedPropertySetter implements Callable<Void> {
   @Inject
   private DeserializationContext context;
-  @Inject
-  private MemoizingSecurity security;
   private Property toSet;
   private Object target;
   private Object value;
