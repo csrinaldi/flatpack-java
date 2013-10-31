@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
@@ -132,7 +133,7 @@ public class IdentResolver extends PolicyLocationVisitor {
     }
     Property p = ensureReferent(inheritFrom);
     TypePolicy policy = p == null ? null : findTypePolicy(p);
-    if (p == null || policy == null) {
+    if (policy == null || hasUnroselvedInherits(policy)) {
       // Skip for the second pass
       unresolved.add(inheritFrom);
       return false;
@@ -166,7 +167,7 @@ public class IdentResolver extends PolicyLocationVisitor {
     }
     Property p = ensureReferent(inheritFrom);
     TypePolicy policy = p == null ? null : findTypePolicy(p);
-    if (p == null || policy == null) {
+    if (policy == null || hasUnroselvedInherits(policy)) {
       // Skip for the second pass
       unresolved.add(inheritFrom);
       return false;
@@ -269,10 +270,8 @@ public class IdentResolver extends PolicyLocationVisitor {
      * Don't continue if inheritance wasn't collapsed, or security groups may be resolved to global,
      * rather than inherited groups.
      */
-    for (GroupBlock g : x.getGroups()) {
-      if (g.getInheritFrom() != null) {
-        return false;
-      }
+    if (hasUnresolvedInherits(x.getGroups())) {
+      return false;
     }
 
     traverse(x.getAllows());
@@ -572,6 +571,37 @@ public class IdentResolver extends PolicyLocationVisitor {
       scope().put(toReturn);
     }
     return toReturn;
+  }
+
+  private boolean hasUnresolvedInherits(List<? extends PolicyNode> x) {
+    final AtomicBoolean toReturn = new AtomicBoolean();
+    new PolicyVisitor() {
+      @Override
+      public boolean visit(AllowBlock x) {
+        if (x.getInheritFrom() != null) {
+          toReturn.set(true);
+        }
+        return false;
+      }
+
+      @Override
+      public boolean visit(GroupBlock x) {
+        if (x.getInheritFrom() != null) {
+          toReturn.set(true);
+        }
+        return false;
+      }
+    }.traverse(x);
+
+    return toReturn.get();
+  }
+
+  private boolean hasUnroselvedInherits(PolicyNode x) {
+    // Allow self-referential policies to resolve to themselves
+    if (currentLocation().contains(x)) {
+      return false;
+    }
+    return hasUnresolvedInherits(Collections.singletonList(x));
   }
 
   /**
