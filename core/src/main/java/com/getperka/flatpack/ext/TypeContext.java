@@ -19,6 +19,7 @@
  */
 package com.getperka.flatpack.ext;
 
+import static com.getperka.flatpack.util.FlatPackCollections.identitySetForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.listForAny;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForIteration;
 import static com.getperka.flatpack.util.FlatPackCollections.mapForLookup;
@@ -35,23 +36,18 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import javax.annotation.security.PermitAll;
-import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 
-import com.getperka.flatpack.Configuration;
+import com.getperka.flatpack.EntityMetadata;
 import com.getperka.flatpack.HasUuid;
-import com.getperka.flatpack.InheritPrincipal;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.JsonTypeName;
 import com.getperka.flatpack.PersistenceMapper;
@@ -59,6 +55,8 @@ import com.getperka.flatpack.SparseCollection;
 import com.getperka.flatpack.codexes.DynamicCodex;
 import com.getperka.flatpack.inject.AllTypes;
 import com.getperka.flatpack.inject.FlatPackLogger;
+import com.getperka.flatpack.security.SecurityPolicy;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.getperka.flatpack.util.FlatPackCollections;
 import com.getperka.flatpack.util.FlatPackTypes;
 
@@ -94,11 +92,8 @@ public class TypeContext {
    * <ul>
    * <li>public Foo getFoo()</li>
    * <li>public boolean isFoo()</li>
-   * <li>{@code @PermitAll} &lt;any modifier&gt; Foo getFoo()</li>
-   * <li>{@code @RolesAllowed} &lt;any modifier&gt; Foo getFoo()</li>
    * </ul>
-   * Ignores any method declared annotated with {@link Transient} unless {@link PermitAll} or
-   * {@link RolesAllowed} is present.
+   * Ignores any private method or those annotated with {@link NoPack}.
    */
   private static boolean isGetter(Method m) {
     if (m.getParameterTypes().length != 0) {
@@ -108,13 +103,7 @@ public class TypeContext {
     if (name.startsWith("get") && name.length() > 3 ||
       name.startsWith("is") && name.length() > 2 && isBoolean(m.getReturnType())) {
 
-      if (m.isAnnotationPresent(PermitAll.class)) {
-        return true;
-      }
-      if (m.isAnnotationPresent(RolesAllowed.class)) {
-        return true;
-      }
-      if (hasAnnotationWithSimpleName(m, "Transient")) {
+      if (m.isAnnotationPresent(NoPack.class)) {
         return false;
       }
       if (!Modifier.isPrivate(m.getModifiers())) {
@@ -134,21 +123,17 @@ public class TypeContext {
     if (!m.getName().startsWith("set")) {
       return false;
     }
-    if (m.isAnnotationPresent(PermitAll.class)) {
-      return true;
-    }
-    if (m.isAnnotationPresent(RolesAllowed.class)) {
-      return true;
+    if (m.isAnnotationPresent(NoPack.class)) {
+      return false;
     }
     return !Modifier.isPrivate(m.getModifiers());
   }
 
   /**
-   * Used to instantiate instances of
+   * Used to instantiate instances of {@link Property}.
    */
   @Inject
   private Provider<Property.Builder> builderProvider;
-  private final Map<String, Class<? extends HasUuid>> classes = sortedMapForIteration();
   @Inject
   private CodexMapper codexMapper;
   /**
@@ -161,131 +146,62 @@ public class TypeContext {
    */
   @Inject
   private DynamicCodex dynamicCodex;
+  private final Map<Class<? extends HasUuid>, EntityDescription> entitiesByClass = mapForIteration();
+  private final Map<String, EntityDescription> entitiesByName = mapForIteration();
+  /**
+   * State management to make {@link #describe(Class)} behave in the reentrant case.
+   */
+  private Set<EntityDescription> isExtracting = identitySetForIteration();
+  @FlatPackLogger
+  @Inject
   private Logger logger;
   @Inject
   private PersistenceMapper persistenceMapper;
-  private final Map<Class<?>, List<Property>> properties = mapForLookup();
-  private final Map<Class<?>, List<PropertyPath>> principalPaths = mapForLookup();
   @Inject
-  private PrincipalMapper principalMapper;
+  private SecurityPolicy securityPolicy;
 
   @Inject
   protected TypeContext() {}
 
   /**
-   * Returns {@code true} if a {@link PersistenceMapper} is registered that provides persistence
-   * metadata for the requested type.
+   * Examine a class and return an {@link EntityDescription} with introspection data. Calls to this
+   * method are cached in the instance of {@link TypeContext}.
    */
-  public boolean canPersist(Class<?> clazz) {
-    if (HasUuid.class.isAssignableFrom(clazz)) {
-      return persistenceMapper.canPersist(clazz.asSubclass(HasUuid.class));
-    }
-    return false;
-  }
-
-  /**
-   * Examine a class and return {@link Property} helpers that describe all JSON properties that the
-   * type is expected to interact with. Calls to this method are cached in the instance of
-   * {@link TypeContext}.
-   */
-  public synchronized List<Property> extractProperties(Class<?> clazz) {
-    // No properties on Object.class. Play nicely in case of null value.
-    if (clazz == null || Object.class.equals(clazz)) {
-      return Collections.emptyList();
+  public synchronized EntityDescription describe(Class<? extends HasUuid> clazz) {
+    if (clazz == null) {
+      throw new NullPointerException("clazz must be non-null");
     }
 
-    // Cache check
-    List<Property> toReturn = properties.get(clazz);
+    EntityDescription toReturn = entitiesByClass.get(clazz);
     if (toReturn != null) {
       return toReturn;
     }
 
-    toReturn = listForAny();
+    boolean topCall = isExtracting.isEmpty();
 
-    // Protect the return value and cache it
-    List<Property> unmodifiable = Collections.unmodifiableList(toReturn);
-    properties.put(clazz, unmodifiable);
+    // Create the type and add it to the map to short-circuit type-reference loops
+    toReturn = new EntityDescription();
+    isExtracting.add(toReturn);
+    entitiesByClass.put(clazz, toReturn);
 
-    // Start by collecting all supertype properties
-    toReturn.addAll(extractProperties(clazz.getSuperclass()));
-
-    // Link implied properties after all other properties have been stubbed out
-    Map<Property.Builder, String> impliedPropertiesToLink = FlatPackCollections.mapForIteration();
-
-    // Examine each declared method on the type and assemble Property objects
-    Map<String, Property.Builder> builders = mapForIteration();
-    for (Method m : clazz.getDeclaredMethods()) {
-      if (isGetter(m)) {
-        String beanPropertyName = beanPropertyName(m);
-        Property.Builder builder = getBuilderForProperty(builders, beanPropertyName);
-
-        // Set the getter, and update the property name
-        builder.withGetter(m);
-        setJsonPropertyName(builder);
-
-        // Eagerly add the property to ensure implied properties work
-        if (!toReturn.contains(builder.peek())) {
-          toReturn.add(builder.peek());
-        }
-
-        // Look for SparseCollection, OneToMany or ManyToMany
-        builder.withDeepTraversalOnly(isDeepTraversalOnly(m));
-        /*
-         * Disable traversal of Implied / OneToMany properties unless requested. Also wire up the
-         * implication relationships between properties in the two models after all Properties have
-         * been constructed.
-         */
-        String impliedPropertyName = getImpliedPropertyName(m);
-        if (impliedPropertyName != null) {
-          impliedPropertiesToLink.put(builder, impliedPropertyName);
-        }
-      } else if (isSetter(m)) {
-        Property.Builder builder = getBuilderForProperty(builders, beanPropertyName(m));
-        builder.withSetter(m);
-        setJsonPropertyName(builder);
-      }
+    // Extract the entity data
+    extractOneEntity(toReturn, clazz);
+    if (entitiesByName.put(toReturn.getTypeName(), toReturn) != null) {
+      logger.warn("Duplicate type name {}", clazz.getName());
     }
 
-    // Wire the implied properties in the current class
-    for (Map.Entry<Property.Builder, String> entry : impliedPropertiesToLink.entrySet()) {
-      Property.Builder builder = entry.getKey();
-      String impliedPropertyName = entry.getValue();
-      Method getter = builder.peek().getGetter();
-      Type elementType = getSingleParameterization(getter.getGenericReturnType(), Collection.class);
-
-      if (elementType == null) {
-        logger.error("Method {}.{} defines a OneToMany / Implies relationship but the " +
-          "return type is not a Collection", clazz.getName(), getter.getName());
-      } else {
-        Class<?> otherModel = erase(elementType);
-        for (Property otherProperty : extractProperties(otherModel)) {
-          if (otherProperty.getName().equals(impliedPropertyName)) {
-            builder.withImpliedProperty(otherProperty);
-            otherProperty.setImpliedProperty(builder.peek());
-            break;
-          }
-        }
-      }
+    if (topCall) {
+      finalizeEntityDescriptions();
     }
-
-    // Finish construction
-    for (Property.Builder builder : builders.values()) {
-      Property p = builder.build();
-      if (!toReturn.contains(p)) {
-        toReturn.add(p);
-      }
-    }
-
-    return unmodifiable;
+    return toReturn;
   }
 
   /**
-   * Returns a Class from a payload name or {@code null} if the type is unknown.
-   * 
-   * @see Configuration#getDomainPackages()
+   * @deprecated Use {@link #describe(Class)} and {@link EntityDescription#getProperties()} instead.
    */
-  public Class<? extends HasUuid> getClass(String simplePayloadName) {
-    return classes.get(simplePayloadName);
+  @Deprecated
+  public List<Property> extractProperties(Class<? extends HasUuid> clazz) {
+    return describe(clazz).getProperties();
   }
 
   /**
@@ -318,43 +234,34 @@ public class TypeContext {
     return toReturn;
   }
 
-  public Collection<Class<? extends HasUuid>> getEntityTypes() {
-    return Collections.unmodifiableCollection(classes.values());
+  /**
+   * Finds an {@link EntityDescription} based on its simple type name.
+   */
+  public EntityDescription getEntityDescription(String typeName) {
+    return entitiesByName.get(typeName);
+  }
+
+  public Collection<EntityDescription> getEntityDescriptions() {
+    return Collections.unmodifiableCollection(entitiesByClass.values());
   }
 
   /**
-   * Returns the "type" name used for an entity type in the {@code data} section of the payload.
+   * @deprecated Use {@link #describe(Class)} and {@link EntityDescription#getTypeName()} instead.
    */
-  public String getPayloadName(Class<?> clazz) {
-    JsonTypeName override = clazz.getAnnotation(JsonTypeName.class);
-    if (override != null) {
-      return override.value();
-    }
-    return FlatPackTypes.decapitalize(clazz.getSimpleName());
-  }
-
-  /**
-   * Returns zero or more property paths that can be evaluated to find an object that can be
-   * resolved to a user principal. The returned list will be ordered with the shortest paths first.
-   */
-  public synchronized List<PropertyPath> getPrincipalPaths(Class<? extends HasUuid> clazz) {
-    List<PropertyPath> toReturn = principalPaths.get(clazz);
-    if (toReturn != null) {
-      return toReturn;
-    }
-    toReturn = Collections.unmodifiableList(computePrincipalPaths(clazz));
-    principalPaths.put(clazz, toReturn);
-    return toReturn;
+  @Deprecated
+  public String getPayloadName(Class<? extends HasUuid> clazz) {
+    return describe(clazz).getTypeName();
   }
 
   @Inject
-  void setAllTypes(@FlatPackLogger Logger logger, @AllTypes Collection<Class<?>> allTypes) {
-    this.logger = logger;
-
+  void inject(@AllTypes Collection<Class<?>> allTypes) {
     if (allTypes.isEmpty()) {
       logger.warn("No unpackable classes. Will not be able to deserialize entity payloads");
       return;
     }
+
+    EntityDescription dummy = new EntityDescription();
+    isExtracting.add(dummy);
 
     for (Class<?> clazz : allTypes) {
       if (!HasUuid.class.isAssignableFrom(clazz)) {
@@ -362,82 +269,151 @@ public class TypeContext {
             HasUuid.class.getSimpleName());
         continue;
       }
-      String payloadName = getPayloadName(clazz);
-      if (classes.containsKey(payloadName)) {
-        logger.error("Duplicate payload name {} in class {}",
-            payloadName, clazz.getCanonicalName());
-      } else {
-        classes.put(payloadName, clazz.asSubclass(HasUuid.class));
-        logger.debug("Flatpack map: {} -> {}", clazz.getCanonicalName(), payloadName);
-      }
-    }
-  }
-
-  /**
-   * Initializes the recursive calls and sorts the result by path length.
-   */
-  private List<PropertyPath> computePrincipalPaths(Class<? extends HasUuid> clazz) {
-    List<PropertyPath> allPaths = listForAny();
-    computePrincipalPaths(new LinkedList<Property>(), clazz,
-        new LinkedList<Class<? extends HasUuid>>(), allPaths);
-    Collections.sort(allPaths, new Comparator<PropertyPath>() {
-      @Override
-      public int compare(PropertyPath o1, PropertyPath o2) {
-        return o1.getPath().size() - o2.getPath().size();
-      }
-    });
-    logger.debug("Principle paths for {} : {}", clazz.getName(), allPaths);
-    return allPaths;
-  }
-
-  /**
-   * Recursive implementation.
-   * 
-   * @param pathSoFar the current path for the type currently being examined
-   * @param lookingAt the type to examine
-   * @param seen the owner types of the properties in {@code pathSoFar}, to prevent cycles
-   * @param accumulator an accumulator for data to return
-   */
-  private void computePrincipalPaths(Deque<Property> pathSoFar, Class<? extends HasUuid> lookingAt,
-      LinkedList<Class<? extends HasUuid>> seen, List<PropertyPath> accumulator) {
-    // Cycle detection
-    if (seen.contains(lookingAt)) {
-      return;
-    }
-
-    // Add the current path if it provides useful information
-    if (principalMapper.isMapped(Collections.unmodifiableList(seen), lookingAt)) {
-      accumulator.add(new PropertyPath(pathSoFar));
-    }
-
-    // Iterate over each property of the type and recurse
-    seen.push(lookingAt);
-    for (Property property : extractProperties(lookingAt)) {
-      // Ignore properties that don't inherit
-      if (!property.isInheritPrincipal()) {
+      if (clazz.isInterface()) {
+        logger.warn("Ignoring interface {}", clazz.getName());
         continue;
       }
-      Type returnType = property.getGetter().getGenericReturnType();
-      Class<? extends HasUuid> nextType;
-      switch (property.getType().getJsonKind()) {
-        case STRING:
-          nextType = erase(returnType).asSubclass(HasUuid.class);
-          break;
-        case LIST:
-          // TODO: This doesn't support arbitrary composition
-          nextType = erase(getSingleParameterization(returnType, Collection.class))
-              .asSubclass(HasUuid.class);
-          break;
-        default:
-          throw new RuntimeException("Cannot use property " + property + " with "
-            + InheritPrincipal.class.getSimpleName());
+      if (Modifier.isAbstract(clazz.getModifiers())) {
+        logger.warn("Ignoring abstract class {}", clazz.getName());
+        continue;
+      }
+      if (clazz.isAnonymousClass()) {
+        logger.warn("Ignoring anonymous class {}", clazz.getName());
+        continue;
       }
 
-      pathSoFar.addLast(property);
-      computePrincipalPaths(pathSoFar, nextType, seen, accumulator);
-      pathSoFar.removeLast();
+      describe(clazz.asSubclass(HasUuid.class));
     }
-    seen.pop();
+    // Used internally, should always be mapped
+    describe(EntityMetadata.class);
+
+    isExtracting.remove(dummy);
+    finalizeEntityDescriptions();
+  }
+
+  private void extractOneEntity(EntityDescription d, Class<? extends HasUuid> clazz) {
+    // Set identifying information before there's any chance of an escape
+    d.setEntityType(clazz);
+    d.setTypeName(getTypeName(clazz));
+
+    EntityDescription supertype;
+    List<Property> properties = listForAny();
+    if (!clazz.isInterface() && HasUuid.class.isAssignableFrom(clazz.getSuperclass())) {
+      // Start by collecting all supertype properties
+      supertype = describe(clazz.getSuperclass().asSubclass(HasUuid.class));
+      properties.addAll(supertype.getProperties());
+    } else {
+      supertype = null;
+    }
+
+    d.setPersistent(persistenceMapper.canPersist(clazz));
+    d.setProperties(Collections.unmodifiableList(properties));
+    d.setSupertype(supertype);
+
+    // Link implied properties after all other properties have been stubbed out
+    Map<Property.Builder, String> impliedPropertiesToLink = FlatPackCollections.mapForIteration();
+
+    // Examine each declared method on the type and assemble Property objects
+    Map<String, Property.Builder> builders = mapForIteration();
+    for (Method m : clazz.getDeclaredMethods()) {
+      if (isGetter(m)) {
+        String beanPropertyName = beanPropertyName(m);
+        Property.Builder builder = getBuilderForProperty(builders, beanPropertyName);
+
+        // Set the getter, and update the property name
+        builder.withGetter(m);
+        setJsonPropertyName(builder);
+
+        // Eagerly add the property to ensure implied properties work
+        if (!properties.contains(builder.peek())) {
+          properties.add(builder.peek());
+        }
+
+        // Look for SparseCollection, OneToMany or ManyToMany
+        builder.withDeepTraversalOnly(isDeepTraversalOnly(m));
+        /*
+         * Disable traversal of Implied / OneToMany properties unless requested. Also wire up the
+         * implication relationships between properties in the two models after all Properties have
+         * been constructed.
+         */
+        String impliedPropertyName = getImpliedPropertyName(m);
+        if (impliedPropertyName != null) {
+          impliedPropertiesToLink.put(builder, impliedPropertyName);
+        }
+      } else if (isSetter(m)) {
+        Property.Builder builder = getBuilderForProperty(builders, beanPropertyName(m));
+        builder.withSetter(m);
+        setJsonPropertyName(builder);
+      }
+    }
+
+    // Wire the implied properties in the current class
+    for (Map.Entry<Property.Builder, String> entry : impliedPropertiesToLink.entrySet()) {
+      Property.Builder builder = entry.getKey();
+      String impliedPropertyName = entry.getValue();
+      Method getter = builder.peek().getGetter();
+      Type elementType = getSingleParameterization(getter.getGenericReturnType(), Collection.class);
+
+      if (elementType == null) {
+        logger.error("Method {}.{} defines a OneToMany / Implies relationship but the " +
+          "return type is not a Collection", clazz.getName(), getter.getName());
+      } else {
+        Class<? extends HasUuid> otherModel = erase(elementType).asSubclass(HasUuid.class);
+        List<Property> otherProperties = describe(otherModel).getProperties();
+        if (otherProperties != null) {
+          for (Property otherProperty : otherProperties) {
+            if (otherProperty.getName().equals(impliedPropertyName)) {
+              builder.withImpliedProperty(otherProperty);
+              otherProperty.setImpliedProperty(builder.peek());
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Finish construction
+    for (Property.Builder builder : builders.values()) {
+      Property p = builder.build();
+      if (!properties.contains(p)) {
+        properties.add(p);
+      }
+    }
+
+    // Deduplicate by name, allowing subtype properties to replace supertype properties
+    Map<String, Property> propertiesByName = sortedMapForIteration();
+    for (Property p : properties) {
+      propertiesByName.put(p.getName(), p);
+    }
+
+    properties.clear();
+    properties.addAll(propertiesByName.values());
+
+    logger.debug("Extracted type map: {} -> {}", clazz.getCanonicalName(), d.getTypeName());
+  }
+
+  /**
+   * Wire up security information. Because properties can refer to one another via group inheritance
+   * it is necessary to perform this calculation after the properties have been fully constructed.
+   * It's also necessary to allow for the security policy to have caused other types to be
+   * extracted, hence the loop.
+   */
+  private void finalizeEntityDescriptions() {
+    while (!isExtracting.isEmpty()) {
+      // Copy out to prevent ConcurrentModificationException
+      List<EntityDescription> toFinish = listForAny(isExtracting);
+      isExtracting.clear();
+      for (EntityDescription d : toFinish) {
+        d.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(d.getEntityType())));
+        logger.debug("{} -> {}", d.getTypeName(), d.getGroupPermissions());
+        for (Property p : d.getProperties()) {
+          if (p.getGroupPermissions() == null) {
+            p.setGroupPermissions(securityPolicy.getPermissions(SecurityTarget.of(p)));
+            logger.debug("{}.{} -> {}", d.getTypeName(), p.getName(), p.getGroupPermissions());
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -475,6 +451,17 @@ public class TypeContext {
     }
 
     return null;
+  }
+
+  /**
+   * Returns the "type" name used for an entity type in the {@code data} section of the payload.
+   */
+  private String getTypeName(Class<?> clazz) {
+    JsonTypeName override = clazz.getAnnotation(JsonTypeName.class);
+    if (override != null) {
+      return override.value();
+    }
+    return FlatPackTypes.decapitalize(clazz.getSimpleName());
   }
 
   private boolean isDeepTraversalOnly(Method m) {

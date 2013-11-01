@@ -19,13 +19,11 @@
  */
 package com.getperka.flatpack;
 
-import javax.annotation.security.PermitAll;
 
 /**
  * A carrier object to associate out-of-band data with serialized entities. The UUID of this object
  * corresponds to the UUID of the entity it describes.
  */
-@PermitAll
 public class EntityMetadata extends BaseHasUuid {
   private boolean isPersistent;
 

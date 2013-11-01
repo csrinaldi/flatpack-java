@@ -31,6 +31,7 @@ import java.net.HttpURLConnection;
 import org.slf4j.Logger;
 
 import com.getperka.flatpack.FlatPackEntity;
+import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.client.FlatPackRequest;
 import com.getperka.flatpack.client.StatusCodeException;
 import com.getperka.flatpack.util.FlatPackTypes;
@@ -66,6 +67,7 @@ public class FlatPackRequestBase<R extends FlatPackRequest<R, X>, X>
   @SuppressWarnings("unchecked")
   public void setEntity(Object entity) {
     toSend = (FlatPackEntity<X>) FlatPackEntity.create(Object.class, entity, null);
+    toSend.withTraversalMode(TraversalMode.DEEP);
   }
 
   @Override

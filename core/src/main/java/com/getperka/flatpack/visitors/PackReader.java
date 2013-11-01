@@ -19,8 +19,11 @@ package com.getperka.flatpack.visitors;
  * limitations under the License.
  * #L%
  */
+import static com.getperka.flatpack.security.CrudOperation.DELETE_ACTION;
+import static com.getperka.flatpack.security.CrudOperation.UPDATE_ACTION;
 
 import java.lang.reflect.Method;
+import java.security.Principal;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -32,12 +35,13 @@ import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.EntityCodex;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
-import com.getperka.flatpack.ext.EntitySecurity;
 import com.getperka.flatpack.ext.Property;
-import com.getperka.flatpack.ext.PropertySecurity;
 import com.getperka.flatpack.ext.TypeContext;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.inject.PackScoped;
+import com.getperka.flatpack.security.CrudOperation;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.SecurityTarget;
 import com.google.gson.JsonObject;
 
 /**
@@ -52,12 +56,12 @@ public class PackReader extends FlatPackVisitor {
   @Inject
   private DeserializationContext context;
   @Inject
-  private EntitySecurity entitySecurity;
-  @Inject
   private Provider<ImpliedPropertySetter> impliedPropertySetters;
   private JsonObject payload;
   @Inject
-  private PropertySecurity security;
+  private Provider<CreatedPropertyVerifier> propertyVerifiers;
+  @Inject
+  private MemoizingSecurity security;
   private final Deque<PackReader.State> stack = new ArrayDeque<PackReader.State>();
   @Inject
   private TypeContext typeContext;
@@ -120,31 +124,33 @@ public class PackReader extends FlatPackVisitor {
           return;
         }
 
+        HasUuid entity = stack.peek().entity;
+
         // Verify the new value may be set
-        if (!security.maySet(prop, context.getPrincipal(), stack.peek().entity, value)) {
+        if (!checkAccess(entity, prop, value, context)) {
           return;
         }
 
         // Perhaps set the other side of a OneToMany relationship
-        Property impliedPropery = prop.getImpliedProperty();
-        if (impliedPropery != null && value != null) {
+        Property impliedProperty = prop.getImpliedProperty();
+        if (impliedProperty != null && value != null) {
           // Ensure that any linked property is also mutable
-          if (!checkAccess(value, context)) {
-            context.addWarning(stack.peek().entity,
+          if (!checkAccess(value, impliedProperty, entity, context)) {
+            context.addWarning(entity,
                 "Ignoring property %s because the inverse relationship (%s) may not be set",
-                prop.getName(), impliedPropery.getName());
+                prop.getName(), impliedProperty.getName());
             return;
           }
           ImpliedPropertySetter setter = impliedPropertySetters.get();
-          setter.setLater(impliedPropery, value, stack.peek().entity);
+          setter.setLater(impliedProperty, value, entity);
           context.addPostWork(setter);
         }
 
         // Set the value
-        setProperty(prop, stack.peek().entity, value);
+        setProperty(prop, entity, value);
 
         // Record the value as having been set
-        context.addModified(stack.peek().entity, prop);
+        context.addModified(entity, prop);
       } catch (Exception e) {
         context.fail(e);
       } finally {
@@ -181,9 +187,6 @@ public class PackReader extends FlatPackVisitor {
     stack.push(state);
 
     if (payload.entrySet().size() == 1 && payload.has("uuid")) {
-      return false;
-    }
-    if (!context.checkAccess(entity)) {
       return false;
     }
 
@@ -228,17 +231,39 @@ public class PackReader extends FlatPackVisitor {
     }
   }
 
-  /**
-   * A fan-out to to {@link DeserializationContext#checkAccess(HasUuid)} that will accept
-   * collections.
-   */
-  private boolean checkAccess(Object object, DeserializationContext ctx) {
+  private boolean checkAccess(Object object, Property property, Object value,
+      DeserializationContext ctx) throws Exception {
     if (object instanceof HasUuid) {
-      return ctx.checkAccess((HasUuid) object);
+      HasUuid entity = (HasUuid) object;
+      Principal principal = ctx.getPrincipal();
+      // Verify the new value may be set
+      SecurityTarget target = SecurityTarget.of(entity, property);
+
+      switch (context.getEntitySource(entity)) {
+        case CREATED: {
+          // Allow properties of newly-created entities to be set, but check them later
+          CreatedPropertyVerifier verifier = propertyVerifiers.get();
+          verifier.configure(principal, entity, property, CrudOperation.CREATE_ACTION);
+          ctx.addPostWork(verifier);
+          return true;
+        }
+        case RESOLVED: {
+          boolean mayDelete = security.may(principal, target, DELETE_ACTION);
+          boolean mayUpdate = security.may(principal, target, UPDATE_ACTION);
+          if (value == null) {
+            return mayDelete || mayUpdate;
+          }
+          return mayUpdate;
+        }
+        case UNKNOWN:
+          return false;
+        default:
+          throw new UnsupportedOperationException(context.getEntitySource(entity).name());
+      }
     }
     if (object instanceof Iterable) {
       for (Object obj : ((Iterable<?>) object)) {
-        if (!checkAccess(obj, ctx)) {
+        if (!checkAccess(obj, property, value, ctx)) {
           return false;
         }
       }

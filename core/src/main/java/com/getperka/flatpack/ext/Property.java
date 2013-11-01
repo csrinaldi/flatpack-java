@@ -19,24 +19,24 @@
  */
 package com.getperka.flatpack.ext;
 
-import static com.getperka.flatpack.util.FlatPackTypes.UTF8;
 import static com.getperka.flatpack.util.FlatPackTypes.hasAnnotationWithSimpleName;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.security.DenyAll;
-import javax.annotation.security.PermitAll;
 import javax.inject.Inject;
 
 import com.getperka.flatpack.BaseHasUuid;
-import com.getperka.flatpack.InheritPrincipal;
+import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.JsonProperty;
 import com.getperka.flatpack.SuppressDefaultValue;
+import com.getperka.flatpack.security.GroupPermissions;
+import com.getperka.flatpack.security.SecurityGroups;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * An immutable view of a property that should be serialized.
@@ -50,7 +50,7 @@ public class Property extends BaseHasUuid {
     @Inject
     private Property prop;
     @Inject
-    private PropertySecurity security;
+    SecurityGroups security;
     @Inject
     private TypeContext typeContext;
 
@@ -62,9 +62,6 @@ public class Property extends BaseHasUuid {
 
       Method getter = toReturn.getGetter();
       Method setter = toReturn.getSetter();
-
-      toReturn.setGetterRoleNames(preferEmpty(security.getGetterRoleNames(toReturn)));
-      toReturn.setSetterRoleNames(preferEmpty(security.getSetterRoleNames(toReturn)));
 
       if (getter != null) {
         java.lang.reflect.Type returnType = getter.getGenericReturnType();
@@ -98,9 +95,10 @@ public class Property extends BaseHasUuid {
       getter.setAccessible(true);
       prop.getter = getter;
 
-      if (prop.enclosingTypeName == null) {
-        Class<?> enclosingType = getter.getDeclaringClass();
-        prop.enclosingTypeName = typeContext.getPayloadName(enclosingType);
+      if (prop.enclosingType == null) {
+        Class<? extends HasUuid> enclosingType =
+            getter.getDeclaringClass().asSubclass(HasUuid.class);
+        prop.enclosingType = typeContext.describe(enclosingType);
       }
 
       return this;
@@ -120,24 +118,17 @@ public class Property extends BaseHasUuid {
       setter.setAccessible(true);
       prop.setter = setter;
 
-      if (prop.enclosingTypeName == null) {
-        Class<?> enclosingType = setter.getDeclaringClass();
-        prop.enclosingTypeName = typeContext.getPayloadName(enclosingType);
+      if (prop.enclosingType == null) {
+        Class<? extends HasUuid> enclosingType =
+            setter.getDeclaringClass().asSubclass(HasUuid.class);
+        prop.enclosingType = typeContext.describe(enclosingType);
       }
       return this;
     }
 
     private void analyzeAnnotations(Property toReturn, AnnotatedElement method) {
       toReturn.embedded = hasAnnotationWithSimpleName(method, "Embedded");
-      toReturn.inheritPrincipal = method.isAnnotationPresent(InheritPrincipal.class);
       toReturn.suppressDefaultValue = method.isAnnotationPresent(SuppressDefaultValue.class);
-    }
-
-    /**
-     * Convert {@link PropertySecurity#noRoleNames} into the empty set.
-     */
-    private Set<String> preferEmpty(Set<String> set) {
-      return PropertySecurity.noRoleNames.equals(set) ? Collections.<String> emptySet() : set;
     }
   }
 
@@ -154,66 +145,74 @@ public class Property extends BaseHasUuid {
   private Codex<?> codex;
   private boolean deepTraversalOnly;
   /**
+   * This property exists for exposing annotations to callers.
+   */
+  private List<Annotation> docAnnotations;
+  /**
    * This property is mutable by external callers. It's kind of a hack to allow the describe
    * endpoint to lazily add the doc strings.
    */
   private String docString;
-  private String enclosingTypeName;
+  private EntityDescription enclosingType;
   private boolean embedded;
   private Method getter;
-  private Set<String> getterRoleNames;
+  private GroupPermissions groupPermissions;
   private Property implied;
-  private boolean inheritPrincipal;
   private String name;
   private Method setter;
-  private Set<String> setterRoleNames;
   private boolean suppressDefaultValue;
   private Type type;
 
   @Inject
   private Property() {}
 
-  @DenyAll
+  @NoPack
   public Codex<?> getCodex() {
     return codex;
   }
 
-  @PermitAll
+  /**
+   * Annotations that provide additional information about the entity. This could include
+   * deprecation or JSR-303 validation constraints.
+   * <p>
+   * The value of this property will not influence any runtime behavior in the Flatpack
+   * serialization code.
+   */
+  public List<Annotation> getDocAnnotations() {
+    return docAnnotations;
+  }
+
   public String getDocString() {
     return docString;
   }
 
   /**
-   * The payload name of the type that defines the property.
+   * The {@link EntityDescription} that defines the property.
    */
-  @PermitAll
-  public String getEnclosingTypeName() {
-    return enclosingTypeName;
+  public EntityDescription getEnclosingType() {
+    return enclosingType;
   }
 
   /**
    * Returns the getter method for this Property. The returned method will have a non-{@code void}
    * return type and no parameters.
    */
-  @DenyAll
+  @NoPack
   public Method getGetter() {
     return getter;
   }
 
   /**
-   * Returns the role names that are allowed to get the property. A value containing a single
-   * asterisk means that all roles may access the property.
+   * Returns the security permissions that govern access to the property.
    */
-  @PermitAll
-  public Set<String> getGetterRoleNames() {
-    return getterRoleNames;
+  public GroupPermissions getGroupPermissions() {
+    return groupPermissions;
   }
 
   /**
    * When a new value is assigned to the current property in some instance, the implied property of
    * the new value should also be updated with the current instance.
    */
-  @PermitAll
   public Property getImpliedProperty() {
     return implied;
   }
@@ -222,7 +221,6 @@ public class Property extends BaseHasUuid {
    * Returns the json payload name of the Property, which may differ from the bean name if a
    * {@link JsonProperty} annotation has been applied to the getter.
    */
-  @PermitAll
   public String getName() {
     return name;
   }
@@ -231,24 +229,14 @@ public class Property extends BaseHasUuid {
    * Returns the optional setter for the property. The returned method will have a single parameter
    * and a {@code void} return type.
    */
-  @DenyAll
+  @NoPack
   public Method getSetter() {
     return setter;
   }
 
   /**
-   * Return the role names that are allowed to set this property. A value containing a single
-   * asterisk means that all roles may set the property.
-   */
-  @PermitAll
-  public Set<String> getSetterRoleNames() {
-    return setterRoleNames;
-  }
-
-  /**
    * A simplified description of the property's type.
    */
-  @PermitAll
   public Type getType() {
     return type;
   }
@@ -256,7 +244,6 @@ public class Property extends BaseHasUuid {
   /**
    * Returns {@code true} if the Property should be included only during a deep traversal.
    */
-  @PermitAll
   public boolean isDeepTraversalOnly() {
     return deepTraversalOnly;
   }
@@ -265,31 +252,28 @@ public class Property extends BaseHasUuid {
    * Returns {@code true} if an entity Property's properties should be emitted into the owning
    * entity's properties.
    */
-  @PermitAll
   public boolean isEmbedded() {
     return embedded;
-  }
-
-  /**
-   * Returns {@code true} if the referred entity's owner should also be considered an owner of the
-   * entity that defines the Property.
-   */
-  @PermitAll
-  public boolean isInheritPrincipal() {
-    return inheritPrincipal;
   }
 
   /**
    * If {@code true}, non-null properties that contain the property type's default value will not be
    * serialized. For example, integer properties whose values are {@code 0} will not be serialized.
    */
-  @PermitAll
   public boolean isSuppressDefaultValue() {
     return suppressDefaultValue;
   }
 
+  public void setDocAnnotations(List<Annotation> docAnnotations) {
+    this.docAnnotations = docAnnotations;
+  }
+
   public void setDocString(String docString) {
     this.docString = docString;
+  }
+
+  public void setGroupPermissions(GroupPermissions groupPermissions) {
+    this.groupPermissions = groupPermissions;
   }
 
   /**
@@ -297,15 +281,15 @@ public class Property extends BaseHasUuid {
    */
   @Override
   public String toString() {
-    return getEnclosingTypeName() + "." + getName() + " ::= " + getType();
+    return getEnclosingType().getTypeName() + "." + getName() + " ::= " + getType();
   }
 
   @Override
   protected UUID defaultUuid() {
-    if (getEnclosingTypeName() == null || getName() == null) {
+    if (getEnclosingType() == null || getName() == null) {
       throw new IllegalStateException();
     }
-    return UUID.nameUUIDFromBytes((getEnclosingTypeName() + "." + getName()).getBytes(UTF8));
+    return new UuidDigest(getClass()).add(getEnclosingType()).add(name).digest();
   }
 
   void setDeepTraversalOnly(boolean deepTraversalOnly) {
@@ -316,12 +300,8 @@ public class Property extends BaseHasUuid {
     this.embedded = embedded;
   }
 
-  void setEnclosingTypeName(String enclosingTypeName) {
-    this.enclosingTypeName = enclosingTypeName;
-  }
-
-  void setGetterRoleNames(Set<String> names) {
-    this.getterRoleNames = names;
+  void setEnclosingType(EntityDescription enclosingType) {
+    this.enclosingType = enclosingType;
   }
 
   void setImplied(Property implied) {
@@ -336,16 +316,8 @@ public class Property extends BaseHasUuid {
     this.implied = implied;
   }
 
-  void setInheritPrincipal(boolean inheritPrincipal) {
-    this.inheritPrincipal = inheritPrincipal;
-  }
-
   void setName(String name) {
     this.name = name;
-  }
-
-  void setSetterRoleNames(Set<String> names) {
-    this.setterRoleNames = names;
   }
 
   void setSuppressDefaultValue(boolean suppressDefaultValue) {

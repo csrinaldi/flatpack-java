@@ -45,8 +45,8 @@ import com.google.inject.TypeLiteral;
  * @param <T> the type of data contained in the array
  */
 public class ArrayCodex<T> extends Codex<T[]> {
-  private Class<T> elementType;
-  private Codex<T> valueCodex;
+  protected Class<T> elementType;
+  protected Codex<T> valueCodex;
 
   protected ArrayCodex() {}
 

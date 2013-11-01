@@ -21,8 +21,6 @@ package com.getperka.flatpack;
 
 import java.util.UUID;
 
-import javax.annotation.security.PermitAll;
-
 /**
  * Utility base class that provides lazy UUID generation.
  */
@@ -50,7 +48,6 @@ public class BaseHasUuid implements HasUuid {
    * Generates a new UUID by calling {@link #defaultUuid()} if a value has not been previously set.
    */
   @Override
-  @PermitAll
   public UUID getUuid() {
     if (uuid == null) {
       uuid = defaultUuid();

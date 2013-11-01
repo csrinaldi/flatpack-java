@@ -1,0 +1,28 @@
+action crudOperation = create, read, update, delete;
+
+allow {
+  ADMIN to *;
+  * to read;
+}
+
+type baseHasUuid {}
+
+package thingsToProtect {
+  allow only {
+    ADMIN to *;
+    NOBODY none;
+  }
+  
+  type product {
+    allow {
+      NOBODY to read;
+    }
+    
+    policy adminOnly {
+      property notes;
+      allow only {
+        ADMIN to *;
+      }
+    }    
+  }
+}

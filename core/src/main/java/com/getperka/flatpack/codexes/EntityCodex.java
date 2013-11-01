@@ -37,12 +37,14 @@ import com.getperka.flatpack.PostUnpack;
 import com.getperka.flatpack.PreUnpack;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.DeserializationContext;
+import com.getperka.flatpack.ext.DeserializationContext.EntitySource;
 import com.getperka.flatpack.ext.EntityResolver;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.ext.TypeContext;
+import com.getperka.flatpack.ext.UpdatingCodex;
 import com.getperka.flatpack.ext.VisitorContext;
 import com.getperka.flatpack.ext.Walker;
 import com.google.gson.JsonElement;
@@ -86,7 +88,6 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   private Provider<T> provider;
   private List<Method> preUnpackMethods;
   private List<Method> postUnpackMethods;
-
   @Inject
   private TypeContext typeContext;
 
@@ -107,7 +108,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
       if (visitor.visit(entity, this, context)) {
         // Traverse all properties
         PropertyWalker walker = new PropertyWalker(entity);
-        for (Property prop : typeContext.extractProperties(clazz)) {
+        for (Property prop : typeContext.describe(clazz).getProperties()) {
           context.walkImmutable(walker).accept(visitor, prop);
         }
       }
@@ -141,7 +142,7 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   public Type describe() {
     return new Type.Builder()
         .withJsonKind(JsonKind.STRING)
-        .withName(typeContext.getPayloadName(clazz))
+        .withName(typeContext.describe(clazz).getTypeName())
         .build();
   }
 
@@ -221,6 +222,15 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   protected void setProperty(Property property, T target, Object value) {
     if (property.getSetter() != null) {
       try {
+        // Allow some properties (e.g. collections) to be updated in-place
+        @SuppressWarnings("unchecked")
+        Codex<Object> codex = (Codex<Object>) property.getCodex();
+        if (codex instanceof UpdatingCodex && property.getGetter() != null) {
+          Object oldValue = property.getGetter().invoke(target);
+          if (oldValue != null && value != null) {
+            value = ((UpdatingCodex<Object>) codex).replacementValue(oldValue, value);
+          }
+        }
         property.getSetter().invoke(target, value);
       } catch (Exception e) {
         throw new RuntimeException("Could not set property value", e);
@@ -270,17 +280,16 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
   private T allocate(UUID uuid, JsonElement element, DeserializationContext context,
       boolean useResolvers) {
     T toReturn = null;
-    boolean resolved = false;
 
     // Possibly delegate to injected resolvers
     if (useResolvers) {
       try {
         toReturn = entityResolver.resolve(clazz, uuid);
+        if (toReturn != null) {
+          context.putEntity(uuid, toReturn, EntitySource.RESOLVED);
+        }
       } catch (Exception e) {
         context.fail(e);
-      }
-      if (toReturn != null) {
-        resolved = true;
       }
     }
 
@@ -288,9 +297,8 @@ public class EntityCodex<T extends HasUuid> extends Codex<T> {
     if (toReturn == null && provider != null) {
       toReturn = provider.get();
       toReturn.setUuid(uuid);
+      context.putEntity(uuid, toReturn, EntitySource.CREATED);
     }
-
-    context.putEntity(uuid, toReturn, resolved);
 
     return toReturn;
   }

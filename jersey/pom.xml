@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>flatpack-jersey</artifactId>
   <name>FlatPack Jersey integration</name>
@@ -6,7 +7,7 @@
   <parent>
     <groupId>com.getperka.flatpack</groupId>
     <artifactId>flatpack-parent</artifactId>
-    <version>2.20.1-SNAPSHOT</version>
+    <version>2.21.0-SNAPSHOT</version>
   </parent>
 
   <scm>
@@ -20,10 +21,6 @@
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
@@ -46,9 +43,12 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>jsr250-api</artifactId>
-      <version>1.0</version>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
     </dependency>
     <!-- Test dependencies -->
     <dependency>

@@ -25,6 +25,7 @@ goog.provide('<entity.canonicalName>');
 goog.require('com.getperka.flatpack.core.EntityDescription');
 goog.require('com.getperka.flatpack.core.Property');
 goog.require('<entity.supertype.canonicalName>');
+<entity.validationRequires:{r | goog.require('<r>');}; separator="\n">
 
 (function() {
 
@@ -42,7 +43,11 @@ goog.require('<entity.supertype.canonicalName>');
     superType : <entity.supertype.canonicalName>.entityDescription(),
     typeName : ENTITY_NAME,
     kind : '<entity.canonicalName>',
-    properties : allProperties
+    properties : allProperties<if(entity.validations)>,
+    validations : {
+      <validationMap(entity.validations)>
+    }
+    <endif>
   });
   
   com.getperka.flatpack.core.EntityDescription.setEntityDescriptionForName(
@@ -64,7 +69,7 @@ goog.require('<entity.supertype.canonicalName>');
       <if(entity.collectionProperties)>
         var self = this;
       
-      <entity.collectionProperties:collectionDeclaration(); separator="\n\n"><endif>
+      <entity.uniqueTypeCollectionListProperties:collectionDeclaration(); separator="\n\n"><endif>
       
         return {
           <entity.properties:property(); separator=",\n\n">
@@ -87,6 +92,17 @@ goog.require('<entity.supertype.canonicalName>');
     }
   );
 }());
+
+>>
+
+validationMap(map) ::= <<
+<map.keys:{key | <key> : <validationValues(map.(key))>}; separator=",\n\n">
+>>
+
+validationValues(values) ::= <<
+[
+  <values:{v | <v>}; separator=",\n">
+]
 >>
 
 collectionDeclaration(property) ::= <<
@@ -153,6 +169,8 @@ goog.require('com.getperka.flatpack.client.BaseApi');
   );
 
 }());
+
+
 >>
 
 endpointRequestClass(end) ::= <<

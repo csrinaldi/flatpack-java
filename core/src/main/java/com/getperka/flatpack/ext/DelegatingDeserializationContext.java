@@ -1,4 +1,5 @@
 package com.getperka.flatpack.ext;
+
 /*
  * #%L
  * FlatPack serialization code
@@ -54,11 +55,6 @@ public class DelegatingDeserializationContext extends DeserializationContext {
   }
 
   @Override
-  public boolean checkAccess(HasUuid object) {
-    return delegate.checkAccess(object);
-  }
-
-  @Override
   public void close() throws IOException {
     delegate.close();
   }
@@ -71,6 +67,11 @@ public class DelegatingDeserializationContext extends DeserializationContext {
   @Override
   public HasUuid getEntity(UUID uuid) {
     return delegate.getEntity(uuid);
+  }
+
+  @Override
+  public EntitySource getEntitySource(HasUuid entity) {
+    return delegate.getEntitySource(entity);
   }
 
   @Override
@@ -99,8 +100,8 @@ public class DelegatingDeserializationContext extends DeserializationContext {
   }
 
   @Override
-  public void putEntity(UUID uuid, HasUuid entity, boolean resolved) {
-    delegate.putEntity(uuid, entity, resolved);
+  public void putEntity(UUID uuid, HasUuid entity, EntitySource source) {
+    delegate.putEntity(uuid, entity, source);
   }
 
   @Override
@@ -111,10 +112,5 @@ public class DelegatingDeserializationContext extends DeserializationContext {
   @Override
   public String toString() {
     return delegate.toString();
-  }
-
-  @Override
-  public boolean wasResolved(HasUuid entity) {
-    return delegate.wasResolved(entity);
   }
 }

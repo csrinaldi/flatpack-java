@@ -23,6 +23,7 @@ import javax.inject.Inject;
 
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.DeserializationContext;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.SerializationContext;
 import com.getperka.flatpack.ext.Type;
@@ -46,13 +47,14 @@ public class HasUuidClassCodex extends ValueCodex<Class<? extends HasUuid>> {
   public Class<? extends HasUuid> readNotNull(JsonElement element, DeserializationContext context)
       throws Exception {
     String name = element.getAsString();
-    return typeContext.getClass(name);
+    EntityDescription entityDescription = typeContext.getEntityDescription(name);
+    return entityDescription == null ? null : entityDescription.getEntityType();
   }
 
   @Override
   public void writeNotNull(Class<? extends HasUuid> object, SerializationContext context)
       throws Exception {
-    context.getWriter().value(typeContext.getPayloadName(object));
+    context.getWriter().value(typeContext.describe(object).getTypeName());
   }
 
   @Inject

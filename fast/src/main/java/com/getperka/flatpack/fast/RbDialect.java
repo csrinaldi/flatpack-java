@@ -50,8 +50,8 @@ import com.getperka.cli.flags.Flag;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
 import com.getperka.flatpack.util.FlatPackCollections;
@@ -90,6 +90,8 @@ public class RbDialect implements Dialect {
 
   private final Logger logger = LoggerFactory.getLogger(getClass());
 
+  private EntityDescription baseHasUuid;
+
   @Override
   public void generate(ApiDescription api, File outputDir) throws IOException {
 
@@ -113,14 +115,14 @@ public class RbDialect implements Dialect {
         if ("uuid".equals(prop.getName())) {
           // Crop the UUID property
           it.remove();
-        } else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
+        } else if (!prop.getEnclosingType().equals(entity)) {
           // Remove properties not declared in the current type
           it.remove();
         }
       }
     }
     // Ensure that the "real" implementations are used
-    allEntities.remove("baseHasUuid");
+    baseHasUuid = allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
 
     // rendr the list of require statements
@@ -270,7 +272,10 @@ public class RbDialect implements Dialect {
 
             else if ("supertype".equals(propertyName)) {
               EntityDescription supertype = entity.getSupertype();
-              return supertype == null ? new EntityDescription("baseHasUuid", null) : supertype;
+              if (supertype == null) {
+                supertype = baseHasUuid;
+              }
+              return supertype;
             }
 
             else if ("simpleName".equals(propertyName)) {

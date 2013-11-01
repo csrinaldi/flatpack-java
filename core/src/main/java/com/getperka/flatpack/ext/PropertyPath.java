@@ -25,10 +25,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import javax.annotation.security.PermitAll;
+import java.util.UUID;
 
 import com.getperka.flatpack.BaseHasUuid;
+import com.getperka.flatpack.util.UuidDigest;
 
 /**
  * Represents a sequence of simple property evaluations.
@@ -42,14 +42,19 @@ public class PropertyPath extends BaseHasUuid {
     boolean receive(Object value);
   }
 
-  private final List<Property> path;
+  private List<Property> path;
 
   /**
    * Constructor that creates a copy of {@code path}.
    */
   public PropertyPath(Collection<Property> path) {
     this.path = Collections.unmodifiableList(new ArrayList<Property>(path));
-  }
+  };
+
+  /**
+   * Flatpack.
+   */
+  PropertyPath() {}
 
   /**
    * Evaluate each possible property value in the path, passing the value to {@code receiver}.
@@ -61,7 +66,6 @@ public class PropertyPath extends BaseHasUuid {
   /**
    * Return an unmodifiable view of the properties that comprise the path.
    */
-  @PermitAll
   public List<Property> getPath() {
     return path;
   }
@@ -88,6 +92,15 @@ public class PropertyPath extends BaseHasUuid {
     return sb.toString();
   }
 
+  @Override
+  protected UUID defaultUuid() {
+    return new UuidDigest(getClass()).addEntities(path).digest();
+  }
+
+  void setPath(List<Property> path) {
+    this.path = path;
+  }
+
   private boolean evaluate(Object target, List<Property> properties, Receiver receiver) {
     if (properties.isEmpty()) {
       return receiver.receive(target);
@@ -95,7 +108,13 @@ public class PropertyPath extends BaseHasUuid {
     Throwable ex;
     try {
       Property prop = properties.get(0);
+      if (prop.getGetter() == null) {
+        return false;
+      }
       Object currentValue = prop.getGetter().invoke(target);
+      if (currentValue == null) {
+        return false;
+      }
       switch (prop.getType().getJsonKind()) {
         case STRING:
           return evaluate(currentValue, properties.subList(1, properties.size()), receiver);

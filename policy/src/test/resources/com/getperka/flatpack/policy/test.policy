@@ -1,0 +1,84 @@
+/*
+ * CAUTION: This policy file is intended to exercise the parser,
+ * not be to particularly meaningful or instructive to humans.
+ */
+
+// Implicit definition
+action crudOperation = create, read, update, delete;
+
+// Default values if a type contains no allow block
+allow {
+  // Matches all actions, even custom ones
+  internalUser to *;
+}
+
+/*
+ * Types can be grouped into packages for DRY and scoping purposes.
+ * The package name is merely descriptive.
+ */
+package arbitraryName {
+  // Check package-level definitions
+  allow {
+    * to read;
+    integratorUser none;
+  }
+
+  type merchant {
+    // implicit inherit global if no inherit
+    group {
+      clerk = merchantLocations.clerks;
+      merchantUser = merchantUsers;
+      integratorUser = integratorUser;
+    }
+  
+    // Defaults for the type and its properties
+    allow {
+      clerk to read;
+      integratorUser to create, read, update, delete;
+      merchantUser to update;
+      // Allow global inherit to be overridden
+      * none;
+    }
+      
+  
+    // A policy has a name to make logging saner
+    policy publicThings {
+      /*
+       * A property may be referenced by at most one
+       * policy to prevent overloaded behaviors.
+       */
+      property name, headline;
+      // Re-override type-level allow rule, also don't need curly braces for singleton rulesets
+      allow * to read; 
+    }
+    
+    policy internalOnly {
+      property note, foo, bar;
+      // The "only" modifier prevents any inheritance
+      allow only internalUser to *;
+    }
+  }
+  
+  type merchantLocation {
+    // Inherits all groups from merchant, but overrides the clerk group
+    group inherit merchant {
+      clerk = clerks;
+    }
+  
+    // Allows other actions to be defined
+    action validatorActions = redeemCoupon, validate;
+  
+    allow inherit merchant {
+      clerk to read, validatorActions.*;
+      merchantUser to crudOperation.*, validatorActions.redeemCoupon;
+    }
+    
+    // Test same-type inheritance
+    allow inherit templateLocation;
+  
+    policy thingsToForget {
+      property hidden;
+      // No allow is like @DenyAll
+    }
+  }
+}

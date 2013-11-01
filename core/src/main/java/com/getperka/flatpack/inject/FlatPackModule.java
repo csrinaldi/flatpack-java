@@ -30,18 +30,18 @@ import org.slf4j.LoggerFactory;
 import com.getperka.flatpack.Configuration;
 import com.getperka.flatpack.FlatPack;
 import com.getperka.flatpack.PersistenceMapper;
-import com.getperka.flatpack.RoleMapper;
 import com.getperka.flatpack.TraversalMode;
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.EntitySecurity;
-import com.getperka.flatpack.ext.PrincipalMapper;
-import com.getperka.flatpack.ext.PropertySecurity;
-import com.getperka.flatpack.security.AllowAllEntitySecurity;
-import com.getperka.flatpack.security.AllowAllPropertySecurity;
-import com.getperka.flatpack.security.RoleEntitySecurity;
-import com.getperka.flatpack.security.RolePropertySecurity;
+import com.getperka.flatpack.security.MemoizingSecurity;
+import com.getperka.flatpack.security.NoSecurity;
+import com.getperka.flatpack.security.PermissivePrincipalMapper;
+import com.getperka.flatpack.security.PrincipalMapper;
+import com.getperka.flatpack.security.PrincipalSecurity;
+import com.getperka.flatpack.security.ReflexiveSecurityPolicy;
+import com.getperka.flatpack.security.Security;
+import com.getperka.flatpack.security.SecurityPolicy;
 import com.getperka.flatpack.util.IoObserver;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.AbstractModule;
@@ -131,12 +131,14 @@ public class FlatPackModule extends AbstractModule {
         .toProvider(Providers.of(new DateTime(0)))
         .in(packScope);
 
-    bind(TraversalMode.class)
-        .toProvider(PackScope.<TraversalMode> provider())
-        .in(packScope);
-
     bind(JsonWriter.class)
         .toProvider(PackScope.<JsonWriter> provider())
+        .in(packScope);
+
+    bind(MemoizingSecurity.class).in(packScope);
+
+    bind(TraversalMode.class)
+        .toProvider(PackScope.<TraversalMode> provider())
         .in(packScope);
   }
 
@@ -173,19 +175,20 @@ public class FlatPackModule extends AbstractModule {
     // PrincipalMapper
     if (configuration.getPrincipalMapper() == null) {
       bind(PrincipalMapper.class).to(PermissivePrincipalMapper.class);
-      bind(EntitySecurity.class).to(AllowAllEntitySecurity.class);
+      bind(SecurityPolicy.class).to(NoSecurity.class);
     } else {
       bind(PrincipalMapper.class).toInstance(configuration.getPrincipalMapper());
-      bind(EntitySecurity.class).to(RoleEntitySecurity.class);
+
+      // SecurityPolicy
+      if (configuration.getSecurityPolicy() == null) {
+        bind(SecurityPolicy.class).to(ReflexiveSecurityPolicy.class);
+      } else {
+        bind(SecurityPolicy.class).toInstance(configuration.getSecurityPolicy());
+      }
     }
 
-    // RoleMapper and PropertySecurity
-    if (configuration.getRoleMapper() == null) {
-      bind(RoleMapper.class).to(NullRoleMapper.class);
-      bind(PropertySecurity.class).to(AllowAllPropertySecurity.class);
-    } else {
-      bind(RoleMapper.class).toInstance(configuration.getRoleMapper());
-      bind(PropertySecurity.class).to(RolePropertySecurity.class);
-    }
+    // Security
+    bind(Security.class).to(PrincipalSecurity.class);
+
   }
 }

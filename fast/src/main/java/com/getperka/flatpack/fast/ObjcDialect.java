@@ -58,8 +58,8 @@ import com.getperka.cli.flags.Flag;
 import com.getperka.flatpack.BaseHasUuid;
 import com.getperka.flatpack.client.dto.ApiDescription;
 import com.getperka.flatpack.client.dto.EndpointDescription;
-import com.getperka.flatpack.client.dto.EntityDescription;
 import com.getperka.flatpack.client.dto.ParameterDescription;
+import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
@@ -104,6 +104,8 @@ public class ObjcDialect implements Dialect {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
 
+  private EntityDescription baseHasUuid;
+
   @Override
   public void generate(ApiDescription api, File outputDir) throws IOException {
     if (!outputDir.isDirectory() && !outputDir.mkdirs()) {
@@ -124,13 +126,13 @@ public class ObjcDialect implements Dialect {
         }
 
         // and properties not declared in the current type
-        else if (!prop.getEnclosingTypeName().equals(entity.getTypeName())) {
+        else if (!prop.getEnclosingType().equals(entity)) {
           it.remove();
         }
       }
     }
     // Ensure that the "real" implementations are used
-    allEntities.remove("baseHasUuid");
+    baseHasUuid = allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
 
     // Render entities
@@ -493,7 +495,10 @@ public class ObjcDialect implements Dialect {
 
             else if ("supertype".equals(propertyName)) {
               EntityDescription supertype = entity.getSupertype();
-              return supertype == null ? new EntityDescription("baseHasUuid", null) : supertype;
+              if (supertype == null) {
+                supertype = baseHasUuid;
+              }
+              return supertype;
             }
 
             else if ("requireName".equals(propertyName)) {

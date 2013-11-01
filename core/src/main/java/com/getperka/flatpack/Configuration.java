@@ -25,7 +25,8 @@ import java.util.Set;
 
 import com.getperka.flatpack.ext.CodexMapper;
 import com.getperka.flatpack.ext.EntityResolver;
-import com.getperka.flatpack.ext.PrincipalMapper;
+import com.getperka.flatpack.security.PrincipalMapper;
+import com.getperka.flatpack.security.SecurityPolicy;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 /**
@@ -39,7 +40,7 @@ public class Configuration {
   private List<PersistenceMapper> persistenceMappers;
   private PrincipalMapper principalMapper;
   private List<EntityResolver> resolvers = FlatPackCollections.listForAny();
-  private RoleMapper roleMapper;
+  private SecurityPolicy securityPolicy;
   private boolean verbose;
   private int verboseLogChunkSize = Integer.MAX_VALUE;
 
@@ -109,11 +110,8 @@ public class Configuration {
     return principalMapper;
   }
 
-  /**
-   * Returns the {@link RoleMapper} that maps role names to interface types.
-   */
-  public RoleMapper getRoleMapper() {
-    return roleMapper;
+  public SecurityPolicy getSecurityPolicy() {
+    return securityPolicy;
   }
 
   /**
@@ -149,10 +147,6 @@ public class Configuration {
     return verbose;
   }
 
-  public void setRoleMapper(RoleMapper roleMapper) {
-    this.roleMapper = roleMapper;
-  }
-
   public void setVerbose(boolean verbose) {
     this.verbose = verbose;
   }
@@ -172,8 +166,8 @@ public class Configuration {
     return this;
   }
 
-  public Configuration withRoleMapper(RoleMapper roleMapper) {
-    setRoleMapper(roleMapper);
+  public Configuration withSecurityPolicy(SecurityPolicy securityPolicy) {
+    this.securityPolicy = securityPolicy;
     return this;
   }
 

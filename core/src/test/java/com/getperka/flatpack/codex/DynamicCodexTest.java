@@ -41,6 +41,7 @@ import com.getperka.flatpack.FlatPackTest;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.codexes.DynamicCodex;
 import com.getperka.flatpack.ext.DeserializationContext;
+import com.getperka.flatpack.ext.DeserializationContext.EntitySource;
 import com.getperka.flatpack.ext.TypeContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -90,7 +91,7 @@ public class DynamicCodexTest extends FlatPackTest {
     assertEquals(uuid.toString(), codex.read(new JsonPrimitive(uuid.toString()), ctx));
 
     HasUuid entity = new BaseHasUuid();
-    ctx.putEntity(uuid, entity, true);
+    ctx.putEntity(uuid, entity, EntitySource.RESOLVED);
     assertSame(entity, codex.read(new JsonPrimitive(uuid.toString()), ctx));
   }
 }

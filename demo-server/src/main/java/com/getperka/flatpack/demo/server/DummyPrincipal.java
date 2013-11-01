@@ -42,4 +42,9 @@ public class DummyPrincipal implements Principal {
   public String getRole() {
     return role;
   }
+
+  @Override
+  public String toString() {
+    return role + " " + name;
+  }
 }

@@ -37,6 +37,10 @@ public class FlatPackResolver implements ContextResolver<FlatPack> {
     flatpack = FlatPack.create(configuration);
   }
 
+  public FlatPackResolver(FlatPack flatpack) {
+    this.flatpack = flatpack;
+  }
+
   @Override
   public FlatPack getContext(Class<?> type) {
     return flatpack;
