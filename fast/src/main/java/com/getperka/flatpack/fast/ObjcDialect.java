@@ -63,6 +63,7 @@ import com.getperka.flatpack.ext.EntityDescription;
 import com.getperka.flatpack.ext.JsonKind;
 import com.getperka.flatpack.ext.Property;
 import com.getperka.flatpack.ext.Type;
+import com.getperka.flatpack.ext.TypeHint;
 import com.getperka.flatpack.util.FlatPackCollections;
 
 public class ObjcDialect implements Dialect {
@@ -191,6 +192,16 @@ public class ObjcDialect implements Dialect {
   }
 
   private String coreDataTypeForType(Type type) {
+    TypeHint hint = type.getTypeHint();
+    if (hint != null) {
+      if (hint.getValue().equals("org.joda.time.DateTime")) {
+        return "NSDateAttributeType";
+      }
+      else if (hint.getValue().equals("org.joda.time.LocalDateTime")) {
+        return "NSDateAttributeType";
+      }
+    }
+
     switch (type.getJsonKind()) {
       case BOOLEAN:
         return "NSBooleanAttributeType";
@@ -252,8 +263,7 @@ public class ObjcDialect implements Dialect {
     Iterator<Property> iter = props.iterator();
     while (iter.hasNext()) {
       Property prop = iter.next();
-      boolean isRelationship = prop.getType().getName() != null ||
-        prop.getType().getListElement() != null;
+      boolean isRelationship = isRelationship(prop);
       if (isRelationship ^ includeRelationships) {
         iter.remove();
       }
@@ -346,6 +356,11 @@ public class ObjcDialect implements Dialect {
     });
 
     return sortedProperties;
+  }
+
+  private boolean isRelationship(Property prop) {
+    return prop.getType().getName() != null ||
+      prop.getType().getListElement() != null;
   }
 
   private boolean isRequiredImport(String type) {
@@ -680,6 +695,19 @@ public class ObjcDialect implements Dialect {
             return type.substring(2);
           }
           return upcase(p.getName());
+        }
+        else if ("attributeType".equals(propertyName)) {
+          return coreDataTypeForType(p.getType());
+        }
+        else if ("relationshipTargetType".equals(propertyName)) {
+          Type type = p.getType();
+          Type listElementType = type.getListElement();
+          if (listElementType != null) {
+            return listElementType.getName();
+          }
+          else {
+            return type.getName();
+          }
         }
 
         return super.getProperty(interp, self, o, property, propertyName);

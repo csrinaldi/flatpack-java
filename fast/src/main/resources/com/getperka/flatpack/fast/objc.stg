@@ -261,7 +261,8 @@ schema(entities) ::= <<
 + (NSManagedObjectModel *) managedObjectModel {
   NSManagedObjectModel *mom = [[NSManagedObjectModel alloc] init];
   NSMutableArray *entities = [NSMutableArray array];
-  
+  <! Initializing all the entities up front so they can reference each other !>
+  <entities:entityInit(); separator="\n">
   <entities:schemaForEntity(); separator="\n\n">
   
   [mom setEntities:entities];
@@ -271,17 +272,22 @@ schema(entities) ::= <<
 @end
 >>
 
+entityInit(entity) ::= <<
+NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init];
+>>
+
 schemaForEntity(entity) ::= <<
 // ***** Entity: <entity.typeName> *****
 
-NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init];
 [<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
 [<entity.typeName>Entity setManagedObjectClassName:@"<entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
 <if(entity.properties)>
 
 NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
+<uuidAttributeDescription()>
 <entity.attributes:attributeDescription(entity.typeName); separator="\n\n">
+
 <entity.relationships:relationshipDescription(entity.typeName); separator="\n\n">
 
 [<entity.typeName>Entity setProperties:<entity.typeName>Properties];
@@ -289,13 +295,29 @@ NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
 >>
 
 attributeDescription(property, propertiesPrefix) ::= <<
-NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute =
-  [[NSAttributeDescription alloc] init];
+// Attribute: <property.name> 
+NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = [[NSAttributeDescription alloc] init];
 [<propertiesPrefix><property.nameCapitalized>Attribute setName:@"<property.name>"];
+[<propertiesPrefix><property.nameCapitalized>Attribute setAttributeType:<property.attributeType>];
+[<propertiesPrefix><property.nameCapitalized>Attribute setOptional:YES];
+[<propertiesPrefix><property.nameCapitalized>Attribute setIndexed:NO];
 [<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];
 >>
 
+uuidAttributeDescription(property, propertiesPrefix) ::= <<
+// Attribute: uuid
+NSAttributeDescription *uuidAttribute = [[NSAttributeDescription alloc] init];
+[uuidAttribute setName:@"uuid"];
+[uuidAttribute setAttributeType:NSStringAttributeType];
+[uuidAttribute setOptional:NO];
+[uuidAttribute setIndexed:YES];
+[<propertiesPrefix>Properties addObject:uuidAttribute];
+
+>>
+
 relationshipDescription(property, propertiesPrefix) ::= <<
-// Relationship Description goes here
+// Relationship: <property.name>
+NSRelationshipDescription *<propertiesPrefix><property.nameCapitalized>Relationship = [[NSRelationshipDescription alloc] init];
+[<propertiesPrefix><property.nameCapitalized>Relationship setDestinationEntity:<property.relationshipTargetType>Entity];
 >>
 
