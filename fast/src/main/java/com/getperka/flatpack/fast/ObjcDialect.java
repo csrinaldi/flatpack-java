@@ -118,6 +118,8 @@ public class ObjcDialect implements Dialect {
         .mapForIteration();
     for (EntityDescription entity : api.getEntities()) {
       addEntity(allEntities, entity);
+
+      for (Property p : entity.getProperties()) {}
     }
 
     // Ensure that the "real" implementations are used
@@ -186,6 +188,21 @@ public class ObjcDialect implements Dialect {
 
     // Add the supertype
     addEntity(allEntities, entity.getSupertype());
+  }
+
+  private String coreDataTypeForType(Type type) {
+    switch (type.getJsonKind()) {
+      case BOOLEAN:
+        return "NSBooleanAttributeType";
+      case DOUBLE:
+        return "NSDoubleAttributeType";
+      case INTEGER:
+        return "NSInteger32AttributeType";
+      case STRING:
+        return "NSStringAttributeType";
+      default:
+        return "NSUndefinedAttributeType";
+    }
   }
 
   /**

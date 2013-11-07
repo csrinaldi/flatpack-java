@@ -282,6 +282,9 @@ NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init
 
 NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
 <entity.attributes:attributeDescription(entity.typeName); separator="\n\n">
+<entity.relationships:relationshipDescription(entity.typeName); separator="\n\n">
+
+[<entity.typeName>Entity setProperties:<entity.typeName>Properties];
 <endif>
 >>
 
@@ -291,3 +294,8 @@ NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute =
 [<propertiesPrefix><property.nameCapitalized>Attribute setName:@"<property.name>"];
 [<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];
 >>
+
+relationshipDescription(property, propertiesPrefix) ::= <<
+// Relationship Description goes here
+>>
+
