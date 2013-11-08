@@ -31,6 +31,7 @@ import java.io.Writer;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -106,6 +107,7 @@ public class ObjcDialect implements Dialect {
   }
 
   private EntityDescription baseHasUuid;
+  private Map<EntityDescription, HashSet<EntityDescription>> topDownHierarchy;
 
   @Override
   public void generate(ApiDescription api, File outputDir) throws IOException {
@@ -113,14 +115,13 @@ public class ObjcDialect implements Dialect {
       logger.error("Could not create output directory {}", outputDir.getPath());
       return;
     }
+    topDownHierarchy = new HashMap<EntityDescription, HashSet<EntityDescription>>();
 
     // first collect just our model entities
     Map<String, EntityDescription> allEntities = FlatPackCollections
         .mapForIteration();
     for (EntityDescription entity : api.getEntities()) {
       addEntity(allEntities, entity);
-
-      for (Property p : entity.getProperties()) {}
     }
 
     // Ensure that the "real" implementations are used
@@ -189,6 +190,9 @@ public class ObjcDialect implements Dialect {
 
     // Add the supertype
     addEntity(allEntities, entity.getSupertype());
+
+    // register this on the supertype's list of subtypes for top-down hierarchy construction
+    registerSubEntity(entity, entity.getSupertype());
   }
 
   private String coreDataTypeForType(Type type) {
@@ -200,6 +204,11 @@ public class ObjcDialect implements Dialect {
       else if (hint.getValue().equals("org.joda.time.LocalDateTime")) {
         return "NSDateAttributeType";
       }
+    }
+
+    // Use String for enums
+    if (type.getEnumValues() != null) {
+      return "NSStringAttributeType";
     }
 
     switch (type.getJsonKind()) {
@@ -358,9 +367,23 @@ public class ObjcDialect implements Dialect {
     return sortedProperties;
   }
 
+  /**
+   * Determines whether the property refers to an Attribute or a Relationship
+   * 
+   * @param prop
+   * @return
+   */
   private boolean isRelationship(Property prop) {
-    return prop.getType().getName() != null ||
-      prop.getType().getListElement() != null;
+    Type type = prop.getType();
+    List<String> enumValues = type.getEnumValues();
+    String name = type.getName();
+    Type listElementType = type.getListElement();
+
+    // Not an enum, and either a HasUuid or a list of things that are HasUuids
+    return enumValues == null
+      && (name != null ||
+      (listElementType != null && (listElementType.getName() != null && listElementType
+          .getEnumValues() == null)));
   }
 
   private boolean isRequiredImport(String type) {
@@ -612,6 +635,9 @@ public class ObjcDialect implements Dialect {
                 }
               });
               return sortedProperties;
+            }
+            else if ("subentities".equals(propertyName)) {
+              return subEntityNamesForEntity(entity);
             }
 
             return super.getProperty(interp, self, o, property, propertyName);
@@ -874,6 +900,23 @@ public class ObjcDialect implements Dialect {
 
   }
 
+  /**
+   * Add entity to parent's subentities list for top down hierarchy construction
+   */
+  private void registerSubEntity(EntityDescription child, EntityDescription parent) {
+    if (parent == null) {
+      return;
+    }
+
+    HashSet<EntityDescription> subEntities = topDownHierarchy.get(parent);
+    if (subEntities == null) {
+      subEntities = new HashSet<EntityDescription>();
+      topDownHierarchy.put(parent, subEntities);
+    }
+
+    subEntities.add(child);
+  }
+
   private void render(ST enumST, File packageDir, String fileName)
       throws IOException {
 
@@ -892,5 +935,19 @@ public class ObjcDialect implements Dialect {
 
   private String requireNameForType(String type) {
     return type.equalsIgnoreCase("baseHasUuid") ? "FP" + upcase(type) : classPrefix + upcase(type);
+  }
+
+  // For top-down entity hierarchy construction
+  private List<String> subEntityNamesForEntity(EntityDescription entityDesc) {
+    Collection<EntityDescription> subEntities = topDownHierarchy.get(entityDesc);
+    List<String> ret = null;
+    if (!(subEntities == null || subEntities.isEmpty())) {
+      ret = new ArrayList<String>(subEntities.size());
+      for (EntityDescription eDesc : subEntities) {
+        ret.add(eDesc.getTypeName());
+      }
+    }
+
+    return ret;
   }
 }
