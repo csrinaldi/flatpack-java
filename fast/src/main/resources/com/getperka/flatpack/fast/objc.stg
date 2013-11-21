@@ -280,7 +280,7 @@ schemaForEntity(entity) ::= <<
 // ***** Entity: <entity.typeName> *****
 
 [<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
-[<entity.typeName>Entity setManagedObjectClassName:@"<entity.typeNameCapitalized>"];
+[<entity.typeName>Entity setManagedObjectClassName:@"PK<entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
 <if(entity.subentities)>
 
@@ -298,10 +298,9 @@ NSAttributeDescription *<entity.typeName>UuidAttribute = [[NSAttributeDescriptio
 [<entity.typeName>UuidAttribute setOptional:NO];
 [<entity.typeName>UuidAttribute setIndexed:YES];
 [<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute];
+<entity.attributes:attributeDescription(entity.typeName); separator="\n">
 
-<entity.attributes:attributeDescription(entity.typeName); separator="\n\n">
-
-<entity.relationships:relationshipDescription(entity.typeName); separator="\n\n">
+<entity.relationships:relationshipDescription(entity.typeName); separator="\n">
 
 [<entity.typeName>Entity setProperties:<entity.typeName>Properties];<endif>
 >>
@@ -311,6 +310,7 @@ subEntityRelationships(subentityName, arrayPrefix) ::= <<
 >>
 
 attributeDescription(property, propertiesPrefix) ::= <<
+
 // Attribute: <property.name> 
 NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = [[NSAttributeDescription alloc] init];
 [<propertiesPrefix><property.nameCapitalized>Attribute setName:@"<property.name>"];
@@ -321,6 +321,7 @@ NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = 
 >>
 
 relationshipDescription(property, propertiesPrefix) ::= <<
+
 // Relationship: <property.name>
 NSRelationshipDescription *<propertiesPrefix><property.nameCapitalized>Relationship = [[NSRelationshipDescription alloc] init];
 [<propertiesPrefix><property.nameCapitalized>Relationship setDestinationEntity:<property.relationshipTargetType>Entity];
