@@ -210,6 +210,9 @@ apiHeader(api) ::= <<
 
 @interface <names.classPrefix>BaseApi : FPBaseApi
 
+// Get a new instance with options
++ (id) newWithDictionary:(NSDictionary *)properties;
+
 <api.endpoints:{e | 
   <docString(e.docString)>
   <endpointDeclaration(e)>;
@@ -223,11 +226,42 @@ api(api) ::= <<
 // Generated File - DO NOT EDIT
 
 #import "<names.classPrefix>BaseApi.h"
+#import "NSObject+FP.h"
+#import "<names.classPrefix>Schema.h"
 <api.importNames:{n | #import "<n>.h"}; separator="\n">
 
 <api.endpoints:endpointRequestImplementation(); separator="\n\n">
 
+
+
 @implementation <names.classPrefix>BaseApi
+
+// Give the option to enable persistent storage using Core Data
++ (id) newWithDictionary:(NSDictionary *)properties {
+  FPBaseApi *result;
+  
+  if ([properties valueForKey:@"persistent"]) {
+    // Create a new dictionary with a core data entityResolver
+    NSDictionary *propertiesWithMom = [NSMutableDictionary dictionaryWithCapacity:[properties count]];
+    
+    // add all of the old properties except the persistent flag
+    [properties enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+      if (![@"persistent" isEqual:key]) {
+        [propertiesWithMom setValue:obj forKey:key];
+      }
+    }];
+    
+    NSManagedObjectModel *model = [<names.classPrefix>Schema managedObjectModel];
+    [propertiesWithMom setValue:model forKey:@"managedObjectModel"];
+    result = [super newWithDictionary:propertiesWithMom];
+  }
+  else {
+    result = [super newWithDictionary:properties];
+  }
+  
+  return result;
+}
+
 <api.endpoints:{end |
   <endpointDeclaration(end)> {
     <end.requestBuilderClassName> *request = [[<end.requestBuilderClassName> alloc] initWithApi:self
@@ -280,7 +314,7 @@ schemaForEntity(entity) ::= <<
 // ***** Entity: <entity.typeName> *****
 
 [<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
-[<entity.typeName>Entity setManagedObjectClassName:@"PK<entity.typeNameCapitalized>"];
+[<entity.typeName>Entity setManagedObjectClassName:@"<names.classPrefix><entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
 <if(entity.subentities)>
 
