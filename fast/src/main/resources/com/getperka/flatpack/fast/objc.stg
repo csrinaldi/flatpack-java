@@ -21,6 +21,8 @@ entityHeader(entity) ::= <<
 // Generated File - DO NOT EDIT
 
 #import \<Foundation/Foundation.h\>
+#import \<CoreData/CoreData.h\>
+#import "FPHasUuid.h"
 <if(entity.supertype.requireName)>
 #import "<entity.supertype.requireName>.h"
 <endif>
@@ -28,7 +30,10 @@ entityHeader(entity) ::= <<
 <entity.importNames:{n | @class <n>;}; wrap, separator="\n">
 
 <docString(entity.docString)>
-@interface <entity.requireName> : <entity.supertype.requireName>
+@interface <entity.requireName> : <if(entity.supertype)><entity.supertype.requireName><else>NSManagedObject<endif> \<FPHasUuid\>
+
+// FPHasUuid
+@property (strong) NSString *uuid;
 
 <if(entity.properties)>
 <entity.properties:property(); separator="\n\n">
@@ -49,7 +54,7 @@ entity(entity) ::= <<
 // Generated File - DO NOT EDIT
 
 <entity.importNames:{n | #import "<n>.h"}; wrap, separator="\n">
-#import "FPBaseHasUuid.h"
+#import "FPHasUuid.h"
 #import "FPEntityDescription.h"
 #import "FPProperty.h"
 #import "NSObject+FP.h"
@@ -199,7 +204,7 @@ apiHeader(api) ::= <<
 
 #import \<Foundation/Foundation.h\>
 #import "FPBaseApi.h"
-#import "FPBaseHasUuid.h"
+#import "FPHasUuid.h"
 #import "FPFlatpackRequest.h"
 
 <api.importNames:{n | @class <n>;}; separator="\n">
@@ -325,13 +330,13 @@ NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
 
 NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
 
-<!// Attribute: uuid
+// Attribute: uuid
 NSAttributeDescription *<entity.typeName>UuidAttribute = [[NSAttributeDescription alloc] init];
 [<entity.typeName>UuidAttribute setName:@"uuid"];
 [<entity.typeName>UuidAttribute setAttributeType:NSStringAttributeType];
 [<entity.typeName>UuidAttribute setOptional:NO];
 [<entity.typeName>UuidAttribute setIndexed:YES];
-[<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute]; !>
+[<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute];
 <entity.attributes:attributeDescription(entity.typeName); separator="\n">
 
 <entity.relationships:relationshipDescription(entity.typeName); separator="\n">
