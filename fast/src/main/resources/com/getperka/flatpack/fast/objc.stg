@@ -238,7 +238,7 @@ api(api) ::= <<
 
 // Give the option to enable persistent storage using Core Data
 + (id) newWithDictionary:(NSDictionary *)properties {
-  FPBaseApi *result;
+  <names.classPrefix>BaseApi *result;
   
   if ([properties valueForKey:@"persistent"]) {
     // Create a new dictionary with a core data entityResolver
@@ -325,13 +325,13 @@ NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
 
 NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
 
-// Attribute: uuid
+<!// Attribute: uuid
 NSAttributeDescription *<entity.typeName>UuidAttribute = [[NSAttributeDescription alloc] init];
 [<entity.typeName>UuidAttribute setName:@"uuid"];
 [<entity.typeName>UuidAttribute setAttributeType:NSStringAttributeType];
 [<entity.typeName>UuidAttribute setOptional:NO];
 [<entity.typeName>UuidAttribute setIndexed:YES];
-[<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute];
+[<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute]; !>
 <entity.attributes:attributeDescription(entity.typeName); separator="\n">
 
 <entity.relationships:relationshipDescription(entity.typeName); separator="\n">
