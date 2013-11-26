@@ -371,6 +371,11 @@ public class JavaScriptDialect implements Dialect {
       && type.getTypeHint().getValue().equals("org.joda.time.LocalDateTime")) {
       return "LocalDate";
     }
+    else if (type.getTypeHint() != null
+      && (type.getTypeHint().getValue().equals("java.math.BigDecimal")
+      || type.getTypeHint().getValue().equals("java.math.BigInteger"))) {
+      return "Number";
+    }
 
     String jsType = "nil";
     switch (type.getJsonKind()) {
