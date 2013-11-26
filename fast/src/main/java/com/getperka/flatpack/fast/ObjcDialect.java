@@ -124,18 +124,12 @@ public class ObjcDialect implements Dialect {
       addEntity(allEntities, entity);
     }
 
-    // Render entities
-    STGroup group = loadGroup();
-
-    // render schema definition
-    ST schemaHeaderST = group.getInstanceOf("schemaHeader");
-    render(schemaHeaderST, outputDir, "Schema.h");
-    ST schemaST = group.getInstanceOf("schema").add("entities", allEntities.values());
-    render(schemaST, outputDir, "Schema.m");
-
     // Ensure that the "real" implementations are used
     // baseHasUuid = allEntities.remove("baseHasUuid");
     allEntities.remove("hasUuid");
+
+    // Render entities
+    STGroup group = loadGroup();
 
     ST entityST = null;
     for (EntityDescription entity : allEntities.values()) {
@@ -151,6 +145,12 @@ public class ObjcDialect implements Dialect {
     render(apiHeaderST, outputDir, "BaseApi.h");
     ST apiST = group.getInstanceOf("api").add("api", api);
     render(apiST, outputDir, "BaseApi.m");
+
+    // render schema definition
+    ST schemaHeaderST = group.getInstanceOf("schemaHeader");
+    render(schemaHeaderST, outputDir, "Schema.h");
+    ST schemaST = group.getInstanceOf("schema").add("entities", allEntities.values());
+    render(schemaST, outputDir, "Schema.m");
   }
 
   @Override
