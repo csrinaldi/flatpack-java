@@ -278,6 +278,7 @@ schema(entities) ::= <<
   <! Initializing all the entities up front so they can reference each other !>
   <entities:entityInit(); separator="\n">
   <entities:schemaForEntity(); separator="\n\n">
+  <entities:entitySubentities(); separator="">
   
   [mom setEntities:entities];
   return mom;
@@ -290,17 +291,21 @@ entityInit(entity) ::= <<
 NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init];
 >>
 
+entitySubentities(entity) :: <<
+
+<if(entity.subentities)>
+
+NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
+<entity.subentities:subEntityRelationships(entity.typeName); separator="\n">
+[<entity.typeName>Entity setSubentities:<entity.typeName>Subentities];<endif>
+ >>
+
 schemaForEntity(entity) ::= <<
 // ***** Entity: <entity.typeName> *****
 
 [<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
 [<entity.typeName>Entity setManagedObjectClassName:@"<names.classPrefix><entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
-<if(entity.subentities)>
-
-NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
-<entity.subentities:subEntityRelationships(entity.typeName); separator="\n">
-[<entity.typeName>Entity setSubentities:<entity.typeName>Subentities];<endif>
 <if(entity.properties)>
 
 NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
@@ -314,7 +319,7 @@ NSAttributeDescription *<entity.typeName>UuidAttribute = [[NSAttributeDescriptio
 [<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute];
 <entity.attributes:attributeDescription(entity.typeName); separator="\n">
 
-<entity.relationships:relationshipDescription(entity.typeName); separator="\n">
+<entity.relationships:relationshipDescription(entity.typeName); separator="\n\n">
 
 [<entity.typeName>Entity setProperties:<entity.typeName>Properties];<endif>
 >>
@@ -331,8 +336,7 @@ NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = 
 [<propertiesPrefix><property.nameCapitalized>Attribute setAttributeType:<property.attributeType>];
 [<propertiesPrefix><property.nameCapitalized>Attribute setOptional:YES];
 [<propertiesPrefix><property.nameCapitalized>Attribute setIndexed:NO];
-[<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];
->>
+[<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];>>
 
 relationshipDescription(property, propertiesPrefix) ::= <<
 
