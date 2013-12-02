@@ -211,9 +211,6 @@ apiHeader(api) ::= <<
 
 @interface <names.classPrefix>BaseApi : FPBaseApi
 
-// Get a new instance with options
-+ (id) newWithDictionary:(NSDictionary *)properties;
-
 <api.endpoints:{e | 
   <docString(e.docString)>
   <endpointDeclaration(e)>;
@@ -275,9 +272,14 @@ schema(entities) ::= <<
 + (NSManagedObjectModel *) managedObjectModel {
   NSManagedObjectModel *mom = [[NSManagedObjectModel alloc] init];
   NSMutableArray *entities = [NSMutableArray array];
-  <! Initializing all the entities up front so they can reference each other !>
+  
+  // ***** Initialize all entity objects up front so they can reference each other *****
+  
   <entities:entityInit(); separator="\n">
+  
   <entities:schemaForEntity(); separator="\n\n">
+  
+  // ***** Build entity graph top-down. *****
   <entities:entitySubentities(); separator="">
   
   [mom setEntities:entities];
@@ -292,13 +294,12 @@ NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init
 >>
 
 entitySubentities(entity) :: <<
-
 <if(entity.subentities)>
 
 NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
 <entity.subentities:subEntityRelationships(entity.typeName); separator="\n">
 [<entity.typeName>Entity setSubentities:<entity.typeName>Subentities];<endif>
- >>
+>>
 
 schemaForEntity(entity) ::= <<
 // ***** Entity: <entity.typeName> *****
@@ -306,7 +307,6 @@ schemaForEntity(entity) ::= <<
 [<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
 [<entity.typeName>Entity setManagedObjectClassName:@"<names.classPrefix><entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
-<if(entity.properties)>
 
 NSMutableArray *<entity.typeName>Properties = [NSMutableArray array];
 
@@ -317,30 +317,39 @@ NSAttributeDescription *<entity.typeName>UuidAttribute = [[NSAttributeDescriptio
 [<entity.typeName>UuidAttribute setOptional:NO];
 [<entity.typeName>UuidAttribute setIndexed:YES];
 [<entity.typeName>Properties addObject:<entity.typeName>UuidAttribute];
-<entity.attributes:attributeDescription(entity.typeName); separator="\n">
+<if(entity.properties)>
+<if(entity.attributes)>
 
-<entity.relationships:relationshipDescription(entity.typeName); separator="\n\n">
+<entity.attributes:attributeDescription(entity.typeName); separator="\n\n"><endif>
+<if(entity.relationships)>
 
-[<entity.typeName>Entity setProperties:<entity.typeName>Properties];<endif>
+<entity.relationships:relationshipDescription(entity.typeName); separator="\n\n"><endif>
+<endif>
+
+
+[<entity.typeName>Entity setProperties:<entity.typeName>Properties];
 >>
 
-subEntityRelationships(subentityName, arrayPrefix) ::= <<
+subEntityRelationships(subentityName, arrayPrefix) ::= <%
 [<arrayPrefix>Subentities addObject:<subentityName>Entity];
->>
+%>
 
 attributeDescription(property, propertiesPrefix) ::= <<
-
 // Attribute: <property.name> 
 NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = [[NSAttributeDescription alloc] init];
 [<propertiesPrefix><property.nameCapitalized>Attribute setName:@"<property.name>"];
 [<propertiesPrefix><property.nameCapitalized>Attribute setAttributeType:<property.attributeType>];
 [<propertiesPrefix><property.nameCapitalized>Attribute setOptional:YES];
 [<propertiesPrefix><property.nameCapitalized>Attribute setIndexed:NO];
-[<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];>>
+[<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Attribute];
+>>
 
 relationshipDescription(property, propertiesPrefix) ::= <<
-
 // Relationship: <property.name>
 NSRelationshipDescription *<propertiesPrefix><property.nameCapitalized>Relationship = [[NSRelationshipDescription alloc] init];
+[<propertiesPrefix><property.nameCapitalized>Relationship setName:@"<property.name>"];
+[<propertiesPrefix><property.nameCapitalized>Relationship setOptional:YES];
+[<propertiesPrefix><property.nameCapitalized>Relationship setIndexed:NO];
 [<propertiesPrefix><property.nameCapitalized>Relationship setDestinationEntity:<property.relationshipTargetType>Entity];
+[<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Relationship];
 >>
