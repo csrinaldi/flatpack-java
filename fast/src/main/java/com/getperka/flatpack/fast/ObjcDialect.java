@@ -196,6 +196,24 @@ public class ObjcDialect implements Dialect {
     registerSubEntity(entity, entity.getSupertype());
   }
 
+  /**
+   * Determines whether a relationship property is "to-many" or "to-one". Returns "0" for to many or
+   * "1" for to one. This is used for the Core Data [NSRelationshipDescription setMaxCount] method.
+   */
+  private String cardinalityOf(Property prop) {
+    if (!isRelationship(prop)) {
+      logger.error("Warning, checking cardinality of non-relationship property {}", prop.getName());
+    }
+
+    Type type = prop.getType();
+    if (type.getListElement() != null) {
+      return "0";
+    }
+    else {
+      return "1";
+    }
+  }
+
   private String coreDataTypeForType(Type type) {
     TypeHint hint = type.getTypeHint();
     if (hint != null) {
@@ -366,6 +384,25 @@ public class ObjcDialect implements Dialect {
     });
 
     return sortedProperties;
+  }
+
+  /**
+   * Gets the inverse relationship property for a property. For example, the inverse relationship
+   * for the "merchantLocations" property of Merchant is the "merchant" property of
+   * MerchantLocation.
+   * 
+   * @param p
+   * @return
+   */
+  private Property inverseRelationshipOf(Property prop) {
+    if (!isRelationship(prop)) {
+      logger.error(
+          "Trying to get the inverse relationship of an attribute property \"{}\"." +
+            " This only makes sense for a relationship property",
+          prop.getName());
+    }
+
+    return prop.getImpliedProperty();
   }
 
   /**
@@ -690,6 +727,8 @@ public class ObjcDialect implements Dialect {
         }
         else if ("modifiers".equals(propertyName)) {
           List<String> modifiers = new ArrayList<String>();
+          modifiers.add("nonatomic");
+
           String safeName = getSafeName(p.getName());
           if (p.getImpliedProperty() != null
             && p.getImpliedProperty().getType().getJsonKind().equals(JsonKind.LIST)) {
@@ -735,6 +774,15 @@ public class ObjcDialect implements Dialect {
           else {
             return type.getName();
           }
+        }
+        else if ("cardinality".equals(propertyName)) {
+          return cardinalityOf(p);
+        }
+        else if ("inverseRelationship".equals(propertyName)) {
+          return inverseRelationshipOf(p);
+        }
+        else if ("ownerEntity".equals(propertyName)) {
+          return p.getEnclosingType();
         }
 
         return super.getProperty(interp, self, o, property, propertyName);
@@ -882,7 +930,7 @@ public class ObjcDialect implements Dialect {
         objcType = "NSNumber";
         break;
       case LIST:
-        objcType = "NSMutableArray";
+        objcType = "NSSet";
         break;
       case MAP:
         objcType = "NSMutableDictionary";

@@ -36,13 +36,6 @@ entityHeader(entity) ::= <<
 <entity.properties:property(); separator="\n\n">
 <endif>
 
-<if(entity.collectionProperties)>
-<entity.collectionProperties:{p | 
-/** Adds an item to the <p.name> collection while maintaining a proper bi-directional association
-*/
-- (void)addItemTo<p.upcaseName>:(<p.listElementObjcType> *)item;}; wrap, separator="\n\n">
-<endif>
-
 @end
 
 >>
@@ -57,8 +50,7 @@ entity(entity) ::= <<
 
 @implementation <entity.requireName>
 
-<entity.entityProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
-<entity.collectionProperties:{p | @synthesize <p.safeName> = _<p.safeName>;}; separator="\n">
+<entity.properties:{p | @dynamic <p.safeName>;}; separator="\n">
 
 static FPEntityDescription *_entityDescription;
 static NSMutableArray *_allProperties;
@@ -83,55 +75,17 @@ static NSMutableArray *_allProperties;
   return _entityDescription;
 }
 
-<if(entity.collectionProperties)>
-// initialize collection properties
 - (id)init {
-  self = [super init];
-  if(self != nil) {
-    <entity.collectionProperties:{p | _<p.name> = [<p.objcType> new];}; separator="\n">
-  }
+  self = [super initWithEntityName:@"<entity.typeNameCapitalized>"];
   return self;
 }
-<endif>
-<entity.properties:entityAccessors()>
+
 @end
 >>
 
-entityAccessors(property) ::= <<
-<if(property.type.listElement)>
-
-// <property.safeName> one-to-many accessors to maintain bi-directional relationships
-- (NSMutableArray *)<property.name> {
-  return _<property.name>;
-}
-- (void)set<property.upcaseName>:(NSMutableArray *)<property.safeName> {
-  _<property.safeName> = [<property.safeName> mutableCopy];
-  <if(property.impliedProperty)>
-  [_<property.safeName> enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-    [obj setValue:self forKey:@"<property.impliedProperty.name>"];
-  }];
-  <endif>
-}
-- (void)addItemTo<property.upcaseName>:(<property.listElementObjcType> *)item {
-  [_<property.safeName> addObject:item];
-  <if(property.impliedProperty)>
-  [item setValue:self forKey:@"<property.impliedProperty.name>"];
-  <endif>
-}
-<elseif(property.type.name && property.impliedProperty)>
-
-// <property.safeName> many-to-one accessors to maintain bi-directional relationships
-- (<property.objcType> *)<property.name>{
-  return _<property.name>;
-}
-- (void)set<property.upcaseName>:(<property.objcType> *)<property.name> {
-  _<property.name> = <property.name>;
-  if(![[_<property.name> <property.impliedProperty.name>] containsObject:self]) {
-    [[_<property.name> <property.impliedProperty.name>] addObject:self];
-  }
-}
-<endif>
->>
+propertyDynamic(property) :: <%
+@dynamic <property.safeName>;
+%>
 
 property(property) ::= <%
 <if(property.docString)><docString(property.docString)><\n><endif>
@@ -277,6 +231,8 @@ schema(entities) ::= <<
   
   <entities:entityInit(); separator="\n">
   
+  <entities:entityPropertiesInit(); separator="">
+  
   <entities:schemaForEntity(); separator="\n\n">
   
   // ***** Build entity graph top-down. *****
@@ -289,9 +245,26 @@ schema(entities) ::= <<
 @end
 >>
 
+entityPropertiesInit(entity) :: <<
+<if(entity.attributes)>
+<entity.attributes:attributeInit(entity.typeName); separator="\n">
+<endif>
+<if(entity.relationships)>
+<entity.relationships:relationshipInit(entity.typeName); separator="\n">
+<endif>
+>>
+
 entityInit(entity) ::= <<
 NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init];
 >>
+
+relationshipInit(property, prefix) :: <%
+NSRelationshipDescription *<prefix><property.nameCapitalized>Relationship = [[NSRelationshipDescription alloc] init];
+%>
+
+attributeInit(property, prefix) ::= <%
+NSAttributeDescription *<prefix><property.nameCapitalized>Attribute = [[NSAttributeDescription alloc] init];
+%>
 
 entitySubentities(entity) :: <<
 <if(entity.subentities)>
@@ -336,7 +309,6 @@ subEntityRelationships(subentityName, arrayPrefix) ::= <%
 
 attributeDescription(property, propertiesPrefix) ::= <<
 // Attribute: <property.name> 
-NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = [[NSAttributeDescription alloc] init];
 [<propertiesPrefix><property.nameCapitalized>Attribute setName:@"<property.name>"];
 [<propertiesPrefix><property.nameCapitalized>Attribute setAttributeType:<property.attributeType>];
 [<propertiesPrefix><property.nameCapitalized>Attribute setOptional:YES];
@@ -346,10 +318,14 @@ NSAttributeDescription *<propertiesPrefix><property.nameCapitalized>Attribute = 
 
 relationshipDescription(property, propertiesPrefix) ::= <<
 // Relationship: <property.name>
-NSRelationshipDescription *<propertiesPrefix><property.nameCapitalized>Relationship = [[NSRelationshipDescription alloc] init];
 [<propertiesPrefix><property.nameCapitalized>Relationship setName:@"<property.name>"];
 [<propertiesPrefix><property.nameCapitalized>Relationship setOptional:YES];
 [<propertiesPrefix><property.nameCapitalized>Relationship setIndexed:NO];
 [<propertiesPrefix><property.nameCapitalized>Relationship setDestinationEntity:<property.relationshipTargetType>Entity];
+[<propertiesPrefix><property.nameCapitalized>Relationship setMinCount:0];
+[<propertiesPrefix><property.nameCapitalized>Relationship setMaxCount:<property.cardinality>];
+<if(property.inverseRelationship)>
+[<propertiesPrefix><property.nameCapitalized>Relationship setInverseRelationship:<property.inverseRelationship.ownerEntity.typeName><property.inverseRelationship.nameCapitalized>Relationship];
+<endif>
 [<propertiesPrefix>Properties addObject:<propertiesPrefix><property.nameCapitalized>Relationship];
 >>
