@@ -215,6 +215,8 @@ public class ObjcDialect implements Dialect {
   }
 
   private String coreDataTypeForType(Type type) {
+    // TODO Handle Lists and Maps, e.g. for Merchant.possibleMerchantStates
+
     TypeHint hint = type.getTypeHint();
     if (hint != null) {
       if (hint.getValue().equals("org.joda.time.DateTime")) {
@@ -222,6 +224,12 @@ public class ObjcDialect implements Dialect {
       }
       else if (hint.getValue().equals("org.joda.time.LocalDateTime")) {
         return "NSDateAttributeType";
+      }
+      else if (hint.getValue().equals("java.math.BigDecimal")) {
+        return "NSDecimalAttributeType";
+      }
+      else if (hint.getValue().equals("java.math.BigInteger")) {
+        return "NSInteger64AttributeType";
       }
     }
 
@@ -238,9 +246,11 @@ public class ObjcDialect implements Dialect {
       case INTEGER:
         return "NSInteger32AttributeType";
       case STRING:
+        // Fall through
+      case ANY:
         return "NSStringAttributeType";
       default:
-        return "NSUndefinedAttributeType";
+        return "NSStringAttributeType";
     }
   }
 
@@ -913,6 +923,16 @@ public class ObjcDialect implements Dialect {
         prefix = "FP";
       }
       return prefix + upcase(type.getName());
+    }
+
+    TypeHint hint = type.getTypeHint();
+    if (hint != null) {
+      if (hint.getValue().equals("org.joda.time.DateTime")) {
+        return "NSDate";
+      }
+      else if (hint.getValue().equals("org.joda.time.LocalDateTime")) {
+        return "NSDate";
+      }
     }
 
     String objcType = "nil";

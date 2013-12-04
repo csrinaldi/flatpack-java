@@ -75,15 +75,10 @@ static NSMutableArray *_allProperties;
   return _entityDescription;
 }
 
-- (id)init {
-  self = [super initWithEntityName:@"<entity.typeNameCapitalized>"];
-  return self;
-}
-
 @end
 >>
 
-propertyDynamic(property) :: <%
+propertyDynamic(property) ::= <%
 @dynamic <property.safeName>;
 %>
 
@@ -245,7 +240,7 @@ schema(entities) ::= <<
 @end
 >>
 
-entityPropertiesInit(entity) :: <<
+entityPropertiesInit(entity) ::= <<
 <if(entity.attributes)>
 <entity.attributes:attributeInit(entity.typeName); separator="\n">
 <endif>
@@ -258,7 +253,7 @@ entityInit(entity) ::= <<
 NSEntityDescription *<entity.typeName>Entity = [[NSEntityDescription alloc] init];
 >>
 
-relationshipInit(property, prefix) :: <%
+relationshipInit(property, prefix) ::= <%
 NSRelationshipDescription *<prefix><property.nameCapitalized>Relationship = [[NSRelationshipDescription alloc] init];
 %>
 
@@ -266,7 +261,7 @@ attributeInit(property, prefix) ::= <%
 NSAttributeDescription *<prefix><property.nameCapitalized>Attribute = [[NSAttributeDescription alloc] init];
 %>
 
-entitySubentities(entity) :: <<
+entitySubentities(entity) ::= <<
 <if(entity.subentities)>
 
 NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
@@ -277,7 +272,7 @@ NSMutableArray *<entity.typeName>Subentities = [NSMutableArray array];
 schemaForEntity(entity) ::= <<
 // ***** Entity: <entity.typeName> *****
 
-[<entity.typeName>Entity setName:@"<entity.typeNameCapitalized>"];
+[<entity.typeName>Entity setName:@"<entity.typeName>"];
 [<entity.typeName>Entity setManagedObjectClassName:@"<names.classPrefix><entity.typeNameCapitalized>"];
 [entities addObject:<entity.typeName>Entity];
 
