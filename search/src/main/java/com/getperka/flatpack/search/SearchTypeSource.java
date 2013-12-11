@@ -19,7 +19,9 @@
  */
 package com.getperka.flatpack.search;
 
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -57,6 +59,12 @@ public class SearchTypeSource implements TypeSource {
       search.acrossPackages(packageNames);
     }
     search.execute();
+    // Strip any abstract classes that matched
+    for (Iterator<Class<?>> it = toReturn.iterator(); it.hasNext();) {
+      if (Modifier.isAbstract(it.next().getModifiers())) {
+        it.remove();
+      }
+    }
     return toReturn;
   }
 

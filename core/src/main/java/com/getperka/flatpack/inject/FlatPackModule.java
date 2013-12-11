@@ -152,7 +152,9 @@ public class FlatPackModule extends AbstractModule {
           .to(DefaultCodexMapper.class);
     } else {
       bind(CodexMapper.class)
-          .toInstance(new CompositeCodexMapper(configuration.getExtraMappers()));
+          .toInstance(
+              new CompositeCodexMapper(getProvider(DefaultCodexMapper.class),
+                  configuration.getExtraMappers()));
     }
 
     // EntityResolver

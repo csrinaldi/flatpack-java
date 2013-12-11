@@ -20,6 +20,8 @@
 package com.getperka.flatpack.inject;
 
 import java.security.Principal;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
 
 import org.joda.time.DateTime;
@@ -66,24 +68,30 @@ public class PackScope implements Scope {
   /**
    * Retains the thread-local data.
    */
-  private final ThreadLocal<Map<Key<?>, Object>> allData = new ThreadLocal<Map<Key<?>, Object>>();
+  private final ThreadLocal<Deque<Map<Key<?>, Object>>> allData = new ThreadLocal<Deque<Map<Key<?>, Object>>>() {
+
+    @Override
+    protected Deque<Map<Key<?>, Object>> initialValue() {
+      return new ArrayDeque<Map<Key<?>, Object>>();
+    }
+  };
 
   PackScope() {}
 
   public PackScope enter() {
-    if (allData.get() != null) {
-      throw new IllegalStateException("Already in a PackScope");
-    }
-    allData.set(FlatPackCollections.<Key<?>, Object> mapForLookup());
+    allData.get().push(FlatPackCollections.<Key<?>, Object> mapForLookup());
     return this;
   }
 
   public void exit() {
-    allData.remove();
+    Deque<Map<Key<?>, Object>> deque = allData.get();
+    if (!deque.isEmpty()) {
+      deque.pop();
+    }
   }
 
   public boolean isEntered() {
-    return allData.get() != null;
+    return !allData.get().isEmpty();
   }
 
   @Override
@@ -91,7 +99,7 @@ public class PackScope implements Scope {
     return cast(new Provider<Object>() {
       @Override
       public Object get() {
-        Map<Key<?>, Object> map = allData.get();
+        Map<Key<?>, Object> map = data();
         if (map == null) {
           throw new OutOfScopeException("Not in a PackScope");
         }
@@ -115,9 +123,9 @@ public class PackScope implements Scope {
   public PackScope withJsonWriter(JsonWriter writer) {
     Key<JsonWriter> key = Key.get(JsonWriter.class);
     if (writer == null) {
-      allData.get().remove(key);
+      data().remove(key);
     } else {
-      allData.get().put(key, writer);
+      data().put(key, writer);
     }
     return this;
   }
@@ -127,16 +135,16 @@ public class PackScope implements Scope {
     if (lastModified == null) {
       lastModified = new DateTime(0);
     }
-    allData.get().put(key, lastModified);
+    data().put(key, lastModified);
     return this;
   }
 
   public PackScope withPrincipal(Principal principal) {
     Key<Principal> key = Key.get(Principal.class);
     if (principal == null) {
-      allData.get().remove(key);
+      data().remove(key);
     } else {
-      allData.get().put(key, principal);
+      data().put(key, principal);
     }
     return this;
   }
@@ -144,10 +152,14 @@ public class PackScope implements Scope {
   public PackScope withTraversalMode(TraversalMode mode) {
     Key<TraversalMode> key = Key.get(TraversalMode.class);
     if (mode == null) {
-      allData.get().remove(key);
+      data().remove(key);
     } else {
-      allData.get().put(key, mode);
+      data().put(key, mode);
     }
     return this;
+  }
+
+  private Map<Key<?>, Object> data() {
+    return allData.get().peek();
   }
 }

@@ -22,7 +22,7 @@ package com.getperka.flatpack.inject;
 import java.lang.reflect.Type;
 import java.util.Collection;
 
-import javax.inject.Inject;
+import javax.inject.Provider;
 
 import com.getperka.flatpack.codexes.DefaultCodexMapper;
 import com.getperka.flatpack.ext.Codex;
@@ -34,12 +34,12 @@ import com.getperka.flatpack.ext.TypeContext;
  */
 class CompositeCodexMapper implements CodexMapper {
 
-  @Inject
-  private DefaultCodexMapper defaultMapper;
-
+  private final Provider<DefaultCodexMapper> defaultMapper;
   private final Collection<CodexMapper> extraMappers;
 
-  CompositeCodexMapper(Collection<CodexMapper> extraMappers) {
+  CompositeCodexMapper(Provider<DefaultCodexMapper> defaultMapper,
+      Collection<CodexMapper> extraMappers) {
+    this.defaultMapper = defaultMapper;
     this.extraMappers = extraMappers;
   }
 
@@ -51,6 +51,6 @@ class CompositeCodexMapper implements CodexMapper {
         return codex;
       }
     }
-    return defaultMapper.getCodex(context, type);
+    return defaultMapper.get().getCodex(context, type);
   }
 }
