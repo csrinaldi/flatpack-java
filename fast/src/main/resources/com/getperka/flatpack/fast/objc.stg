@@ -203,6 +203,8 @@ api(api) ::= <<
 >>
 
 schemaHeader() ::= <<
+// Generated File - DO NOT EDIT
+
 #import \<Foundation/Foundation.h\>
 #import \<CoreData/CoreData.h\>
   
@@ -214,6 +216,8 @@ schemaHeader() ::= <<
 >>
 
 schema(entities) ::= <<
+// Generated File - DO NOT EDIT
+
 #import "<names.classPrefix>Schema.h"
 
 @implementation <names.classPrefix>Schema
