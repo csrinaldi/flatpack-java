@@ -43,6 +43,7 @@ import javax.inject.Inject;
 
 import org.joda.time.DateTimeZone;
 
+import com.getperka.flatpack.FlatPackEntity;
 import com.getperka.flatpack.HasUuid;
 import com.getperka.flatpack.ext.Codex;
 import com.getperka.flatpack.ext.CodexMapper;
@@ -124,6 +125,12 @@ public class DefaultCodexMapper implements CodexMapper {
     // java.util.Date and subtypes
     if (java.util.Date.class.isAssignableFrom(erased)) {
       return getInstance(DateCodex.class, erased);
+    }
+
+    // A nested FlatPackEntity
+    if (FlatPackEntity.class.equals(erased)) {
+      return getInstance(FlatPackEntityCodex.class,
+          getSingleParameterization(type, FlatPackEntity.class));
     }
 
     /*
